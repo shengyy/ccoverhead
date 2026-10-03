@@ -352,8 +352,12 @@ describe('ccoverhead', () => {
       on('session.measure', ($, e) => ({ changed: e.changed }))
       mock.store(on)
       on('session.usage', ($, e) => ({ value: usage(tokens, [], e.breakdown !== undefined) }))
-      // No settings hook stands beneath in a test: answer the classic event as an empty one.
-      on('classic.SessionStart', () => ({}))
+      // The lifecycle observer must preserve the settings hook's first-message and stop decisions.
+      const downstream = { additionalContext: 'Synthetic session instructions.', preventContinuation: true, stopReason: 'Synthetic stop.' }
+      on('classic.SessionStart', () => {
+        tokens = undefined
+        return downstream
+      })
       on('turn.step', async function* () {
         return cached(40_000, 0)
       })
@@ -370,8 +374,7 @@ describe('ccoverhead', () => {
       expect(await ui.find({ type: 'Text', text: /^ ?↑12\.3k$/ })).toBeDefined()
       expect(await ui.find({ type: 'Text', text: /^ ?warm$/ })).toBeDefined()
 
-      tokens = undefined
-      await $.classic.SessionStart({ source: 'clear' })
+      expect(await $.classic.SessionStart({ source: 'clear' })).toEqual(downstream)
       expect(await ui.find({ type: 'Text', text: /↑/ })).toBeUndefined()
       expect(await ui.find({ type: 'Text', text: /^ ?warm$/ })).toBeUndefined()
       expect(await ui.find({ type: 'Text', text: /^ ?~13k\/1M$/ })).toBeDefined()

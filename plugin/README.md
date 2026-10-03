@@ -36,6 +36,11 @@ illustrate the [design specification](https://github.com/shengyy/ccoverhead/blob
 
 ## Privacy and license
 
+On session start and after `/clear`, `/resume` or `/branch`, the lifecycle hook refreshes only
+ccOverhead's numeric state and clears its growth and cache history. It forwards the original event and
+the downstream result unchanged, preserving the first message, instructions and permission decisions.
+Other hooks observe usage and model changes; the render hook only draws the band.
+
 Session figures stay in memory. Only the last quota reading is kept in Claude Code's plugin store so a
 new session can show it until its own arrives. See the
 [privacy details](https://github.com/shengyy/ccoverhead/blob/main/SECURITY.md).
