@@ -8,7 +8,7 @@ only long-lived **current** facts that every maintainer needs; history lives in 
 
 | Document | Only responsibility |
 |---|---|
-| [README.md](../README.md) / [README.zh-CN.md](../README.zh-CN.md) | Entry for users: what it is, install, use. The two are kept in sync |
+| [README.md](../README.md) / [README.zh-CN.md](../README.zh-CN.md) | Default English user entry, with an optional Simplified Chinese translation: what it is, install, use. Kept in sync |
 | [plugin/README.md](../plugin/README.md) | User entry included with the plugin: install, privacy and links to the full English README and design diagrams |
 | [PRODUCT.md](../PRODUCT.md) | What ccOverhead does, its rules and its non-goals |
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | Human workflow: setup, checks, issues, pull requests |

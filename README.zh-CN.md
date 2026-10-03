@@ -79,7 +79,7 @@ ctx ■■■□□□□□□□ 27% 271k/1M  ▁▂▄█▂▇▁ ↑3.4k | 
 
 四种信号，放进一条安静的横条。同一套从冷到暖的色阶，让上下文压力、重的一轮和额度用量都能一眼看清。窗口变窄时先删次要细节，把上下文留到最后。
 
-下面的设计图用虚构数据说明布局、色阶阈值与状态规则。完整规则与生成方式见[设计说明](docs/design.md)，另有[英文版设计图](README.md#design-rationale)。
+下面的设计图用虚构数据说明布局、色阶阈值与状态规则。完整规则与生成方式见[设计说明](docs/design.md)。
 
 <p align="center">
   <img src="assets/screenshots/design-layout-zh-cn.png" width="1000" alt="ccOverhead 布局与色阶设计图：桌面与终端画法、六档窄屏删减、深浅色调色板与颜色阈值">
