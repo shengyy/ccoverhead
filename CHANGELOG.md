@@ -6,6 +6,14 @@ All notable changes to ccOverhead are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-04
+
+### Added
+
+- The weekly group follows the main model: when Claude Code reports a weekly window of the model's own, it
+  shows that window as `7d <family>` (for example `7d fable`) and switches at once on `/model`. Not verified:
+  no such window has reached a plugin yet; without one the band is unchanged.
+
 ## [1.0.0] - 2026-10-04
 
 ### Added

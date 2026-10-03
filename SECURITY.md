@@ -6,11 +6,12 @@ reads, what it keeps, and what it sends.
 ## What is read
 
 Only figures Claude Code reports to plugins: the context window and its fill, the rate-limit windows, the
-token usage of each main-conversation request, and the session's local `/context` estimate. ccOverhead does
+token usage of each main-conversation request, the session's local `/context` estimate, and the main loop's
+model id. ccOverhead does
 not read the conversation, your prompts, files or the environment.
 
 `claude plugin validate plugin` lists every engine call the module makes; today they are `$.session.usage`,
-`$.clock`, `$.state`, `$.store` and `$.ui`.
+`$.session.model`, `$.clock`, `$.state`, `$.store` and `$.ui`.
 
 ## What is stored
 

@@ -13,6 +13,8 @@ declare module 'claude-code' {
       limits: OverheadLimit[]
       limitsLive: boolean
       cache: OverheadCache | null
+      // The main loop's model, as /model shows it: picks a model's own weekly window when one is reported.
+      model: string | null
     }
   }
 }

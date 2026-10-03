@@ -13,6 +13,7 @@ const history = atom({ plugin: 'ccoverhead', key: 'history' } as const, [] as nu
 const limits = atom({ plugin: 'ccoverhead', key: 'limits' } as const, [] as OverheadLimit[])
 const limitsLive = atom({ plugin: 'ccoverhead', key: 'limitsLive' } as const, false)
 const cache = atom({ plugin: 'ccoverhead', key: 'cache' } as const, null as OverheadCache | null)
+const model = atom({ plugin: 'ccoverhead', key: 'model' } as const, null as string | null)
 
 // Countdowns are whole minutes; redraw often enough that they never lag by more than half of one.
 const TICK_MS = 30_000
@@ -44,6 +45,14 @@ export const register: Register = on => {
   on('session.measure', async ($, e, next) => {
     const result = await next(e)
     await take($, e.context, e.rateLimits)
+    await readModel($)
+    return result
+  })
+
+  // /model, the picker, a fallback: the weekly group follows the new model at once.
+  on('classic.PostModelSwitch', async ($, e, next) => {
+    const result = await next(e)
+    await update($, model, () => e.to_model)
     return result
   })
 
@@ -67,6 +76,7 @@ export const register: Register = on => {
       limits: await read($, limits),
       limitsLive: await read($, limitsLive),
       cache: await read($, cache),
+      model: await read($, model),
     }
     const gs = fit(band, e.props.bodyColumns - 2)
     if (gs.length === 0) return next(e)
@@ -128,6 +138,7 @@ export const register: Register = on => {
 async function load($: EngineInterface) {
   const { context, rateLimits } = await $.session.usage()
   await take($, context, rateLimits)
+  await readModel($)
   if (pick(rateLimits).length === 0) {
     const saved = await $.store.get(STORE_LIMITS)
     if (Array.isArray(saved) && !(await read($, limitsLive))) {
@@ -159,6 +170,17 @@ async function take($: EngineInterface, context: SessionContextUsage | undefined
   }
 }
 
+// The main loop's model; a host that cannot say leaves the weekly group on the all-models window.
+async function readModel($: EngineInterface) {
+  let id: string | null = null
+  try {
+    id = await $.session.model()
+  } catch {
+    // keep the all-models window
+  }
+  await update($, model, () => id)
+}
+
 // A breakdown the engine cannot give (no session bound, a thin client) is no estimate, never a failed
 // measure that would leave the band on the old figures.
 async function estimate($: EngineInterface): Promise<number | undefined> {
@@ -169,8 +191,7 @@ async function estimate($: EngineInterface): Promise<number | undefined> {
   }
 }
 
+// Every window reported, so a model's own weekly window is at hand when the model switches.
 function pick(rateLimits: SessionRateLimit[] | undefined): OverheadLimit[] {
-  return (rateLimits ?? [])
-    .filter(l => l.kind === 'five_hour' || l.kind === 'seven_day')
-    .map(l => ({ kind: l.kind, percentUsed: l.percentUsed, resetsAt: l.resetsAt }))
+  return (rateLimits ?? []).map(l => ({ kind: l.kind, percentUsed: l.percentUsed, resetsAt: l.resetsAt }))
 }

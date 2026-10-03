@@ -25,7 +25,7 @@
 
 ## 本仓不变量
 
-- mod 只通过 `$` 读取 Claude Code 已上报的数字：不读写文件、不起进程、不联网、不发模型请求。新增引擎调用要能在 `claude plugin validate plugin` 的列表里解释清楚，并同步 `SECURITY.md`。
+- mod 只通过 `$` 读取 Claude Code 已上报的数字：不读写文件、不起进程、不联网、不发模型请求；插件拿不到的数字（如按模型的周额度）也不去读 Claude Code 的缓存或凭据、不调未公开接口。新增引擎调用要能在 `claude plugin validate plugin` 的列表里解释清楚，并同步 `SECURITY.md`。
 - 画界面的 hook 只读不写；状态写在事件里，值放 `$.state`，跨会话只存最近一次额度读数（`$.store` 的 `limits`）。
 - 终端和桌面端都要过：测试对 `terminal` 与 `desktop` 各跑一遍；桌面端是比例字体，图形用 `Svg`，元素靠 `Box` 的 `gap` 隔开，不靠空格。按 `e.surface` 分支，不按元素表里有没有 `Svg` 判断。
 - Claude Code 行为先在真实会话里验证，再写进 `docs/claude-code-integration.md` 与 `docs/status.md`，写明版本；没验证的标 not verified。

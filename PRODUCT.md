@@ -52,6 +52,10 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
 ### Quota
 
 - Only the 5-hour and weekly windows are shown; a window whose reset time has passed is dropped.
+- The weekly group follows the main model: when Claude Code reports a weekly window of the model's own, it
+  shows that window, labeled with the model family (`7d fable`), and switches at once on `/model`;
+  otherwise the all-models week. *Not verified*: no model's own window has reached a plugin yet, so it is
+  recognized by its kind (one naming the family; for Fable, also a `scoped` one).
 - Until a session has its own reading, it shows the last reading any session saw, dimmed. A session saves
   a reading only when its own figures change, so an idle session never overwrites a newer one.
 
@@ -70,7 +74,9 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
 ## Non-goals
 
 - **No reading of files, processes or the network, and no model requests.** Every figure comes from what
-  Claude Code already reports to plugins.
+  Claude Code already reports to plugins. In particular it does not read Claude Code's own caches or
+  credentials to reach undocumented usage endpoints, even for figures plugins are not given (such as a
+  model's own weekly quota).
 - **No cost accounting.** It shows tokens and quota shares, not money, and it does not predict when a limit
   will be hit.
 - **No actions.** It never compacts, clears, pauses or changes anything in the session.

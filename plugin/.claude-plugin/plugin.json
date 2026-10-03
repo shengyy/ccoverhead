@@ -1,6 +1,6 @@
 {
   "name": "ccoverhead",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "ccOverhead: the context window, each turn's growth, the 5-hour and weekly quota and prompt-cache warmth, in one band above the Claude Code prompt on one safe-to-warning colour scale.",
   "author": { "name": "shengyy", "url": "https://github.com/shengyy" },
   "homepage": "https://github.com/shengyy/ccoverhead",

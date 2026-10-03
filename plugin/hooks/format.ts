@@ -6,10 +6,8 @@ export const CACHE_TTL_MS = 60 * 60 * 1000
 // Context totals kept for the sparkline: 8 totals, 7 bars.
 export const HISTORY = 8
 const BARS = '▁▂▃▄▅▆▇█'
-const LIMIT_LABELS: [kind: string, label: string][] = [
-  ['five_hour', '5h'],
-  ['seven_day', '7d'],
-]
+// Model families a rate-limit window may be named after.
+const FAMILIES = ['fable', 'opus', 'sonnet', 'haiku']
 
 // `text` is what the terminal draws and what widths count; `tier` its colour on the band's one scale (`GAIN`),
 // absent for plain text (the labels). A span with `bar` (a used percentage) or `spark` (the gains, with their
@@ -173,6 +171,28 @@ export function sparkline(values: number[]): string {
   return values.map(v => BARS[Math.floor((v * 7) / top)]).join('')
 }
 
+// The family a model id belongs to (`claude-fable-5-1` → `fable`), if it names one.
+export function modelFamily(model: string | null): string | undefined {
+  const id = (model ?? '').toLowerCase()
+  return FAMILIES.find(f => id.includes(f))
+}
+
+// The weekly window to show: the main model's own when Claude Code reports one, else the all-models week.
+// Not verified: no model's own window has reached a plugin yet, so its kind is matched, not known. A kind
+// naming the family counts; for Fable so does a `scoped` one, since Anthropic's usage data calls a
+// model's own weekly window `weekly_scoped` (the model in a separate scope a rate limit here does not
+// carry) and the one seen was Fable's.
+export function weeklyWindow(limits: OverheadLimit[], model: string | null): { limit?: OverheadLimit; label: string } {
+  const family = modelFamily(model)
+  const others = limits.filter(l => l.kind !== 'seven_day')
+  const own =
+    family === undefined
+      ? undefined
+      : (others.find(l => l.kind.toLowerCase().includes(family)) ??
+        (family === 'fable' ? others.find(l => l.kind.toLowerCase().includes('scoped')) : undefined))
+  return own ? { limit: own, label: `7d ${family}` } : { limit: limits.find(l => l.kind === 'seven_day'), label: '7d' }
+}
+
 export type BandInput = {
   now: number
   ctx: OverheadCtx | null
@@ -180,6 +200,7 @@ export type BandInput = {
   limits: OverheadLimit[]
   limitsLive: boolean
   cache: OverheadCache | null
+  model: string | null
 }
 
 // What to leave out, from least to most important, when the band is too narrow.
@@ -236,12 +257,15 @@ export function groups(b: BandInput, d: Detail): Span[][] {
     }
   }
 
-  for (const [kind, label] of LIMIT_LABELS) {
-    const l = b.limits.find(x => x.kind === kind)
-    // A window whose reset has passed is dropped, as the script did.
+  const weekly = weeklyWindow(b.limits, b.model)
+  const windows: [l: OverheadLimit | undefined, label: string, showReset: boolean][] = [
+    [b.limits.find(x => x.kind === 'five_hour'), '5h', d.reset5],
+    [weekly.limit, weekly.label, d.reset7],
+  ]
+  for (const [l, label, showReset] of windows) {
+    // A window whose reset has passed is dropped.
     if (!l || !l.resetsAt || Date.parse(l.resetsAt) <= b.now) continue
     const p = Math.trunc(l.percentUsed)
-    const showReset = kind === 'five_hour' ? d.reset5 : d.reset7
     const reset = showReset ? ` ↻${dur(Date.parse(l.resetsAt) - b.now)}` : ''
     out.push(
       b.limitsLive
