@@ -75,6 +75,18 @@ ctx ■■■□□□□□□□ 27% 271k/1M  ▁▂▄█▂▇▁ ↑3.4k | 
 
 颜色是同一条从冷到暖的 10 档色阶。百分比（上下文和额度）每 10% 升一档：0–29% 天蓝，90% 及以上深红；每根增长柱按它占窗口的比例落档，从 0.1% 起每翻一倍升一档。完整对照表见 [docs/design.md](docs/design.md#color-scale)。窗口变窄时，横条依次省掉柱状图、缓存和其它细节，上下文保留得最久。
 
+## 设计图
+
+布局、色阶阈值与状态规则，沿用上方预览的同一份虚构数据。提交材料使用[英文版](README.md#design-reference)；下面展示中文版。规则来源与重新生成方式见[设计说明](docs/design.md)。
+
+<p align="center">
+  <img src="assets/screenshots/design-layout-zh-cn.png" width="1000" alt="ccOverhead 布局与色阶设计图：桌面与终端画法、六档窄屏删减、深浅色调色板与颜色阈值">
+</p>
+
+<p align="center">
+  <img src="assets/screenshots/design-states-zh-cn.png" width="1000" alt="ccOverhead 状态设计图：实际与估算上下文、额度记忆、缓存冷热、会话重置、事件状态流与验证边界">
+</p>
+
 ## 原理
 
 ccOverhead 是一个函数钩子插件。它绘制输入框上方的 `AbovePrompt` 区域，读取 Claude Code 每轮结束后上报的上下文和用量限制（`session.measure`、`$.session.usage`），并观察主对话每次请求的缓存用量（`turn.step`）。显示的每个数字都是 Claude Code 本来就有的，不从你的文件里计算，也不发往任何地方。它依赖的 Claude Code 行为，以及每条在哪个版本上验证过，见 [docs/claude-code-integration.md](docs/claude-code-integration.md)。
