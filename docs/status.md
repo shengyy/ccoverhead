@@ -23,6 +23,9 @@ Claude Code raises the band's site (`AbovePrompt`) on the terminal and desktop s
 - In a headless session with the installed plugin: before the first response the plugin's state holds the
   window and the local estimate (about 13.8k tokens from `{ breakdown: 'summary' }`, about 20 ms, no
   request sent).
+- Installing from this repository: `claude plugin marketplace add shengyy/ccoverhead` then
+  `claude plugin install ccoverhead@ccoverhead` installs 1.0.0 enabled, the installed copy matches
+  `plugin/` file for file, and it loads and records its state in a headless session.
 
 Not verified: light themes (the text colors are tuned for dark ones), `/clear` resetting Claude Code's own
 plugin state (ccOverhead resets its values itself, covered by tests), plans other than Claude Pro.
