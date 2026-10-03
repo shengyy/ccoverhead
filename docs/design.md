@@ -12,6 +12,8 @@ ctx ■■■□□□□□□□ 27% 271k/1M  ▁▂▄█▂▇▁ ↑3.4k | 
 
 - Groups, left to right: context (bar, percentage, tokens, growth chart, `↑` latest growth), 5-hour quota,
   weekly quota, cache. A dim ` | ` separates groups.
+- The weekly label names the model family when the group shows the main model's own window: `7d fable`
+  instead of `7d`.
 - Labels (`ctx`, `5h`, `7d`, `cache`) are plain text. Figures take their tier's color. Secondary detail
   (tokens, countdowns, `↑`, remembered quota, the estimate) is dim.
 - Widths are counted in terminal cells. Narrowing drops the growth chart, the cache, the context tokens,

@@ -84,7 +84,7 @@ ctx ■■■□□□□□□□ 27% 271k/1M  ▁▂▄█▂▇▁ ↑3.4k | 
 |---|---|
 | `ctx` | Context used: bar, percentage, tokens. `~` marks the pre-response estimate |
 | Bars and `↑` | What each of the last seven turns added; `↑` is the latest turn |
-| `5h`, `7d` | Quota used in each window, and `↻` the time until it resets. Dim when remembered from an earlier session |
+| `5h`, `7d` | Quota used in each window, and `↻` the time until it resets. Dim when remembered from an earlier session. `7d` follows the main model's own weekly window when Claude Code reports one, such as `7d fable` (not verified) |
 | `cache` | `warm` with the minutes left on the cache, or `cold` |
 
 Colors follow one ten-step scale from cool to warm. Percentages (context and quota) move one step per 10%

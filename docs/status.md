@@ -28,7 +28,9 @@ Claude Code raises the band's site (`AbovePrompt`) on the terminal and desktop s
   `plugin/` file for file, and it loads and records its state in a headless session.
 
 Not verified: light themes (the text colors are tuned for dark ones), `/clear` resetting Claude Code's own
-plugin state (ccOverhead resets its values itself, covered by tests), plans other than Claude Pro.
+plugin state (ccOverhead resets its values itself, covered by tests), plans other than Claude Pro, and the
+weekly group following a model's own window (no such window has reached a plugin; covered by tests with a
+fictional one).
 
 Each Claude Code behavior these rely on, and the version it was checked against, is listed in
 [claude-code-integration.md](claude-code-integration.md).

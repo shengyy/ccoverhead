@@ -17,6 +17,10 @@ row when you rely on it in a new version, and add the version you checked.
 | `rateLimits` lists `five_hour` and `seven_day` with `percentUsed` and ISO `resetsAt` on a Claude subscription; it is empty off a subscription | 2.1.288 (Claude Pro) |
 | A `turn.step` result carries `usage` with `cache_read_input_tokens` and `cache_creation_input_tokens`; `agentId` is absent on the main thread | 2.1.288 |
 | Main-conversation cache writes are `ephemeral_1h`; ccOverhead counts warmth over one hour | 2.1.288 (Claude Pro only; other plans not verified) |
+| On a Claude Pro account without Fable access, `rateLimits` holds only `five_hour` and `seven_day` (all models); a Fable request is refused with "Fable 5.1 requires usage credits" and reports no windows | 2.1.288 |
+| `$.session.model()` returns the main loop's resolved model id (`claude-haiku-4-5-20251001`, `claude-fable-5-1`); `classic.PostModelSwitch` carries `from_model` and `to_model` | 2.1.288 |
+| Anthropic's usage data, as cached by Claude Code's `/usage` (not read by ccOverhead), names a model's own weekly window `weekly_scoped`, with the model in a separate `scope`; the one seen was Fable's, on an account with Fable access | seen in 2026-08, outside the plugin API |
+| Whether Claude Code passes a model's own weekly window to plugins in `rateLimits`, and under what kind (`SessionRateLimit` has no scope) | not verified |
 
 ## Session lifecycle
 

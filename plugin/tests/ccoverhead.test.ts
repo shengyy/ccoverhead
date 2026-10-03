@@ -11,7 +11,7 @@ import type {
   TurnStepResult,
 } from 'claude-code'
 
-import { gainTier, pctTier } from '../hooks/format'
+import { gainTier, modelFamily, pctTier, weeklyWindow } from '../hooks/format'
 
 const NOW = Date.parse('2026-10-03T15:00:00Z')
 const iso = (ms: number) => new Date(NOW + ms).toISOString()
@@ -116,6 +116,27 @@ async function tiers(ui: Mounted<Surface, 'AbovePrompt'>, surface: Surface, want
   expect([...source.matchAll(/<rect class="t(\d)"/g)].map(m => Number(m[1]))).toEqual(want)
   for (const t of want) expect(source).toContain(`.t${t}{fill:${TIER_HEX[t]}}`)
 }
+
+test('the weekly window follows the main model when one is named after it (not verified against a real window)', () => {
+  expect(['claude-fable-5-1', 'claude-opus-5-5', 'claude-haiku-4-5-20251001', 'some-other-model', null].map(modelFamily)).toEqual(['fable', 'opus', 'haiku', undefined, undefined])
+  const limits = [
+    { kind: 'five_hour', percentUsed: 74 },
+    { kind: 'seven_day', percentUsed: 65 },
+    { kind: 'seven_day_fable', percentUsed: 12 },
+  ]
+  expect(weeklyWindow(limits, 'claude-fable-5-1')).toEqual({ limit: limits[2], label: '7d fable' })
+  // No window of its own: the all-models one.
+  expect(weeklyWindow(limits, 'claude-opus-5-5')).toEqual({ limit: limits[1], label: '7d' })
+  expect(weeklyWindow(limits, null)).toEqual({ limit: limits[1], label: '7d' })
+  // A scoped window counts for Fable only, never relabelled as another model's.
+  const scoped = [
+    { kind: 'five_hour', percentUsed: 74 },
+    { kind: 'seven_day', percentUsed: 65 },
+    { kind: 'weekly_scoped', percentUsed: 30 },
+  ]
+  expect(weeklyWindow(scoped, 'claude-fable-5-1')).toEqual({ limit: scoped[2], label: '7d fable' })
+  expect(weeklyWindow(scoped, 'claude-opus-5-5')).toEqual({ limit: scoped[1], label: '7d' })
+})
 
 test('percent tiers step every 10% from tier 2', () => {
   expect([0, 29, 30, 49, 50, 69, 70, 89, 90, 100].map(pctTier)).toEqual([2, 2, 3, 4, 5, 6, 7, 8, 9, 9])
@@ -284,6 +305,45 @@ describe('ccoverhead', () => {
       await $.session.start(session(surface))
       const ui = await $.ui.mount(band(surface))
       expect(await ui.find({ type: 'Text', text: /^ ?-- \/1M$/ })).toBeDefined()
+    })
+
+    test(`switching to a model with its own weekly window shows that window (${surface})`, async ($, on) => {
+      let current = 'claude-fable-5-1'
+      on('session.start', ($, e) => ({ cwd: e.cwd }))
+      on('session.measure', ($, e) => ({ changed: e.changed }))
+      mock.store(on)
+      on('session.model', () => ({ value: current }))
+      on('classic.PostModelSwitch', () => ({}))
+      // A fictional model-specific window: Claude Code has not been seen reporting one.
+      const rateLimits: SessionRateLimit[] = [
+        { kind: 'five_hour', percentUsed: 74, resetsAt: iso(100 * MIN) },
+        { kind: 'seven_day', percentUsed: 65, resetsAt: iso(3 * 24 * 60 * MIN) },
+        { kind: 'seven_day_fable', percentUsed: 12, resetsAt: iso(3 * 24 * 60 * MIN) },
+      ]
+      on('session.usage', () => ({ value: { startedAt: 0, rateLimits, context: fill(40_000) } }))
+      mock.clock(on, { now: NOW })
+      await $.session.start(session(surface))
+      const ui = await $.ui.mount(band(surface))
+      expect(await ui.find({ type: 'Text', text: /^7d fable$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /^ ?12%$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /^ ?65%$/ })).toBeUndefined()
+
+      // /model opus: no window of its own, so the all-models week, at once.
+      current = 'claude-opus-5-5'
+      await $.classic.PostModelSwitch({
+        from_model: 'claude-fable-5-1',
+        to_model: current,
+        requested_model: 'opus',
+        source: 'command',
+        context_tokens: 40_000,
+        prompt_cache_warm: true,
+        cache_ttl: '1h',
+        estimated_cache_write_usd: 0,
+        pricing: 'catalog',
+      })
+      expect(await ui.find({ type: 'Text', text: /^7d$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /^ ?65%$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /fable/ })).toBeUndefined()
     })
 
     test(`/clear drops the old conversation's growth and cache (${surface})`, async ($, on) => {

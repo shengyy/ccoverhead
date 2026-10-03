@@ -12,6 +12,7 @@ the band from that state. External facts about the engine live in
  session.measure ───────┘        │                 ▲
                                  └─▶ $.store "limits" (last quota reading, across sessions)
  turn.step (main thread) ─────────────▶ $.state: cache
+ classic.PostModelSwitch, $.session.model() ─▶ $.state: model
  clock, every 30 s ─▶ $.ui.invalidate("ui.render")
                                                    │
  ui.render { AbovePrompt } ◀── read $.state ───────┘ ──▶ format.ts: fit → groups → spans
@@ -29,7 +30,7 @@ band by itself; the clock invalidates only so the countdowns keep time between t
 | `.claude-plugin/plugin.json` | Manifest; the only version source |
 | `hooks/hooks.json` | Names the hooks module |
 | `hooks/register.tsx` | Event hooks: loading figures, recording growth and cache, resetting on a new conversation, drawing per surface |
-| `hooks/format.ts` | Pure formatting: groups and spans, narrowing (`fit`), the color scale (`GAIN`, `pctTier`, `gainTier`), the desktop's Svg (`svgOf`, `items`) |
+| `hooks/format.ts` | Pure formatting: groups and spans, narrowing (`fit`), the weekly window for the model (`weeklyWindow`, `modelFamily`), the color scale (`GAIN`, `pctTier`, `gainTier`), the desktop's Svg (`svgOf`, `items`) |
 | `types/index.d.ts` | The `$.state` contract, `PluginState['ccoverhead']` |
 | `tests/ccoverhead.test.ts` | Behavior through the engine's test kit, on the terminal and desktop surfaces |
 
@@ -42,9 +43,10 @@ plugin from a folder (ignored by Git).
 |---|---|---|---|
 | `ctx` | `OverheadCtx \| null` | `session.start`, `session.measure`, `classic.SessionStart` | Window, tokens and percent of the last response, or the pre-response estimate |
 | `history` | `number[]` | the same | Up to eight context totals; reset on a drop or a new conversation |
-| `limits` | `OverheadLimit[]` | the same | The 5-hour and weekly windows |
+| `limits` | `OverheadLimit[]` | the same | Every window reported; the band shows the 5-hour one and one weekly one |
 | `limitsLive` | `boolean` | the same | Whether `limits` is this session's own reading (drawn in color) or remembered (dim) |
 | `cache` | `OverheadCache \| null` | `turn.step`, cleared by `classic.SessionStart` | When the last main-thread request finished and whether it touched the cache |
+| `model` | `string \| null` | load, `session.measure`, `classic.PostModelSwitch` | The main loop's model; picks its own weekly window (`weeklyWindow`) |
 
 `$.store` keeps one key, `limits`, written only when this session's own reading changes.
 
