@@ -1,0 +1,51 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please don't paste transcripts, prompts or anything from a real session.
+  - type: input
+    id: version
+    attributes:
+      label: ccOverhead version
+      description: "`claude plugin list` shows it."
+      placeholder: "1.0.0"
+    validations:
+      required: true
+  - type: input
+    id: claude-code
+    attributes:
+      label: Claude Code version
+      description: "`claude --version`"
+      placeholder: "2.1.288"
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where you saw it
+      options:
+        - Terminal
+        - Claude desktop app (Code tab)
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: OS, terminal and theme
+      placeholder: "macOS 27, Terminal.app, dark"
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected
+      description: A screenshot of the band helps.
+    validations:
+      required: true
+  - type: textarea
+    id: debug
+    attributes:
+      label: Debug log lines
+      description: "Run `claude --debug` and paste only lines that mention `ccoverhead`."
+      render: text

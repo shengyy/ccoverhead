@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <title>ccOverhead</title>
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2d2d2b"/>
+      <stop offset="1" stop-color="#1c1c1b"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="url(#tile)"/>
+  <rect x="0.5" y="0.5" width="127" height="127" rx="27.5" fill="none" stroke="#ffffff" stroke-opacity="0.08"/>
+  <!-- The gauge overhead: the band's ten tiers, safe (cool) to warning (warm). -->
+  <g fill="none" stroke-width="10">
+    <path d="M24.00 86.00 A40 40 0 0 1 25.26 76.05" stroke="#5965cd"/>
+    <path d="M26.04 73.37 A40 40 0 0 1 30.38 64.33" stroke="#4087de"/>
+    <path d="M31.97 62.04 A40 40 0 0 1 38.94 54.83" stroke="#37aae3"/>
+    <path d="M41.17 53.15 A40 40 0 0 1 50.06 48.51" stroke="#35c5db"/>
+    <path d="M52.71 47.63 A40 40 0 0 1 62.60 46.02" stroke="#49d6cc"/>
+    <path d="M65.40 46.02 A40 40 0 0 1 75.29 47.63" stroke="#b8e45c"/>
+    <path d="M77.94 48.51 A40 40 0 0 1 86.83 53.15" stroke="#f9e149"/>
+    <path d="M89.06 54.83 A40 40 0 0 1 96.03 62.04" stroke="#fea92f"/>
+    <path d="M97.62 64.33 A40 40 0 0 1 101.96 73.37" stroke="#fd7933"/>
+    <path d="M102.74 76.05 A40 40 0 0 1 104.00 86.00" stroke="#ed4b43"/>
+  </g>
+  <!-- The prompt beneath it. -->
+  <path d="M51 71 L61 80 L51 89" fill="none" stroke="#e8e6dc" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="66" y="84.5" width="15" height="5.5" rx="2.75" fill="#e8e6dc"/>
+</svg>
