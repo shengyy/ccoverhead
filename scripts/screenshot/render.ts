@@ -9,26 +9,10 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
 import { SEP, colorOf, fit, items, sparkCells } from '../../plugin/hooks/format'
-import type { BandInput } from '../../plugin/hooks/format'
+import { band } from './fixture'
 
 const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 const OUT = resolve(import.meta.dir, '../../assets/screenshots')
-const NOW = Date.parse('2026-10-04T09:00:00Z')
-const MIN = 60_000
-
-// A fictional session: 27% of a 1M window, seven turns of mixed weight, quota part-used, cache warm.
-const band: BandInput = {
-  now: NOW,
-  ctx: { tokens: 271_400, window: 1_000_000, percent: 27 },
-  history: [180_000, 181_200, 186_000, 198_000, 232_000, 236_500, 268_000, 271_400],
-  limits: [
-    { kind: 'five_hour', percentUsed: 42, resetsAt: new Date(NOW + 154 * MIN).toISOString() },
-    { kind: 'seven_day', percentUsed: 63, resetsAt: new Date(NOW + (2 * 24 * 60 + 7 * 60) * MIN).toISOString() },
-  ],
-  limitsLive: true,
-  cache: { at: NOW - 22 * MIN, warm: true },
-}
-
 const DIM = '#8b8a85'
 const INK = '#e8e6dc'
 const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;')
