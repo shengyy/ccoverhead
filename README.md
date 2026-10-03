@@ -92,11 +92,14 @@ from sky blue at 0–29% to red at 90% and above; each growth bar takes a step b
 doubling from 0.1%. The full table is in [docs/design.md](docs/design.md#color-scale). On a narrow window
 the band drops the chart, then the cache, then details, keeping the context longest.
 
-## Design reference
+## Design rationale
 
-Layout, color thresholds and state rules, using the same fictional figures as the previews above.
-The English sheets are the submission assets. See [the design specification](docs/design.md) for the
-source rules and how to regenerate them.
+Four signals, one quiet band. A shared cool-to-warm scale makes context pressure, heavy turns and quota
+use readable at a glance. On narrow windows, secondary details yield first so context stays visible.
+
+The sheets below cover layout, color thresholds and state rules using fictional figures. The English
+version is used for submissions. See [the design specification](docs/design.md) for the source rules
+and how to regenerate the diagrams.
 
 <p align="center">
   <img src="assets/screenshots/design-layout-en.png" width="1000" alt="ccOverhead layout and color reference: desktop and terminal rendering, six narrowing stages, dark and light palettes, and color thresholds">

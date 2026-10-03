@@ -88,3 +88,23 @@ bun scripts/screenshot/render.ts   # needs Google Chrome and ImageMagick
 
 It stages the band in a terminal frame and in a desktop frame, screenshots both at 2x with headless Chrome
 and trims them into `assets/screenshots/{terminal,desktop}.png`. Never commit screenshots of a real session.
+
+### Design rationale sheets
+
+The [English README](../README.md#design-rationale) and
+[Simplified Chinese README](../README.zh-CN.md#设计理念) embed matching layout/color and state/data sheets.
+English is the submission version; both languages live in `assets/screenshots/`:
+
+| Language | Layout and color | States and data |
+|---|---|---|
+| English | [design-layout-en.png](../assets/screenshots/design-layout-en.png) | [design-states-en.png](../assets/screenshots/design-states-en.png) |
+| Simplified Chinese | [design-layout-zh-cn.png](../assets/screenshots/design-layout-zh-cn.png) | [design-states-zh-cn.png](../assets/screenshots/design-states-zh-cn.png) |
+
+```bash
+bun scripts/screenshot/design.ts
+```
+
+The sheets use the plugin's formatter for the band, graphics, narrowing, palettes and thresholds. Both
+renderers share the fictional figures in `scripts/screenshot/fixture.ts`. One localized layout produces
+four 2x PNGs, with checks for horizontal overflow and untranslated English copy. The source rules remain
+here, in [PRODUCT.md](../PRODUCT.md) and in [status.md](status.md); the diagrams illustrate them.

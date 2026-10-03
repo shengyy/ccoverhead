@@ -9,6 +9,7 @@ only long-lived **current** facts that every maintainer needs; history lives in 
 | Document | Only responsibility |
 |---|---|
 | [README.md](../README.md) / [README.zh-CN.md](../README.zh-CN.md) | Entry for users: what it is, install, use. The two are kept in sync |
+| [plugin/README.md](../plugin/README.md) | English directory listing: a short user entry linking to the full README and English submission sheets |
 | [PRODUCT.md](../PRODUCT.md) | What ccOverhead does, its rules and its non-goals |
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | Human workflow: setup, checks, issues, pull requests |
 | [AGENTS.md](../AGENTS.md) / [CLAUDE.md](../CLAUDE.md) | Boundaries and routing for coding agents, loaded every session |
@@ -27,8 +28,8 @@ only long-lived **current** facts that every maintainer needs; history lives in 
 | `.claude-plugin/` | The marketplace manifest: this repository is its own marketplace |
 | `plugin/` | The mod: manifest, hooks module, `$.state` contract, tests |
 | `assets/brand/` | The logo source (SVG) |
-| `assets/screenshots/` | Rendered screenshots for the README; regenerate, never hand-edit |
-| `scripts/screenshot/` | The screenshot renderer and its fictional figures |
+| `assets/screenshots/` | Rendered README previews and bilingual design sheets; regenerate, never hand-edit |
+| `scripts/screenshot/` | The preview and design-sheet renderers and their shared fictional figures |
 | `docs/` | The documents above |
 | `.github/` | CI; issue and pull request templates |
 

@@ -9,7 +9,9 @@ All notable changes to ccOverhead are documented here. The format follows
 ### Added
 
 - Detailed design sheets for layout, color thresholds and state rules in English and Simplified Chinese,
-  embedded in the matching README. English is the submission version.
+  embedded under Design rationale in the matching README. English is the submission version.
+- An English README inside the plugin folder for the directory listing, linking to the full documentation
+  and English design sheets.
 
 ## [1.1.0] - 2026-10-04
 
