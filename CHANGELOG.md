@@ -12,7 +12,7 @@ All notable changes to ccOverhead are documented here. The format follows
   embedded under Design rationale in the matching README.
 - An English README inside the plugin folder for installation and usage, linking to the full documentation
   and design sheets.
-- A PNG directory icon rendered from the existing logo.
+- A PNG directory icon rendered from the existing logo and the display name `ccOverhead`.
 
 ### Fixed
 
