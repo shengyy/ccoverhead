@@ -91,9 +91,9 @@ and trims them into `assets/screenshots/{terminal,desktop}.png`. Never commit sc
 
 ### Design rationale sheets
 
-The [English README](../README.md#design-rationale) and
-[Simplified Chinese README](../README.zh-CN.md#设计理念) embed matching layout/color and state/data sheets.
-English is the submission version; both languages live in `assets/screenshots/`:
+The [README](../README.md#design-rationale) embeds English layout/color and state/data sheets. The optional
+[Simplified Chinese translation](../README.zh-CN.md#设计理念) includes localized versions of the same
+diagrams. Both live in `assets/screenshots/`:
 
 | Language | Layout and color | States and data |
 |---|---|---|

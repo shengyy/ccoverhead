@@ -27,7 +27,7 @@ and remaining limitations.
 ## Design rationale
 
 Four signals share one band and one visual scale. Secondary details yield first when space is tight,
-keeping context visible longest. The following English submission sheets use fictional figures and
+keeping context visible longest. The following diagrams use fictional figures and
 illustrate the [design specification](https://github.com/shengyy/ccoverhead/blob/main/docs/design.md).
 
 ![Layout and color: desktop and terminal drawing, narrowing stages, palettes and thresholds](https://raw.githubusercontent.com/shengyy/ccoverhead/main/assets/screenshots/design-layout-en.png)

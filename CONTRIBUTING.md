@@ -46,7 +46,7 @@ bun scripts/screenshot/design.ts
 Renders `assets/screenshots/{terminal,desktop}.png` and the bilingual `design-*.png` sheets from the
 plugin's own formatting code and shared fictional figures in `scripts/screenshot/fixture.ts`. Regenerate
 them when the band's look changes; never commit screenshots of a real session. The design sheets are
-embedded in the matching README, with English used for submissions.
+embedded in the matching README.
 
 ## Pull requests
 
