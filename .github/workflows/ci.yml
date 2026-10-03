@@ -1,0 +1,52 @@
+name: CI
+
+# PR checks: skipped while the PR is a draft (GitHub records them as skipped),
+# run once it is marked ready and on every later push. Merging into main does
+# not run them again. The "Protect main" ruleset requires `gate` and an
+# up-to-date branch. The type check needs declarations only a signed-in
+# session writes, so it stays a local check (CONTRIBUTING.md).
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: check
+    if: github.event.pull_request.draft == false
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Claude Code
+        run: |
+          curl -fsSL https://claude.ai/install.sh | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Claude Code version
+        run: claude --version
+      - name: Validate the marketplace and the plugin
+        run: |
+          claude plugin validate .
+          claude plugin validate plugin
+      - name: Test on the terminal and desktop surfaces
+        run: claude plugin test plugin
+      - name: Whitespace
+        run: git diff --check "$(git hash-object -t tree /dev/null)" HEAD
+
+  # The single required check.
+  gate:
+    name: gate
+    if: always() && github.event.pull_request.draft == false
+    needs: check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Every check passed
+        run: test "${{ needs.check.result }}" = "success"

@@ -1,0 +1,16 @@
+{
+  "name": "ccoverhead",
+  "description": "ccOverhead: context, per-turn growth, quota and prompt-cache warmth above the Claude Code prompt",
+  "owner": {
+    "name": "shengyy",
+    "url": "https://github.com/shengyy"
+  },
+  "plugins": [
+    {
+      "name": "ccoverhead",
+      "source": "./plugin",
+      "description": "Context window, each turn's growth, the 5-hour and weekly quota and prompt-cache warmth in one band above the prompt, on one safe-to-warning colour scale",
+      "category": "productivity"
+    }
+  ]
+}
