@@ -1,6 +1,7 @@
 import { describe, expect, mock, test } from 'claude-code/testing'
 import type { MountTarget, Mounted } from 'claude-code/testing'
 import type {
+  ClassicResultOf,
   SessionContextBreakdown,
   SessionContextUsage,
   SessionMeasureInput,
@@ -353,7 +354,12 @@ describe('ccoverhead', () => {
       mock.store(on)
       on('session.usage', ($, e) => ({ value: usage(tokens, [], e.breakdown !== undefined) }))
       // The lifecycle observer must preserve the settings hook's first-message and stop decisions.
-      const downstream = { additionalContext: 'Synthetic session instructions.', preventContinuation: true, stopReason: 'Synthetic stop.' }
+      const downstream: ClassicResultOf['classic.SessionStart'] = {
+        additionalContext: ['Synthetic session instructions.'],
+        initialUserMessage: 'Synthetic initial message.',
+        preventContinuation: true,
+        stopReason: 'Synthetic stop.',
+      }
       on('classic.SessionStart', () => {
         tokens = undefined
         return downstream
