@@ -97,9 +97,9 @@ the band drops the chart, then the cache, then details, keeping the context long
 Four signals, one quiet band. A shared cool-to-warm scale makes context pressure, heavy turns and quota
 use readable at a glance. On narrow windows, secondary details yield first so context stays visible.
 
-The sheets below cover layout, color thresholds and state rules using fictional figures. The English
-version is used for submissions. See [the design specification](docs/design.md) for the source rules
-and how to regenerate the diagrams.
+The diagrams below illustrate layout, color thresholds and state rules using fictional figures. See
+[the design specification](docs/design.md) for the rules and how to regenerate them, or view the
+[Simplified Chinese diagrams](README.zh-CN.md#设计理念).
 
 <p align="center">
   <img src="assets/screenshots/design-layout-en.png" width="1000" alt="ccOverhead layout and color reference: desktop and terminal rendering, six narrowing stages, dark and light palettes, and color thresholds">

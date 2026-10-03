@@ -93,7 +93,7 @@ and trims them into `assets/screenshots/{terminal,desktop}.png`. Never commit sc
 
 The [English README](../README.md#design-rationale) and
 [Simplified Chinese README](../README.zh-CN.md#设计理念) embed matching layout/color and state/data sheets.
-English is the submission version; both languages live in `assets/screenshots/`:
+Both languages live in `assets/screenshots/`:
 
 | Language | Layout and color | States and data |
 |---|---|---|
