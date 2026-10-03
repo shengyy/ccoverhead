@@ -34,11 +34,14 @@ export const register: Register = on => {
   // /clear, /resume and /branch start another conversation with no new session.start: the old
   // one's growth history and cache timestamp no longer apply, the account's quota still does.
   on('classic.SessionStart', { source: ['clear', 'resume', 'fork'] }, async ($, e, next) => {
-    const result = await next(e)
-    await update($, history, () => [])
-    await update($, cache, () => null)
-    await load($)
-    return result
+    // Return the chain's answer directly; refreshing our figures cannot change its first message.
+    try {
+      return await next(e)
+    } finally {
+      await update($, history, () => [])
+      await update($, cache, () => null)
+      await load($)
+    }
   })
 
   // After each turn, and whenever a quota window moves a point.
@@ -152,7 +155,7 @@ async function take($: EngineInterface, context: SessionContextUsage | undefined
     const next: OverheadCtx = { tokens: context.tokens, window: context.window, percent: context.percent }
     if (context.tokens !== undefined && context.tokens > 0) {
       const t = context.tokens
-      await update($, history, h => addSample(h, t))
+      await update($, history, samples => addSample(samples, t))
     } else {
       // No response in this window yet (new, cleared or just compacted): /context's local
       // estimate, which sends no request.

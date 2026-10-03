@@ -12,6 +12,12 @@ All notable changes to ccOverhead are documented here. The format follows
   embedded under Design rationale in the matching README.
 - An English README inside the plugin folder for installation and usage, linking to the full documentation
   and design sheets.
+- A PNG directory icon rendered from the existing logo and the display name `ccOverhead`.
+
+### Fixed
+
+- Directory validation of the hooks module: avoid the JSX compiler's reserved `h` name and return the
+  lifecycle hook's downstream result directly without changing the first message or permission decisions.
 
 ## [1.1.0] - 2026-10-04
 

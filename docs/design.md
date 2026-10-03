@@ -71,10 +71,12 @@ There, and only there:
 
 A gauge of the ten tiers arched overhead a prompt, `>_`: the band above the input, safe to warning. The
 source is `assets/brand/logo.svg` (128×128, its own dark tile, so it reads on light and dark pages). It
-does not reuse Anthropic's or Claude's marks. Render a PNG when one is needed:
+does not reuse Anthropic's or Claude's marks. The plugin includes a 1024×1024 PNG of this source at
+`plugin/.claude-plugin/icon.png` for the directory icon. Regenerate it with:
 
 ```bash
-rsvg-convert -w 512 -h 512 assets/brand/logo.svg -o <out.png>
+rsvg-convert -w 1024 -h 1024 assets/brand/logo.svg -o plugin/.claude-plugin/icon.png
+magick plugin/.claude-plugin/icon.png -strip plugin/.claude-plugin/icon.png
 ```
 
 ## Screenshots
