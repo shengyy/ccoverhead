@@ -6,6 +6,8 @@ All notable changes to ccOverhead are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-04
+
 ### Added
 
 - The weekly group follows the main model: when Claude Code reports a weekly window of the model's own, it
