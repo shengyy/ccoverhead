@@ -206,8 +206,10 @@ async function load($: EngineInterface) {
 
 // `withdrawn`: an empty reading means the windows went away, not that there is no reading yet.
 async function take($: EngineInterface, context: SessionContextUsage | undefined, rateLimits: SessionRateLimit[] | undefined, withdrawn: boolean) {
+  // Each reading's own breakdown, or none: one the engine refused this time is unknown, never the last one,
+  // which may describe a conversation since compacted or another model.
   const b = await localBreakdown($)
-  if (b) await update($, breakdown, () => slim(b))
+  await update($, breakdown, () => (b ? slim(b) : null))
   if (context?.window) {
     const m = await read($, model)
     const next: OverheadCtx = { tokens: context.tokens, window: context.window, percent: context.percent, ...(m && { model: m }) }

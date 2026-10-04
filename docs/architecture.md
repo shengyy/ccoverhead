@@ -50,11 +50,11 @@ plugin from a folder (ignored by Git).
 
 | Key | Type | Written by | Holds |
 |---|---|---|---|
-| `ctx` | `OverheadCtx \| null` | `session.start`, `session.measure`, `classic.SessionStart`, `command.run` | Window, tokens and percent of the last response, or the pre-response estimate; the auto-compaction threshold; the model the window was read for |
+| `ctx` | `OverheadCtx \| null` | `session.start`, `session.measure`, `classic.SessionStart`, `command.run`; `session.compact` drops its reading, `classic.PostModelSwitch` its threshold | Window, tokens and percent of the last response, or the pre-response estimate; the auto-compaction threshold; the model the window was read for |
 | `history` | `number[]` | the same, `session.compact` | Up to eight context totals; reset on a compaction, a drop or a new conversation |
 | `timeline` | `number[]` | the same, `session.compact` | Up to 48 context totals since the last compaction, for the pane |
 | `compactions` | `OverheadCompaction[]` | `session.compact`, a drop in `session.measure` | The last three compactions' sizes before and after |
-| `breakdown` | `OverheadBreakdown \| null` | the same; cleared by `session.compact` and a model switch | `/context`'s local count by category and by MCP server, without paths or file names |
+| `breakdown` | `OverheadBreakdown \| null` | the same; cleared by `session.compact` and a model switch | `/context`'s local count by category and by MCP server, without paths or file names; none when the last count was refused |
 | `limits` | `OverheadLimit[]` | the same | Every window reported; the band shows the 5-hour one, one weekly one and a spend limit |
 | `limitsLive` | `boolean` | the same | Whether `limits` is this session's own reading (drawn in color) or remembered (dim) |
 | `cache` | `OverheadCache \| null` | `turn.step`, `classic.PostModelSwitch`, cleared by `classic.SessionStart` | When the last main-thread request finished and whether it touched the cache |

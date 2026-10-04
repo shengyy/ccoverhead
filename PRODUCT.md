@@ -104,8 +104,9 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
   state, hit rate and token counts; every quota window with the share of its time gone beside the share
   used; the eight most recently active subagents with type, model family, last context total and growth.
 - The share of a window's time gone is a fact about the clock. Nothing is extrapolated from it.
-- A compaction or a switch to another model makes the breakdown stale: it goes until the next local count,
-  and a switch drops the old model's auto-compaction threshold with it.
+- The breakdown is always the latest local count's: a compaction or a switch to another model drops it at
+  once, and a count the engine refuses leaves none, never an older one. A switch also drops the old model's
+  auto-compaction threshold.
 
 ### Color
 

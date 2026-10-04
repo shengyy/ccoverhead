@@ -214,7 +214,7 @@ const states = `
   <table class="lifecycle"><thead><tr><th>触发</th><th>状态变化</th><th>画面规则</th></tr></thead><tbody>
     <tr><td>新会话 / 模块重载<br><code>session.start</code></td><td>加载宿主读数、主模型与额度记忆</td><td>有数字才绘制；首个回复前显示本地估算或窗口占位。</td></tr>
     <tr><td>新对话<br><code>/clear · /resume · /branch</code></td><td>清空增长历史与缓存时间，再加载读数</td><td>新的对话不带入旧增长或旧缓存状态；账户额度仍可沿用。</td></tr>
-    <tr><td>压缩<br><code>session.compact</code>（漏见时按总量下降补认）</td><td>增长历史重新开始，清除旧分类与本轮读数</td><td>不足两条总量时不显示增长图；缺回复读数时重新取本地估算。</td></tr>
+    <tr><td>压缩<br><code>session.compact</code>（漏见时按总量下降补认）</td><td>增长历史重新开始，旧分类作废</td><td>不足两条总量时不显示增长图；缺回复读数时重新取本地估算。</td></tr>
     <tr><td>主模型切换<br><code>classic.PostModelSwitch</code></td><td>更新主模型，用它选择周窗口；缓存变冷</td><td>宿主提供该模型周额度才显示；否则使用全模型周额度。此分支尚未实测。</td></tr>
   </tbody></table>
   <div class="section-heading"><span class="index">03</span><h2>事件写状态，绘制只读取</h2><span class="aside">每个事实只有一个来源</span></div>
@@ -311,7 +311,7 @@ const english: Record<string, string> = {
   '新的对话不带入旧增长或旧缓存状态；账户额度仍可沿用。': 'Do not carry over old growth or cache state. Account quota may still be reused.',
   '压缩': 'Compaction',
   '（漏见时按总量下降补认）': '(or a drop in the total, if unseen)',
-  '增长历史重新开始，清除旧分类与本轮读数': 'Restart growth history; drop the old breakdown and reading',
+  '增长历史重新开始，旧分类作废': 'Restart growth history; the old breakdown goes',
   '不足两条总量时不显示增长图；缺回复读数时重新取本地估算。': 'Hide growth with fewer than two totals. Without a response reading, get a fresh local estimate.',
   '主模型切换': 'Main model switches',
   '更新主模型，用它选择周窗口；缓存变冷': 'Update the main model and select its weekly window; the cache turns cold',

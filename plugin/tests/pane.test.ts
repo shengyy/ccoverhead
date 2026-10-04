@@ -161,10 +161,11 @@ describe('the /ccoverhead pane', () => {
     test(`a model switch or a compaction drops the old breakdown even when the next one is refused (${surface})`, async ($, on) => {
       let refuse = false
       let tokens: number | undefined = 431_000
+      let current = 'claude-opus-5-5'
       const SUMMARY = [{ role: 'user' as const, text: 'Fictional summary.', toolUses: [] }]
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
-      on('session.model', () => ({ value: 'claude-opus-5-5' }))
+      on('session.model', () => ({ value: current }))
       on('classic.PostModelSwitch', () => ({}))
       on('session.compact', () => ({ messages: SUMMARY, tokensBefore: 431_000, tokensAfter: 30_000 }))
       mock.store(on)
@@ -185,9 +186,10 @@ describe('the /ccoverhead pane', () => {
       expect(await ui.find({ type: 'Text', text: /^ ?at 967k$/ })).toBeDefined()
 
       // A switch to another model: its threshold is not the old one's.
+      current = 'claude-haiku-4-5-20251001'
       await $.classic.PostModelSwitch({
         from_model: 'claude-opus-5-5',
-        to_model: 'claude-haiku-4-5-20251001',
+        to_model: current,
         requested_model: 'haiku',
         source: 'command',
         context_tokens: 30_000,
@@ -198,6 +200,25 @@ describe('the /ccoverhead pane', () => {
       })
       await $.session.measure({ context: { window: 200_000, tokens: 100_000, percent: 50 }, rateLimits: [], changed: ['context'] })
       expect(await ui.find({ type: 'Text', text: /967k/ })).toBeUndefined()
+      expect(await ui.find({ type: 'Text', text: /^ ?100k of 200k$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /^ ?claude-haiku-4-5-20251001$/ })).toBeDefined()
+    })
+
+    test(`a compaction seen only as a drop drops the old breakdown when the next one is refused (${surface})`, async ($, on) => {
+      let refuse = false
+      on('session.start', ($, e) => ({ cwd: e.cwd }))
+      on('session.measure', ($, e) => ({ changed: e.changed }))
+      mock.store(on)
+      on('session.usage', ($, e) => (e.breakdown && refuse ? { deny: 'fictional refusal' } : { value: usage(80_000, [], e.breakdown !== undefined && DETAILED) }))
+      mock.clock(on, { now: NOW })
+      await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
+      await $.session.measure(measured(fill(80_000)))
+      const ui = await $.ui.mount(pane(surface))
+      expect(await ui.find({ type: 'Text', text: /^ *Messages$/ })).toBeDefined()
+      refuse = true
+      await $.session.measure(measured(fill(30_000)))
+      expect(await ui.find({ type: 'Text', text: /^ ?80k → 30k$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /^ *Messages$/ })).toBeUndefined()
     })
   }
 })
