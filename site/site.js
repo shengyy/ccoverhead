@@ -1,101 +1,73 @@
-// ccOverhead Website Interactivity
+// Small, local enhancements. The page's content, version and images are present without JavaScript.
+const status = document.getElementById('copy-status')
 
-const REPO = "shengyy/ccoverhead";
-
-// 1. Copy-to-clipboard buttons
-document.querySelectorAll(".copy-btn").forEach((button) => {
-  button.addEventListener("click", () => {
-    if (button.classList.contains("copied")) return;
-
-    const textToCopy = button.getAttribute("data-copy");
-    if (!textToCopy) return;
-
-    const label = button.querySelector("span") || button;
-    const originalText = label.textContent;
-
-    const onSuccess = () => {
-      button.classList.add("copied");
-      label.textContent = "Copied!";
+document.querySelectorAll('[data-copy-target], [data-copy-all]').forEach(button => {
+  button.addEventListener('click', async () => {
+    const text = button.hasAttribute('data-copy-all')
+      ? [...document.querySelectorAll('[data-install-command]')].map(code => code.textContent.trim()).join('\n')
+      : document.getElementById(button.dataset.copyTarget)?.textContent.trim()
+    if (!text) return
+    try {
+      await navigator.clipboard.writeText(text)
+      status.textContent = button.hasAttribute('data-copy-all') ? 'All three commands copied.' : 'Command copied.'
+      const label = button.textContent
+      button.textContent = 'Copied'
+      button.disabled = true
       setTimeout(() => {
-        button.classList.remove("copied");
-        label.textContent = originalText;
-      }, 2000);
-    };
-
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(textToCopy).then(onSuccess).catch(() => {});
-    } else {
-      const ta = document.createElement("textarea");
-      ta.value = textToCopy;
-      ta.style.position = "fixed";
-      ta.style.opacity = "0";
-      document.body.appendChild(ta);
-      ta.select();
-      try {
-        if (document.execCommand("copy")) onSuccess();
-      } catch (_) {}
-      document.body.removeChild(ta);
-    }
-  });
-});
-
-// 2. Surface Switcher (Desktop vs Terminal)
-const previewImg = document.getElementById("preview-img");
-const surfaceTabs = document.querySelectorAll(".surface-tab");
-
-surfaceTabs.forEach((tab) => {
-  tab.addEventListener("click", () => {
-    surfaceTabs.forEach((t) => {
-      t.classList.remove("active");
-      t.setAttribute("aria-selected", "false");
-    });
-    tab.classList.add("active");
-    tab.setAttribute("aria-selected", "true");
-
-    const surface = tab.getAttribute("data-surface");
-    if (surface === "terminal") {
-      previewImg.src = "assets/screenshots/terminal.png";
-      previewImg.alt = "ccOverhead band in terminal session";
-    } else {
-      previewImg.src = "assets/screenshots/desktop.png";
-      previewImg.alt = "ccOverhead band in Claude desktop app";
-    }
-  });
-});
-
-// 3. Design Rationale Diagram Language Switcher
-const sheetLayout = document.getElementById("sheet-layout");
-const sheetStates = document.getElementById("sheet-states");
-const langButtons = document.querySelectorAll(".lang-btn");
-
-langButtons.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    langButtons.forEach((b) => b.classList.remove("active"));
-    btn.classList.add("active");
-
-    const lang = btn.getAttribute("data-lang");
-    if (lang === "zh-cn") {
-      sheetLayout.src = "assets/screenshots/design-layout-zh-cn.png";
-      sheetStates.src = "assets/screenshots/design-states-zh-cn.png";
-    } else {
-      sheetLayout.src = "assets/screenshots/design-layout-en.png";
-      sheetStates.src = "assets/screenshots/design-states-en.png";
-    }
-  });
-});
-
-// 4. Fetch latest release version from GitHub API
-fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
-  headers: { Accept: "application/vnd.github+json" },
-})
-  .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
-  .then((release) => {
-    if (release.tag_name) {
-      document.querySelectorAll("[data-version]").forEach((el) => {
-        el.textContent = release.tag_name;
-      });
+        button.textContent = label
+        button.disabled = false
+      }, 1800)
+    } catch {
+      status.textContent = 'Copy is unavailable. Select the command above to copy it.'
     }
   })
-  .catch(() => {
-    // Keep fallback version on error or offline
-  });
+})
+
+const tabs = [...document.querySelectorAll('[role="tab"]')]
+const bandImage = document.getElementById('band-image')
+const bandPanel = document.getElementById('band-preview')
+const caption = document.getElementById('band-caption')
+function selectSurface(tab) {
+  tabs.forEach(item => {
+    const selected = item === tab
+    item.setAttribute('aria-selected', String(selected))
+    item.tabIndex = selected ? 0 : -1
+  })
+  bandImage.src = tab.dataset.image
+  bandImage.alt = tab.dataset.alt
+  bandImage.removeAttribute('width')
+  bandImage.removeAttribute('height')
+  caption.textContent = tab.dataset.caption
+  bandPanel.setAttribute('aria-labelledby', tab.id)
+}
+tabs.forEach((tab, index) => {
+  tab.addEventListener('click', () => selectSurface(tab))
+  tab.addEventListener('keydown', event => {
+    let next
+    if (event.key === 'ArrowRight') next = tabs[(index + 1) % tabs.length]
+    if (event.key === 'ArrowLeft') next = tabs[(index + tabs.length - 1) % tabs.length]
+    if (event.key === 'Home') next = tabs[0]
+    if (event.key === 'End') next = tabs.at(-1)
+    if (!next) return
+    event.preventDefault()
+    selectSurface(next)
+    next.focus()
+  })
+})
+
+document.querySelectorAll('[data-language]').forEach(button => {
+  button.addEventListener('click', () => {
+    const language = button.dataset.language
+    document.querySelectorAll('[data-language]').forEach(item => {
+      item.setAttribute('aria-pressed', String(item === button))
+    })
+    for (const kind of ['layout', 'states']) {
+      const image = document.getElementById(`${kind}-sheet`)
+      const address = new URL(image.src)
+      address.pathname = address.pathname.replace(/-(en|zh-cn)\.png$/, `-${language}.png`)
+      image.src = address.href
+      image.alt = `${language === 'en' ? 'English' : 'Simplified Chinese'} design reference: ${kind === 'layout' ? 'layout, narrowing and color scale' : 'states, data flow and verification boundaries'}`
+      document.getElementById(`${kind}-sheet-link`).href = address.href
+    }
+  })
+})

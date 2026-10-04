@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { CACHE_TTL_MS, DEGRADE, HISTORY, cells, colorOf, fit, gainTier, groups, items, pctTier, svgOf, width, SEP } from '../../plugin/hooks/format'
 import type { BandInput, Span } from '../../plugin/hooks/format'
-import { band } from './fixture'
+import { band, rewriting } from './fixture'
 
 const REPO = resolve(import.meta.dir, '../..')
 const OUT = join(REPO, 'assets/screenshots')
@@ -41,7 +41,6 @@ const featureDescriptions = [
 ]
 const steps = ['完整信息', '隐藏增长图与 ↑', '再隐藏缓存改写', '再隐藏缓存', '再隐藏 token 数', '再隐藏每周倒计时', '再隐藏 5 小时倒计时']
 // A turn that rewrote the cache, so the narrowing table shows that step too.
-const rewriting: BandInput = { ...band, rewrite: 41_000 }
 const responsive = DEGRADE.map((detail, i) => {
   const gs = groups(rewriting, detail)
   return `<div class="responsive-row"><span class="step-no">${String(i + 1).padStart(2, '0')}</span><span class="step-label">${steps[i]}</span><code class="demo-band">${terminal(gs)}</code><span class="cell-count">${width(gs)} cells</span></div>`

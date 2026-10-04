@@ -48,6 +48,18 @@ plugin's own formatting code and shared fictional figures in `scripts/screenshot
 them when the band's look changes; never commit screenshots of a real session. The design sheets are
 embedded in the matching README.
 
+The same renderer also writes `cache-rewrite.png` and `agent.png` for the website's state previews.
+
+### Website
+
+```bash
+bun scripts/site/build.ts
+```
+
+Assembles `_site/` for GitHub Pages from `site/` and the shared assets, inserting the version from the
+plugin manifest and the color scale from its formatter. `_site/` is generated and ignored. The Pages
+workflow runs this build when the website, assets, builder, version or palette changes on `main`.
+
 ## Pull requests
 
 `main` is protected for everyone, maintainers included: no direct pushes, changes land through pull

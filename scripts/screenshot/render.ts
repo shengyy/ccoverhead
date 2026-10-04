@@ -3,15 +3,15 @@
 //
 //   bun scripts/screenshot/render.ts
 //
-// Writes assets/screenshots/{terminal,desktop,pane}.png at 2x, trimmed to the scene. Needs ImageMagick too.
+// Writes band, pane, cache-rewrite and subagent previews at 2x, trimmed to the scene. Needs ImageMagick too.
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
-import type { Span } from '../../plugin/hooks/format'
+import type { BandInput, Span } from '../../plugin/hooks/format'
 import { SEP, cells, colorOf, fit, items } from '../../plugin/hooks/format'
 import { LABEL, paneLines } from '../../plugin/hooks/pane'
-import { band, pane } from './fixture'
+import { agentView, band, pane, rewriting } from './fixture'
 
 const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 const OUT = resolve(import.meta.dir, '../../assets/screenshots')
@@ -63,8 +63,8 @@ function paneShot(): string {
 }
 
 // The desktop draws in a proportional font: each group a row spaced by gap, the bar and sparkline as Svg.
-function desktop(): string {
-  const groups = fit(band, 110).map(
+function desktop(input: BandInput = band, width = 110, detail?: string): string {
+  const groups = fit(input, width).filter(group => !detail || group[0]?.text === detail).map(
     g =>
       `<span class="group">${items(g)
         .map(it =>
@@ -76,7 +76,7 @@ function desktop(): string {
   )
   return page(
     'desktop',
-    `<div class="app">
+    `<div class="app"${detail ? ' style="min-width:440px"' : ''}>
       <div class="card"><div class="row">${groups.join(`<span style="color:${DIM}">|</span>`)}</div></div>
       <div class="input">Type / for commands<span class="send">↵</span></div>
     </div>`,
@@ -96,7 +96,7 @@ function page(kind: string, body: string): string {
     .term .status { color: ${DIM} }
     .term .pane { white-space: pre; border: 1px solid #4a4640; border-radius: 6px; padding: 8px 14px }
     .term .pane .head { font-weight: 700; margin-top: 12px } .term .pane .pane-title { color: ${DIM} }
-    .app { font: 15px -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; color: ${INK}; width: 820px }
+    .app { font: 15px -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; color: ${INK}; width: max-content; min-width: 820px }
     .card { background: #212121; border-radius: 16px; padding: 14px 18px }
     .row, .group { display: flex; align-items: center; gap: 7px } .row { gap: 9px }
     .input { margin-top: 10px; border: 1px solid #3a3a38; border-radius: 16px; padding: 16px 18px; color: #8b8a85;
@@ -109,6 +109,8 @@ for (const [name, html, width, height] of [
   ['terminal', terminal(), 1100, 320],
   ['desktop', desktop(), 900, 320],
   ['pane', paneShot(), 1000, 1100],
+  ['cache-rewrite', desktop(rewriting, 160, 'cache'), 620, 320],
+  ['agent', desktop(agentView, 110, 'agent'), 620, 320],
 ] as const) {
   const file = join(dir, `${name}.html`)
   writeFileSync(file, html)
@@ -124,7 +126,7 @@ for (const [name, html, width, height] of [
   if (shot.exitCode !== 0) throw new Error(`Chrome failed on ${name}: ${shot.stderr.toString()}`)
   // Crop to the scene and give it an even margin of the page colour.
   const png = join(OUT, `${name}.png`)
-  const trim = Bun.spawnSync(['magick', png, '-trim', '+repage', '-bordercolor', '#141413', '-border', '32', png])
+  const trim = Bun.spawnSync(['magick', png, '-trim', '+repage', '-bordercolor', '#141413', '-border', '32', '-strip', png])
   if (trim.exitCode !== 0) throw new Error(`ImageMagick failed on ${name}: ${trim.stderr.toString()}`)
   console.log(`assets/screenshots/${name}.png`)
 }

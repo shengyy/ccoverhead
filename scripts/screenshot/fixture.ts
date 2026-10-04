@@ -20,6 +20,21 @@ export const band: BandInput = {
   model: null,
 }
 
+export const rewriting: BandInput = { ...band, rewrite: 41_000 }
+
+export const agentView: BandInput = {
+  ...band,
+  view: {
+    agent: {
+      id: 'fictional-view',
+      label: 'Explore',
+      model: 'claude-opus-5-5',
+      totals: [58_000, 62_100, 72_200, 98_000, 111_400, 124_000],
+    },
+    window: band.ctx!.window,
+  },
+}
+
 // The pane over the same session: one compaction behind it, two MCP servers and one subagent.
 export const pane: PaneInput = {
   ...band,
