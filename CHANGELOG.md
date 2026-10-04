@@ -6,6 +6,14 @@ All notable changes to ccOverhead are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- A quota reset time that does not parse is treated as none: the band no longer shows `↻NaNm`.
+- The pane cuts a long quota window name to its column instead of wrapping the line.
+- A subagent the agent list did not have at its first request is named once the list has it.
+- The pane says where auto-compaction runs only where the band draws the mark, not for a threshold at or
+  past the window's end.
+
 ## [1.3.0] - 2026-10-04
 
 ### Added

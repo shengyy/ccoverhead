@@ -13,7 +13,7 @@ the band from that state. External facts about the engine live in
  command.run ccoverhead ┘    breakdown 'summary')
  session.compact, main thread ────▶ $.state: compactions; history, timeline restart
  turn.step, main thread ──────────▶ $.state: cache, cacheStats
- turn.step, a subagent ($.agent.list once) ─▶ $.state: agents
+ turn.step, a subagent ($.agent.list until typed) ─▶ $.state: agents
  classic.PostModelSwitch, $.session.model() ─▶ $.state: model, cacheTtl, cache (cold)
  clock, every 30 s ─▶ $.ui.invalidate("ui.render")
                                                    │

@@ -10,20 +10,13 @@ export const COMPACTIONS = 3
 // Subagents kept, the most recently active last.
 export const AGENTS = 8
 
-// A new total: append when it changed, restart on a drop (compaction), keep the last HISTORY.
-export function addSample(history: number[], tokens: number): number[] {
+// A new total: append when it changed, restart on a drop (compaction), keep the last `keep` (HISTORY for the
+// band, TIMELINE for the pane).
+export function addSample(history: number[], tokens: number, keep = HISTORY): number[] {
   const last = history.at(-1)
   if (last === tokens) return history
   if (last !== undefined && tokens < last) return [tokens]
-  return [...history, tokens].slice(-HISTORY)
-}
-
-// The same for the pane, which keeps more of them.
-export function addTimeline(timeline: number[], tokens: number): number[] {
-  const last = timeline.at(-1)
-  if (last === tokens) return timeline
-  if (last !== undefined && tokens < last) return [tokens]
-  return [...timeline, tokens].slice(-TIMELINE)
+  return [...history, tokens].slice(-keep)
 }
 
 // A compaction appended to the last few.
@@ -78,12 +71,8 @@ export function hitRate(stats: OverheadCacheStats): number | undefined {
 export function addAgentStep(agents: OverheadAgent[], id: string, model: string, u: StepUsage, label?: string): OverheadAgent[] {
   const total = (u.input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0)
   const before = agents.find(a => a.id === id)
-  const agent: OverheadAgent = {
-    id,
-    model,
-    totals: addSample(before?.totals ?? [], total),
-    ...((label ?? before?.label) !== undefined && { label: label ?? before?.label }),
-  }
+  const type = label ?? before?.label
+  const agent: OverheadAgent = { id, model, totals: addSample(before?.totals ?? [], total), ...(type !== undefined && { label: type }) }
   return [...agents.filter(a => a.id !== id), agent].slice(-AGENTS)
 }
 

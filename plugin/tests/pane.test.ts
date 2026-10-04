@@ -132,6 +132,53 @@ describe('the /ccoverhead pane', () => {
       expect(await ui.find({ type: 'Text', text: /^ ?· on screen$/ })).toBeDefined()
     })
 
+    test(`names a subagent once the agent list has it (${surface})`, async ($, on) => {
+      let listed = false
+      on('session.start', ($, e) => ({ cwd: e.cwd }))
+      on('session.measure', ($, e) => ({ changed: e.changed }))
+      // The list does not have the agent at its first request.
+      on('agent.list', () => ({ value: listed ? [{ id: 'a1', type: 'Explore', description: 'fictional', status: 'running' as const }] : [] }))
+      mock.store(on)
+      on('session.usage', () => ({ value: usage(40_000, [], false) }))
+      let read = 0
+      on('turn.step', async function* () {
+        return cached(read, 11_000)
+      })
+      mock.clock(on, { now: NOW })
+      await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
+      for (const r of [0, 11_000]) {
+        read = r
+        for await (const _ of $.turn.step({ ...STEP, agentId: 'a1' })) {
+          // drain
+        }
+        listed = true
+      }
+      const ui = await $.ui.mount(pane(surface))
+      expect(await ui.find({ type: 'Text', text: /^ ?Explore$/ })).toBeDefined()
+    })
+
+    test(`odd readings: a long window name fits its column, a bad reset shows none, an unreachable threshold says nothing (${surface})`, async ($, on) => {
+      on('session.start', ($, e) => ({ cwd: e.cwd }))
+      on('session.measure', ($, e) => ({ changed: e.changed }))
+      on('session.model', () => ({ value: 'claude-opus-5-5' }))
+      mock.store(on)
+      // Fictional: a window kind ccOverhead has no name for, a reset time that does not parse, and an
+      // auto-compaction threshold past the window's end.
+      const limits = [
+        { kind: 'seven_day_fictional', percentUsed: 10, resetsAt: iso(24 * 60 * MIN) },
+        { kind: 'five_hour', percentUsed: 20, resetsAt: 'soon' },
+      ]
+      on('session.usage', ($, e) => ({ value: usage(300_000, limits, e.breakdown !== undefined && { ...BREAKDOWN, autoCompactThreshold: 1_200_000 }) }))
+      mock.clock(on, { now: NOW })
+      await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
+      await $.session.measure(measured(fill(300_000, 30), limits))
+      const ui = await $.ui.mount(pane(surface))
+      expect(await ui.find({ type: 'Text', text: /^seven_day_…$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /^ ?20%$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /NaN/ })).toBeUndefined()
+      expect(await ui.find({ type: 'Text', text: /^compacts$/ })).toBeUndefined()
+    })
+
     test(`a pane the surface cannot place yet still writes nothing to the conversation (${surface})`, async ($, on) => {
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('command.register', ($, e) => ({ value: { command: e.name } }))

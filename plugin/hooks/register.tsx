@@ -9,7 +9,7 @@ import { bandRich, bandTerminal, paneRich, paneTerminal } from './draw'
 import { CACHE_TTL_MS, fit } from './format'
 import type { AgentView, BandInput } from './format'
 import { paneLines } from './pane'
-import { NO_CACHE_STATS, addAgentStep, addCompaction, addSample, addStep, addTimeline, baseModel, clearRewrite, compacted } from './track'
+import { NO_CACHE_STATS, TIMELINE, addAgentStep, addCompaction, addSample, addStep, baseModel, clearRewrite, compacted } from './track'
 
 // Session-long values the host keeps across a reload of this module.
 const ctx = atom({ plugin: 'ccoverhead', key: 'ctx' } as const, null as OverheadCtx | null)
@@ -123,8 +123,9 @@ export const register: Register = on => {
       await update($, cacheStats, s => addStep(s ?? NO_CACHE_STATS, u, e.turnId))
     } else {
       const id = e.agentId
-      const known = (await read($, agents)).some(a => a.id === id)
-      const label = known ? undefined : await agentType($, id)
+      // Its type, asked again on each request until the agent list has it.
+      const labelled = (await read($, agents)).some(a => a.id === id && a.label !== undefined)
+      const label = labelled ? undefined : await agentType($, id)
       await update($, agents, list => addAgentStep(list ?? [], id, u.model, u, label))
     }
     return result
@@ -222,7 +223,7 @@ async function take($: EngineInterface, context: SessionContextUsage | undefined
       const t = context.tokens
       const before = (await read($, timeline)).at(-1)
       await update($, history, samples => addSample(samples, t))
-      await update($, timeline, samples => addTimeline(samples, t))
+      await update($, timeline, samples => addSample(samples, t, TIMELINE))
       // A drop no compaction event announced (one this plugin did not see): treated as one. Its first request
       // has already run, so it stays the base the next one is compared with; only a rewrite mark goes.
       if (before !== undefined && t < before) {
@@ -298,7 +299,12 @@ function withoutThreshold({ compactAt: _, ...rest }: OverheadCtx): OverheadCtx {
   return rest
 }
 
-// Every window reported, so a model's own weekly window is at hand when the model switches.
+// Every window reported, so a model's own weekly window is at hand when the model switches. A reset time that
+// does not parse is treated as none.
 function pick(rateLimits: SessionRateLimit[] | undefined): OverheadLimit[] {
-  return (rateLimits ?? []).map(l => ({ kind: l.kind, percentUsed: l.percentUsed, resetsAt: l.resetsAt }))
+  return (rateLimits ?? []).map(({ kind, percentUsed, resetsAt }) => ({
+    kind,
+    percentUsed,
+    ...(resetsAt !== undefined && !Number.isNaN(Date.parse(resetsAt)) && { resetsAt }),
+  }))
 }
