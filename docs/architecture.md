@@ -51,10 +51,10 @@ plugin from a folder (ignored by Git).
 | Key | Type | Written by | Holds |
 |---|---|---|---|
 | `ctx` | `OverheadCtx \| null` | `session.start`, `session.measure`, `classic.SessionStart`, `command.run` | Window, tokens and percent of the last response, or the pre-response estimate; the auto-compaction threshold; the model the window was read for |
-| `history` | `number[]` | the same | Up to eight context totals; reset on a drop or a new conversation |
+| `history` | `number[]` | the same, `session.compact` | Up to eight context totals; reset on a compaction, a drop or a new conversation |
 | `timeline` | `number[]` | the same, `session.compact` | Up to 48 context totals since the last compaction, for the pane |
 | `compactions` | `OverheadCompaction[]` | `session.compact`, a drop in `session.measure` | The last three compactions' sizes before and after |
-| `breakdown` | `OverheadBreakdown \| null` | the same | `/context`'s local count by category and by MCP server, without paths or file names |
+| `breakdown` | `OverheadBreakdown \| null` | the same; cleared by `session.compact` and a model switch | `/context`'s local count by category and by MCP server, without paths or file names |
 | `limits` | `OverheadLimit[]` | the same | Every window reported; the band shows the 5-hour one, one weekly one and a spend limit |
 | `limitsLive` | `boolean` | the same | Whether `limits` is this session's own reading (drawn in color) or remembered (dim) |
 | `cache` | `OverheadCache \| null` | `turn.step`, `classic.PostModelSwitch`, cleared by `classic.SessionStart` | When the last main-thread request finished and whether it touched the cache |
@@ -70,7 +70,7 @@ plugin from a folder (ignored by Git).
 `format.ts` builds the band once as groups of spans, and `pane.ts` the pane as lines of a label and spans.
 A span's `text` is what the terminal draws and what widths are counted in; `tier` is its color on the
 scale; a span with `bar`, `spark` or `ring` is a graphic. `draw.tsx` renders spans as nested `Text` on the
-terminal, the sparkline and a marked bar piece by piece (`cells`), and a ring not at all. Elsewhere it
+terminal, the sparkline and a marked bar piece by piece (`cells`), and a ring as its one-cell gauge text. Elsewhere it
 renders each group or line as a `Box` row spaced by `gap`, trims text to drop the spaces the terminal
 needs, and turns graphic spans into `Svg` with their own light-theme colors. The look is specified in
 [design.md](design.md).

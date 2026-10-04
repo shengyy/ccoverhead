@@ -19,6 +19,8 @@ const pane = <P extends RenderSurface>(surface: P): MountTarget<P, 'Pane'> => ({
 const DETAILED = {
   ...BREAKDOWN,
   totalTokens: 427_200,
+  percentage: 43,
+  apiUsage: { input_tokens: 2, output_tokens: 300, cache_read_input_tokens: 400_000, cache_creation_input_tokens: 31_000 },
   autoCompactThreshold: 967_000,
   categories: [
     { name: 'System prompt', tokens: 7_100, color: 'promptBorder', isDeferred: false, kind: 'used' as const },
@@ -153,6 +155,48 @@ describe('the /ccoverhead pane', () => {
       refuse = true
       await $.classic.SessionStart({ source: 'clear' })
       expect(await ui.find({ type: 'Text', text: /^ *Messages$/ })).toBeUndefined()
+      expect(await ui.find({ type: 'Text', text: /967k/ })).toBeUndefined()
+    })
+
+    test(`a model switch or a compaction drops the old breakdown even when the next one is refused (${surface})`, async ($, on) => {
+      let refuse = false
+      let tokens: number | undefined = 431_000
+      const SUMMARY = [{ role: 'user' as const, text: 'Fictional summary.', toolUses: [] }]
+      on('session.start', ($, e) => ({ cwd: e.cwd }))
+      on('session.measure', ($, e) => ({ changed: e.changed }))
+      on('session.model', () => ({ value: 'claude-opus-5-5' }))
+      on('classic.PostModelSwitch', () => ({}))
+      on('session.compact', () => ({ messages: SUMMARY, tokensBefore: 431_000, tokensAfter: 30_000 }))
+      mock.store(on)
+      on('session.usage', ($, e) => (e.breakdown && refuse ? { deny: 'fictional refusal' } : { value: usage(tokens, [], e.breakdown !== undefined && DETAILED) }))
+      mock.clock(on, { now: NOW })
+      await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
+      await $.session.measure(measured(fill(431_000)))
+      const ui = await $.ui.mount(pane(surface))
+      expect(await ui.find({ type: 'Text', text: /^ *Messages$/ })).toBeDefined()
+
+      // A compaction, then a reading with no response yet and a refused breakdown.
+      refuse = true
+      await $.session.compact({ trigger: 'manual', messages: SUMMARY })
+      tokens = undefined
+      await $.session.measure({ context: { window: 1_000_000 }, rateLimits: [], changed: ['context'] })
+      expect(await ui.find({ type: 'Text', text: /^ *Messages$/ })).toBeUndefined()
+      // The threshold is the model's, not the conversation's: it stays.
+      expect(await ui.find({ type: 'Text', text: /^ ?at 967k$/ })).toBeDefined()
+
+      // A switch to another model: its threshold is not the old one's.
+      await $.classic.PostModelSwitch({
+        from_model: 'claude-opus-5-5',
+        to_model: 'claude-haiku-4-5-20251001',
+        requested_model: 'haiku',
+        source: 'command',
+        context_tokens: 30_000,
+        prompt_cache_warm: true,
+        cache_ttl: '1h',
+        estimated_cache_write_usd: 0,
+        pricing: 'catalog',
+      })
+      await $.session.measure({ context: { window: 200_000, tokens: 100_000, percent: 50 }, rateLimits: [], changed: ['context'] })
       expect(await ui.find({ type: 'Text', text: /967k/ })).toBeUndefined()
     })
   }

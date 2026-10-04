@@ -556,5 +556,39 @@ describe('ccoverhead', () => {
       await $.session.measure({ context: fill(40_000, 4), rateLimits: [], changed: ['rateLimits'] })
       expect(await ui.find({ type: 'Text', text: /^spend$/ })).toBeUndefined()
     })
+
+    test(`a compaction seen only as a drop keeps its first request as the base for the next (${surface})`, async ($, on) => {
+      const steps: [turnId: string, read: number, write: number][] = [
+        ['t1', 0, 80_000],
+        ['t2', 0, 30_000], // the compaction's first request, the compaction itself unseen
+        ['t3', 0, 31_000], // an hour later: the cache lapsed, a real rewrite
+      ]
+      let at = 0
+      on('session.start', ($, e) => ({ cwd: e.cwd }))
+      on('session.measure', ($, e) => ({ changed: e.changed }))
+      mock.store(on)
+      on('session.usage', () => ({ value: usage(80_000, [], false) }))
+      on('turn.step', async function* () {
+        const [turnId, read, write] = steps[at++]!
+        return { ...cached(read, write), turnId }
+      })
+      const clock = mock.clock(on, { now: NOW })
+      await $.session.start(session(surface))
+      const ui = await $.ui.mount(band(surface))
+      const step = async (turnId: string) => {
+        for await (const _ of $.turn.step({ ...STEP, turnId })) {
+          // drain
+        }
+      }
+      await step('t1')
+      await $.session.measure(measured(fill(80_000, 8)))
+      await step('t2')
+      await $.session.measure(measured(fill(30_000, 3)))
+      // The drop marks the compaction: its request is no rewrite.
+      expect(await ui.find({ type: 'Text', text: /rewrote/ })).toBeUndefined()
+      await clock.advance(61 * MIN)
+      await step('t3')
+      expect(await ui.find({ type: 'Text', text: /^ ?rewrote 31k$/ })).toBeDefined()
+    })
   }
 })

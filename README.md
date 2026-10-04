@@ -51,7 +51,7 @@ and opens the detail behind them in a pane when you ask.
 - **Subagents too.** Open a subagent's transcript and the band follows that agent's context and growth.
 - **The `/ccoverhead` pane.** What is in the window by category (which MCP server costs what), growth since
   the last compaction and each compaction, the cache's hit rate, every quota window with how much of its
-  time is gone, and each subagent. It also works in VS Code and the mobile app, where the band is not drawn.
+  time is gone, and the eight most recently active subagents. It also works in VS Code and the mobile app, where the band is not drawn.
 - **One color language.** Cool means safe, yellow means caution, warm to red means warning, the same for
   every number in the band. The scale stays readable for red-green color-blind users.
 - **Terminal and desktop.** One line of text in the terminal; crisp vector bars and a draining cache ring

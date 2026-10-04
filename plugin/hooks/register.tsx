@@ -9,7 +9,7 @@ import { bandRich, bandTerminal, paneRich, paneTerminal } from './draw'
 import { CACHE_TTL_MS, fit } from './format'
 import type { AgentView, BandInput } from './format'
 import { paneLines } from './pane'
-import { NO_CACHE_STATS, addAgentStep, addCompaction, addSample, addStep, addTimeline, baseModel, compacted } from './track'
+import { NO_CACHE_STATS, addAgentStep, addCompaction, addSample, addStep, addTimeline, baseModel, clearRewrite, compacted } from './track'
 
 // Session-long values the host keeps across a reload of this module.
 const ctx = atom({ plugin: 'ccoverhead', key: 'ctx' } as const, null as OverheadCtx | null)
@@ -77,8 +77,9 @@ export const register: Register = on => {
     return result
   })
 
-  // A compaction of the main conversation, observed and passed on unchanged: growth starts over from it,
-  // and its next request writes a new conversation, which is no rewrite of a lapsed cache.
+  // A compaction of the main conversation, observed and passed on unchanged: growth starts over from it, the
+  // old window's figures and breakdown no longer describe the conversation, and its next request writes a
+  // new conversation, which is no rewrite of a lapsed cache.
   on('session.compact', async ($, e, next) => {
     const result = await next(e)
     if (e.agentId === undefined && e.trigger !== 'precompute' && result.skip === undefined) {
@@ -87,12 +88,15 @@ export const register: Register = on => {
       await update($, history, () => [])
       await update($, timeline, () => [])
       await update($, cacheStats, s => compacted(s ?? NO_CACHE_STATS))
+      await update($, breakdown, () => null)
+      await update($, ctx, c => (c ? withoutReading(c) : c))
     }
     return result
   })
 
   // /model, the picker, a fallback: the weekly group follows the new model at once, and the new model starts
-  // with a cold cache (each model has its own); the switch also says how long the cache lives.
+  // with a cold cache (each model has its own); the switch also says how long the cache lives. The old
+  // model's threshold and breakdown no longer apply.
   on('classic.PostModelSwitch', async ($, e, next) => {
     const result = await next(e)
     await update($, model, () => e.to_model)
@@ -100,6 +104,8 @@ export const register: Register = on => {
     if (baseModel(e.from_model) !== baseModel(e.to_model)) {
       const at = await $.clock.now()
       await update($, cache, c => (c ? { at, warm: false } : c))
+      await update($, breakdown, () => null)
+      await update($, ctx, c => (c ? withoutThreshold(c) : c))
     }
     return result
   })
@@ -205,18 +211,21 @@ async function take($: EngineInterface, context: SessionContextUsage | undefined
   if (context?.window) {
     const m = await read($, model)
     const next: OverheadCtx = { tokens: context.tokens, window: context.window, percent: context.percent, ...(m && { model: m }) }
-    // Where auto-compaction runs; without a breakdown this time, where it ran last time.
-    const compactAt = b ? (b.isAutoCompactEnabled ? (b.autoCompactThreshold ?? undefined) : undefined) : (await read($, ctx))?.compactAt
+    // Where auto-compaction runs; without a breakdown this time, where it ran last time for the same model.
+    const last = await read($, ctx)
+    const kept = last?.model !== undefined && baseModel(last.model) === baseModel(m) ? last.compactAt : undefined
+    const compactAt = b ? (b.isAutoCompactEnabled ? (b.autoCompactThreshold ?? undefined) : undefined) : kept
     if (compactAt) next.compactAt = compactAt
     if (context.tokens !== undefined && context.tokens > 0) {
       const t = context.tokens
       const before = (await read($, timeline)).at(-1)
       await update($, history, samples => addSample(samples, t))
       await update($, timeline, samples => addTimeline(samples, t))
-      // A drop no compaction event announced (one this plugin did not see): treated as one.
+      // A drop no compaction event announced (one this plugin did not see): treated as one. Its first request
+      // has already run, so it stays the base the next one is compared with; only a rewrite mark goes.
       if (before !== undefined && t < before) {
         await update($, compactions, list => addCompaction(list ?? [], { before, after: t }))
-        await update($, cacheStats, s => compacted(s ?? NO_CACHE_STATS))
+        await update($, cacheStats, s => clearRewrite(s ?? NO_CACHE_STATS))
       }
     } else {
       // No response in this window yet (new, cleared or just compacted): /context's local estimate.
@@ -275,6 +284,16 @@ async function agentType($: EngineInterface, id: string): Promise<string | undef
   } catch {
     return undefined
   }
+}
+
+// The context with no reading of its own yet, as after a compaction, until the next response reports one.
+function withoutReading({ window, compactAt, model }: OverheadCtx): OverheadCtx {
+  return { window, ...(compactAt !== undefined && { compactAt }), ...(model !== undefined && { model }) }
+}
+
+// The context without the old model's auto-compaction threshold.
+function withoutThreshold({ compactAt: _, ...rest }: OverheadCtx): OverheadCtx {
+  return rest
 }
 
 // Every window reported, so a model's own weekly window is at hand when the model switches.

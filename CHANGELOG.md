@@ -33,6 +33,8 @@ All notable changes to ccOverhead are documented here. The format follows
   minutes, with a gauge of the lifetime left before it: one block glyph in the terminal (`cache ▆ warm
   38m`), a draining ring on the desktop.
 - Growth starts over at a compaction as Claude Code reports it, not only when the context total drops.
+- The cache group comes right after the context, before the quota: the conversation's own state first, the
+  account's after it.
 - A model switch leaves the cache cold and sets its lifetime from the switch's `cache_ttl`.
 
 ## [1.2.0] - 2026-10-04

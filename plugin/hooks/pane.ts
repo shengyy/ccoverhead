@@ -126,7 +126,7 @@ function cache(p: PaneInput): PaneLine[] {
   if (hit !== undefined) {
     out.push(line('hit rate', { text: ` ${Math.trunc(hit)}%`, tier: pctTier(100 - hit) }, dim(` · read ${kshort(s.read)} · written ${kshort(s.write)} · uncached ${kshort(s.input)}`)))
   }
-  if (p.rewrite) out.push(line('rewrote', { text: ` ${kshort(p.rewrite)}`, tier: gainTier(p.rewrite, p.ctx?.window ?? 1_000_000) }, dim(' this turn, instead of reading it')))
+  if (p.rewrite) out.push(line('rewrote', { text: ` ${kshort(p.rewrite)}`, tier: gainTier(p.rewrite, p.ctx?.window ?? 1_000_000) }, dim(' written again instead of read, not read back since')))
   return out
 }
 

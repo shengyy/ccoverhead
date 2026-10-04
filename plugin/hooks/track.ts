@@ -54,11 +54,16 @@ export function addStep(stats: OverheadCacheStats, u: StepUsage, turnId: string)
   return next
 }
 
-// The counts after a compaction: no rewrite mark, and no previous request to read back, since the next one
-// writes a new conversation rather than finding a lapsed cache.
-export function compacted(stats: OverheadCacheStats): OverheadCacheStats {
+// The counts without the rewrite mark.
+export function clearRewrite(stats: OverheadCacheStats): OverheadCacheStats {
   const { rewrite: _, ...rest } = stats
-  return { ...rest, last: 0 }
+  return rest
+}
+
+// The counts after a compaction, before its first request: no rewrite mark, and no previous request to read
+// back, since the next one writes a new conversation rather than finding a lapsed cache.
+export function compacted(stats: OverheadCacheStats): OverheadCacheStats {
+  return { ...clearRewrite(stats), last: 0 }
 }
 
 // The share of the main conversation's input the cache served, 0 to 100; undefined before any input.
