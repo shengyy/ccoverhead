@@ -3,7 +3,7 @@
 //
 //   bun scripts/screenshot/render.ts
 //
-// Writes band, pane, cache-rewrite and subagent previews at 2x, trimmed to the scene. Needs ImageMagick too.
+// Writes band, pane, cache-rewrite and subagent previews at 4x, trimmed to the scene. Needs ImageMagick too.
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -15,6 +15,7 @@ import { agentView, band, pane, rewriting } from './fixture'
 
 const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 const OUT = resolve(import.meta.dir, '../../assets/screenshots')
+const SCALE = 4
 const DIM = '#8b8a85'
 const INK = '#e8e6dc'
 const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -118,7 +119,7 @@ for (const [name, html, width, height] of [
     CHROME,
     '--headless=new',
     '--hide-scrollbars',
-    '--force-device-scale-factor=2',
+    `--force-device-scale-factor=${SCALE}`,
     `--window-size=${width},${height}`,
     `--screenshot=${join(OUT, `${name}.png`)}`,
     `file://${file}`,
@@ -126,7 +127,7 @@ for (const [name, html, width, height] of [
   if (shot.exitCode !== 0) throw new Error(`Chrome failed on ${name}: ${shot.stderr.toString()}`)
   // Crop to the scene and give it an even margin of the page colour.
   const png = join(OUT, `${name}.png`)
-  const trim = Bun.spawnSync(['magick', png, '-trim', '+repage', '-bordercolor', '#141413', '-border', '32', '-strip', png])
+  const trim = Bun.spawnSync(['magick', png, '-trim', '+repage', '-bordercolor', '#141413', '-border', String(16 * SCALE), '-strip', png])
   if (trim.exitCode !== 0) throw new Error(`ImageMagick failed on ${name}: ${trim.stderr.toString()}`)
   console.log(`assets/screenshots/${name}.png`)
 }
