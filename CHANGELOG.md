@@ -6,6 +6,11 @@ All notable changes to ccOverhead are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The website build takes its version and color scale from the plugin, keeping the public introduction
+  aligned with the code it illustrates.
+
 ## [1.4.0] - 2026-10-04
 
 ### Removed

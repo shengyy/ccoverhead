@@ -1,7 +1,5 @@
 // ccOverhead Website Interactivity
 
-const REPO = "shengyy/ccoverhead";
-
 // 1. Copy-to-clipboard buttons
 document.querySelectorAll(".copy-btn").forEach((button) => {
   button.addEventListener("click", () => {
@@ -83,19 +81,3 @@ langButtons.forEach((btn) => {
     }
   });
 });
-
-// 4. Fetch latest release version from GitHub API
-fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
-  headers: { Accept: "application/vnd.github+json" },
-})
-  .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
-  .then((release) => {
-    if (release.tag_name) {
-      document.querySelectorAll("[data-version]").forEach((el) => {
-        el.textContent = release.tag_name;
-      });
-    }
-  })
-  .catch(() => {
-    // Keep fallback version on error or offline
-  });
