@@ -119,8 +119,9 @@ screenshots them at 2x with headless Chrome and trims them into
 as close-ups of those groups from the shared state fixtures for the website. Never commit screenshots of a
 real session.
 
-The website uses a light paper background, serif headings and compact body text, with the dark product
-previews as the main visual material. It introduces the band before the pane and the state examples,
+The website uses a warm charcoal background, off-white text, a sand-colored action and serif headings,
+with the dark product previews as the main visual material. Its fluid shell grows up to a 3840px viewport;
+paragraphs keep a readable line length while previews and columns use the extra width. It introduces the band before the pane and the state examples,
 then the shared scale, design sheets, installation and verification notes. Version and palette are read
 from their code owners by `scripts/site/build.ts`; the website does not fetch release metadata at runtime.
 
