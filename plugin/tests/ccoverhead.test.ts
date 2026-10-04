@@ -282,38 +282,6 @@ describe('ccoverhead', () => {
       expect(await ui.find({ type: 'Text', text: /^ ?~13k\/1M$/ })).toBeDefined()
     })
 
-    test(`the context bar marks where auto-compaction runs (${surface})`, async ($, on) => {
-      let threshold: number | undefined = 335_000
-      on('session.start', ($, e) => ({ cwd: e.cwd }))
-      on('session.measure', ($, e) => ({ changed: e.changed }))
-      mock.store(on)
-      // A compaction window of 368k on the 1M model: the threshold sits a third of the way along the bar.
-      on('session.usage', ($, e) => ({
-        value: usage(300_000, [], e.breakdown !== undefined && { ...BREAKDOWN, autoCompactThreshold: threshold, isAutoCompactEnabled: threshold !== undefined }),
-      }))
-      mock.clock(on, { now: NOW })
-      await $.session.start(session(surface))
-      await $.session.measure(measured(fill(300_000, 30)))
-      const ui = await $.ui.mount(band(surface))
-      // 30% used, the mark at 33.5%: three cells, the mark, seven. 300k of 335k is 89%: the mark is orange.
-      if (surface === 'terminal') {
-        expect((await ui.find({ type: 'Text', text: /^■■■$/ }))?.props.color).toBe(TIER_HEX[3])
-        expect((await ui.find({ type: 'Text', text: /^│$/ }))?.props.color).toBe(TIER_HEX[8])
-        expect((await ui.find({ type: 'Text', text: /^□{7}$/ }))?.props.color).toBe(TIER_HEX[3])
-      } else {
-        const bar = (await ui.findAll({ type: 'Svg' })).find(one => /^context/.test(String(one.props.alt)))
-        expect(bar?.props.alt).toBe('context 30% used, auto-compacts at 34%')
-        expect(String(bar?.props.source)).toContain(`.m{fill:${TIER_HEX[8]}}`)
-        expect(String(bar?.props.source)).toContain('<rect class="m" x="19"')
-      }
-
-      // Auto-compaction off: no mark.
-      threshold = undefined
-      await $.session.measure(measured(fill(310_000, 31)))
-      await graphic(ui, 'bar', surface, /^■■■□{7}$/, 3)
-      expect(await ui.find({ type: 'Text', text: /│/ })).toBeUndefined()
-    })
-
     test(`a resumed conversation shows its cache's age at once and its first rewrite (${surface})`, async ($, on) => {
       let read = 0
       on('session.start', ($, e) => ({ cwd: e.cwd }))

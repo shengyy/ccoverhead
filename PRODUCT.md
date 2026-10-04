@@ -55,9 +55,9 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
   new session, after `/clear`, after compaction) it shows Claude Code's local `/context` estimate, dim and
   marked `~`; the estimate sends no request.
 - If Claude Code cannot give an estimate, the band shows the window size with `--`, never a stale figure.
-- A mark on the bar shows where auto-compaction runs, at the threshold's share of the window; its color is
-  how near the context is to the threshold, on the percentage scale. No mark while auto-compaction is off.
-  The threshold is read with the same local count as the estimate, so it costs no request.
+- The band draws no auto-compaction mark: on a 1M window the threshold (967k) sits at the bar's end, where
+  a mark read as a separator and said no more than the bar's end. The pane gives the threshold and the
+  tokens to go, read with the same local count as the estimate, so it costs no request.
 
 ### Growth
 

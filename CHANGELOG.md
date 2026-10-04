@@ -8,6 +8,9 @@ All notable changes to ccOverhead are documented here. The format follows
 
 ### Changed
 
+- The context bar no longer carries the auto-compaction mark: on a 1M window the threshold (967k) sat at the
+  bar's end, where `│` read as a separator between the bar and its figures. The pane still gives the
+  threshold and the tokens to go.
 - The cache group drops its lifetime gauge (the terminal's block glyph, the desktop's ring), which repeated
   the minutes: `cache warm 38m`. `warm` and its minutes share one state color, cyan while more than a fifth
   of the lifetime is left and orange in the last fifth, instead of stepping through the ten-tier scale.

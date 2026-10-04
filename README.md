@@ -23,7 +23,7 @@
 <p align="center"><a href="https://shengyy.github.io/ccoverhead/"><strong>Website</strong></a></p>
 
 <p align="center">
-  <img src="assets/screenshots/desktop.png" width="760" alt="The ccOverhead band in the Claude desktop app: a context bar at 27 percent with the auto-compaction tick at its end, a seven-bar growth chart in mixed colours, the cache warm for 38 minutes, 5-hour quota 42 percent, weekly quota 63 percent">
+  <img src="assets/screenshots/desktop.png" width="760" alt="The ccOverhead band in the Claude desktop app: a context bar at 27 percent, a seven-bar growth chart in mixed colours, the cache warm for 38 minutes, 5-hour quota 42 percent, weekly quota 63 percent">
 </p>
 
 ---
@@ -39,8 +39,6 @@ and opens the detail behind them in a pane when you ask.
 - **Context at a glance.** A bar, the used percentage and `used/window` tokens. Before the first response
   of a session (or after `/clear` or compaction) it shows Claude Code's own `/context` estimate, marked
   `~`, instead of a blank.
-- **Where auto-compaction runs.** A mark on the context bar at Claude Code's auto-compaction threshold,
-  warming as the context nears it, so compaction never comes as a surprise.
 - **Each turn's growth.** A seven-bar chart of what every recent turn added to the context, plus the last
   turn's `↑` figure. Each bar is colored by its share of the window, so a heavy turn stands out.
 - **Quota with reset countdowns.** The 5-hour and weekly windows (and a Claude gateway's spend limit), as a
@@ -89,12 +87,12 @@ Remove with `/plugin uninstall ccoverhead@ccoverhead`.
 The band reads left to right, from what changes every turn to what changes slowly:
 
 ```text
-ctx ■■■□□□□□□□│ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | cache warm 38m | 5h 42% ↻2h34m | 7d 63% ↻2d7h
+ctx ■■■□□□□□□□ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | cache warm 38m | 5h 42% ↻2h34m | 7d 63% ↻2d7h
 ```
 
 | Group | Meaning |
 |---|---|
-| `ctx` | Context used: bar, percentage, tokens. `│` marks where auto-compaction runs. `~` marks the pre-response estimate. Reads `agent` while a subagent's transcript is on screen |
+| `ctx` | Context used: bar, percentage, tokens. `~` marks the pre-response estimate. Reads `agent` while a subagent's transcript is on screen |
 | Bars and `↑` | What each of the last seven turns added; `↑` is the latest turn |
 | `cache` | `warm` and its minutes, cyan and orange in the last fifth of the lifetime, or `cold`; `rewrote` and its tokens on a turn that wrote the cache again instead of reading it |
 | `5h`, `7d` | Quota used in each window, and `↻` the time until it resets. Dim when remembered from an earlier session. `7d` follows the main model's own weekly window when Claude Code reports one, such as `7d fable` (not verified) |

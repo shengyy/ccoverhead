@@ -19,7 +19,7 @@ const DIM = '#8b8a85'
 const INK = '#e8e6dc'
 const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;')
 
-// Spans as the terminal draws them: block glyphs, a multi-coloured span (the sparkline, a marked bar) piece by piece.
+// Spans as the terminal draws them: block glyphs, a multi-coloured span (the sparkline) piece by piece.
 function spans(run: Span[]): string {
   return run
     .map(s => {

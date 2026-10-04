@@ -34,7 +34,7 @@ function groupByLabel(input: BandInput, label: string) {
 }
 const full = fit(band, 110)
 const featureDescriptions = [
-  ['上下文容量', '进度条 / 已用比例 / token 数 / 压缩刻度', '容量来自最后一次回复的实际读数。', 'ctx'],
+  ['上下文容量', '进度条 / 已用比例 / token 数', '容量来自最后一次回复的实际读数。', 'ctx'],
   ['每轮增长', '最近 7 次变化 / 最新增量', '柱高相对比较，颜色按窗口占比。', 'growth'],
   ['缓存冷热', 'warm / cold / 剩余分钟', '仅跟踪主对话请求的缓存读写。', 'cache'],
   ['使用额度', '5 小时 / 每周 / 重置倒计时', '显示已用比例，额度读数来自宿主。', 'quota'],
@@ -195,7 +195,7 @@ const layout = `
   <div class="palette-label"><span>深色主题 · Text 与 Svg</span><span>每列依次：颜色 / 上下文与额度已用比例 / 单次增长占窗口比例</span></div>
   <div class="scale">${scale}</div><div class="scale-meanings"><span>安全 · 冷色</span><span>注意 · 黄绿到黄</span><span>警告 · 暖色到红</span></div>
   <div class="light-palette"><div class="palette-label"><span>浅色主题 · 仅 Svg 自动切换</span><span>Text 仍用深色列；浅色主题尚未实测</span></div><div class="scale">${lightScale}</div></div>
-  <div class="mapping"><p><b>图形尺寸</b>　桌面进度条 60 × 6 px，自动压缩刻度 2 × 10 px；增长柱宽 4 px，柱间距 2 px，柱高 3–14 px。终端进度条为 10 格，按最接近的 10% 绘制，刻度 │ 插在离阈值最近的两格之间。</p><p><b>增长与缓存</b>　保留 ${HISTORY} 个不同总量，形成最多 ${HISTORY - 1} 根柱。柱高相对比较，颜色按绝对占比；warm 与剩余分钟同色：寿命充裕为青，最后五分之一为橙，cold 为暗色。</p></div>
+  <div class="mapping"><p><b>图形尺寸</b>　桌面进度条 60 × 6 px；增长柱宽 4 px，柱间距 2 px，柱高 3–14 px。终端进度条为 10 格，按最接近的 10% 绘制。</p><p><b>增长与缓存</b>　保留 ${HISTORY} 个不同总量，形成最多 ${HISTORY - 1} 根柱。柱高相对比较，颜色按绝对占比；warm 与剩余分钟同色：寿命充裕为青，最后五分之一为橙，cold 为暗色。</p></div>
   <footer>${stamp}</footer>
 </section>`
 
@@ -249,7 +249,7 @@ const english: Record<string, string> = {
   '主上下文与增长 → 缓存 → 5 小时额度 → 每周额度': 'Context & growth → cache → 5-hour quota → weekly quota',
   '有调查问卷时，让出横条。': 'Yield the band to a survey.',
   '上下文容量': 'Context window',
-  '进度条 / 已用比例 / token 数 / 压缩刻度': 'Bar / used percentage / tokens / compaction mark',
+  '进度条 / 已用比例 / token 数': 'Bar / used percentage / tokens',
   '容量来自最后一次回复的实际读数。': 'Figures from the last response.',
   '每轮增长': 'Per-turn growth',
   '最近 7 次变化 / 最新增量': 'Last 7 changes / latest delta',
@@ -281,7 +281,7 @@ const english: Record<string, string> = {
   '浅色主题 · 仅 Svg 自动切换': 'Light theme · Svg switches automatically',
   'Text 仍用深色列；浅色主题尚未实测': 'Text keeps dark colors; light themes are not verified',
   '图形尺寸': 'Graphic dimensions',
-  '桌面进度条 60 × 6 px，自动压缩刻度 2 × 10 px；增长柱宽 4 px，柱间距 2 px，柱高 3–14 px。终端进度条为 10 格，按最接近的 10% 绘制，刻度 │ 插在离阈值最近的两格之间。': 'Desktop bar: 60 × 6 px, auto-compaction tick 2 × 10 px. Growth columns: 4 px wide, 2 px apart, 3–14 px tall. The terminal bar has 10 cells, rounded to the nearest 10%, with the │ mark between the two cells nearest the threshold.',
+  '桌面进度条 60 × 6 px；增长柱宽 4 px，柱间距 2 px，柱高 3–14 px。终端进度条为 10 格，按最接近的 10% 绘制。': 'Desktop bar: 60 × 6 px. Growth columns: 4 px wide, 2 px apart, 3–14 px tall. The terminal bar has 10 cells, rounded to the nearest 10%.',
   '增长与缓存': 'Growth and cache',
   [`保留 ${HISTORY} 个不同总量，形成最多 ${HISTORY - 1} 根柱。柱高相对比较，颜色按绝对占比；warm 与剩余分钟同色：寿命充裕为青，最后五分之一为橙，cold 为暗色。`]: `Keep ${HISTORY} changed totals for up to ${HISTORY - 1} bars. Heights compare recent gains; colors use absolute window share. Warm and its minutes share one colour: cyan while plenty is left, orange in the last fifth; cold is dim.`,
   '状态规则与数据边界': 'State rules and data boundaries',

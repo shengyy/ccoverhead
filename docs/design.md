@@ -7,19 +7,19 @@ figures, warm ones only when something deserves attention. What it shows and whe
 ## The band
 
 ```text
-ctx ■■■□□□□□□□│ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | cache warm 38m | 5h 42% ↻2h34m | 7d 63% ↻2d7h
+ctx ■■■□□□□□□□ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | cache warm 38m | 5h 42% ↻2h34m | 7d 63% ↻2d7h
 ```
 
-- Groups, left to right: context (bar with the auto-compaction mark, percentage, tokens, growth chart,
+- Groups, left to right: context (bar, percentage, tokens, growth chart,
   `↑` latest growth), cache (`warm` and the minutes left, or `cold`; then `rewrote` and its tokens
   on a turn that rewrote the cache), 5-hour quota, weekly quota, `spend` (a gateway's spend limit, when
   reported). A dim ` | ` separates groups.
 - `warm` and its minutes are one span in one color, a state rather than a scale: cyan (tier 3) while more
   than a fifth of the lifetime is left, orange (tier 8) in the last fifth, when the next request should come
   soon; `cold` is dim. The minutes already say how long, so no gauge repeats them.
-- The terminal draws the auto-compaction mark `│` between the two cells nearest the threshold, at least one
-  cell in, so on a 1M window (threshold 967k) it closes the bar and on a 368k compaction window it stands a
-  third of the way along.
+- The bar carries no auto-compaction mark. On the 1M window most sessions run, the threshold (967k) rounds
+  to the bar's end, where a mark read as a separator between the bar and its figures; the pane gives the
+  threshold and the tokens to go instead.
 - While a subagent's transcript is on screen, the first group reads `agent` instead of `ctx`.
 - The weekly label names the model family when the group shows the main model's own window: `7d fable`
   instead of `7d`.
@@ -49,9 +49,9 @@ One scale, one meaning: cool is safe, yellow is caution, warm to red is warning.
 
 The colors are defined once, in `plugin/hooks/format.ts`; this table follows it.
 
-The percentage column also colors figures that are shares of something else: the auto-compaction mark (the
-context as a share of the threshold), the pane's hit rate (the share the cache did not serve), and each category in the pane's breakdown (its share of the
-window, as the context bar colors the whole). The growth column also colors `rewrote`, a token amount, by its
+The percentage column also colors figures that are shares of something else: the pane's tokens to
+auto-compaction (the context as a share of the threshold), its hit rate (the share the cache did not serve),
+and each category in its breakdown (its share of the window, as the context bar colors the whole). The growth column also colors `rewrote`, a token amount, by its
 share of the window: a rewrite is a cost like a turn's growth, while a category's size is not an alarm.
 
 - **Why cool to warm.** Safe is cool rather than green: red-green color-blind readers cannot tell green from
@@ -77,8 +77,7 @@ The desktop app draws the band in a proportional font, where block glyphs (`■�
 There, and only there:
 
 - Each group is a `Box` row; items are spaced by `gap`, not by spaces, and text is trimmed.
-- The context bar is a 60×6 rounded `Svg`, filled to the exact percentage over a translucent track; with
-  auto-compaction on, a 2×10 tick stands across it at the threshold, the Svg 10 px tall.
+- The context bar is a 60×6 rounded `Svg`, filled to the exact percentage over a translucent track.
 - The growth chart is an `Svg` of 4 px columns, 14 px at the tallest and 3 px at the least, so even a
   small bar shows its color.
 - Each `Svg` carries both palettes and picks the light one under `prefers-color-scheme: light`.

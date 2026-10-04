@@ -3,7 +3,7 @@
 // the surfaces with a proportional font).
 import type { OverheadAgent, OverheadBreakdown, OverheadCacheStats, OverheadCompaction } from '../types'
 import type { BandInput, Span } from './format'
-import { FALLBACK_WINDOW, bar, cacheTier, compactMark, dur, gainTier, gains, kshort, ktok, modelFamily, pctTier, sparkline, weeklyWindow } from './format'
+import { FALLBACK_WINDOW, bar, cacheTier, dur, gainTier, gains, kshort, ktok, modelFamily, pctTier, sparkline, weeklyWindow } from './format'
 import { AGENTS, hitRate } from './track'
 
 export type PaneInput = BandInput & {
@@ -45,20 +45,18 @@ function context(p: PaneInput): PaneLine[] {
   const ctx = p.ctx
   if (!ctx || ctx.window <= 0) return [...out, line('window', dim(' no reading yet'))]
   const { tokens, window, estimate, compactAt } = ctx
-  const { mark } = compactMark(ctx)
   const now = tokens !== undefined && tokens > 0 ? tokens : undefined
   if (now !== undefined) {
     const pc = Math.trunc(ctx.percent ?? (now * 100) / window)
-    const { markTier } = compactMark(ctx, now)
-    out.push(line('window', { text: ' ' }, { text: bar(pc, mark), tier: pctTier(pc), bar: pc, mark, markTier }, { text: ` ${pc}%`, tier: pctTier(pc) }, dim(` ${ktok(now)} of ${ktok(window)}`)))
+    out.push(line('window', { text: ' ' }, { text: bar(pc), tier: pctTier(pc), bar: pc }, { text: ` ${pc}%`, tier: pctTier(pc) }, dim(` ${ktok(now)} of ${ktok(window)}`)))
   } else if (estimate !== undefined && estimate > 0) {
     const pc = Math.trunc((estimate * 100) / window)
-    out.push(line('window', { text: ' ' }, { text: bar(pc, mark), dimColor: true, bar: pc, mark }, dim(` ~${pc}% ~${ktok(estimate)} of ${ktok(window)}, estimated before the first response`)))
+    out.push(line('window', { text: ' ' }, { text: bar(pc), dimColor: true, bar: pc }, dim(` ~${pc}% ~${ktok(estimate)} of ${ktok(window)}, estimated before the first response`)))
   } else {
     out.push(line('window', dim(` -- of ${ktok(window)}`)))
   }
-  // Said only where the band draws the mark: a threshold at or past the window's end is never reached.
-  if (compactAt !== undefined && mark !== undefined) {
+  // Where auto-compaction runs and the tokens to go; a threshold at or past the window's end is never reached.
+  if (compactAt !== undefined && compactAt > 0 && compactAt < window) {
     const used = now ?? estimate
     const left = used === undefined ? undefined : Math.max(compactAt - used, 0)
     out.push(

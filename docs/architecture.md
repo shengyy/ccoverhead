@@ -35,7 +35,7 @@ band and the pane by itself; the clock invalidates only so the countdowns keep t
 | `hooks/hooks.json` | Names the hooks module |
 | `hooks/register.tsx` | Event hooks: loading figures, recording growth, compactions, cache and subagents, resetting on a new conversation, the `/ccoverhead` command, choosing the tree per surface |
 | `hooks/track.ts` | Pure state updates: the growth history and timeline, compactions, the cache's running counts and rewrite mark (`addStep`, `compacted`), each subagent's totals (`addAgentStep`) |
-| `hooks/format.ts` | Pure formatting of the band: groups and spans, narrowing (`fit`), the weekly window for the model (`weeklyWindow`, `modelFamily`), the color scale (`GAIN`, `pctTier`, `gainTier`), the auto-compaction mark, multi-colored spans (`cells`), the desktop's Svg (`svgOf`, `items`) |
+| `hooks/format.ts` | Pure formatting of the band: groups and spans, narrowing (`fit`), the weekly window for the model (`weeklyWindow`, `modelFamily`), the color scale (`GAIN`, `pctTier`, `gainTier`), the cache state (`cacheTier`), multi-colored spans (`cells`), the desktop's Svg (`svgOf`, `items`) |
 | `hooks/pane.ts` | Pure formatting of the pane: its sections as lines of a label and spans (`paneLines`) |
 | `hooks/draw.tsx` | The band and the pane as element trees, for the terminal and for the surfaces with Svg |
 | `types/index.d.ts` | The `$.state` contract, `PluginState['ccoverhead']` |
@@ -70,7 +70,7 @@ plugin from a folder (ignored by Git).
 `format.ts` builds the band once as groups of spans, and `pane.ts` the pane as lines of a label and spans.
 A span's `text` is what the terminal draws and what widths are counted in; `tier` is its color on the
 scale; a span with `bar` or `spark` is a graphic. `draw.tsx` renders spans as nested `Text` on the
-terminal, the sparkline and a marked bar piece by piece (`cells`). Elsewhere it
+terminal, the sparkline piece by piece (`cells`). Elsewhere it
 renders each group or line as a `Box` row spaced by `gap`, trims text to drop the spaces the terminal
 needs, and turns graphic spans into `Svg` with their own light-theme colors. The look is specified in
 [design.md](design.md).

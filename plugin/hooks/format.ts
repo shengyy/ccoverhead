@@ -18,16 +18,14 @@ export function cacheTier(left: number, ttl: number): number {
 // Context totals kept for the sparkline: 8 totals, 7 bars.
 export const HISTORY = 8
 const BARS = '▁▂▃▄▅▆▇█'
-// Where auto-compaction runs, drawn between two cells of the context bar.
-export const MARK = '│'
 // The window growth is tiered by before any is known.
 export const FALLBACK_WINDOW = 1_000_000
 // Model families a rate-limit window may be named after.
 const FAMILIES = ['fable', 'opus', 'sonnet', 'haiku']
 
 // `text` is what the terminal draws and what widths count; `tier` its colour on the band's one scale (`GAIN`),
-// absent for plain text (the labels). A span with `bar` (a used percentage, with the auto-compaction `mark`
-// in its `markTier`) or `spark` (the gains, with their `tiers`) is a graphic: block glyphs line up only in a
+// absent for plain text (the labels). A span with `bar` (a used percentage) or `spark` (the gains, with their
+// `tiers`) is a graphic: block glyphs line up only in a
 // monospace font, so the desktop, which draws the band in a proportional one, draws those as an Svg instead
 // (`items`).
 export type Span = {
@@ -35,8 +33,6 @@ export type Span = {
   tier?: number
   dimColor?: boolean
   bar?: number
-  mark?: number
-  markTier?: number
   spark?: number[]
   tiers?: number[]
 }
@@ -89,16 +85,12 @@ export function colorOf(s: Span): string | undefined {
 
 export type Cell = { text: string; color?: string; dimColor?: boolean }
 
-// A span the terminal draws in more than one colour, piece by piece: the sparkline one glyph per gain in its
-// tier's colour, a marked bar its cells around the mark. Undefined for a span of one colour.
+// A span the terminal draws in more than one colour, piece by piece: the sparkline, one glyph per gain in its
+// tier's colour. Undefined for a span of one colour.
 export function cells(s: Span): Cell[] | undefined {
   const glyphs = [...s.text]
   if (s.spark) return s.spark.map((_, i) => ({ text: glyphs[i] ?? '', color: GAIN[s.tiers?.[i] ?? 0]?.dark ?? DIM.dark }))
-  if (s.mark === undefined) return undefined
-  const at = markCell(s.mark)
-  const ink: Cell = s.dimColor ? { text: '', dimColor: true } : { text: '', color: colorOf(s) }
-  const mark: Cell = s.dimColor ? { text: MARK, dimColor: true } : { text: MARK, color: colorOf({ text: '', tier: s.markTier }) }
-  return [{ ...ink, text: glyphs.slice(0, at).join('') }, mark, { ...ink, text: glyphs.slice(at + 1).join('') }].filter(c => c.text)
+  return undefined
 }
 
 export type Graphic = { source: string; alt: string; width: number; height: number }
@@ -113,24 +105,16 @@ function svg(width: number, height: number, style: string, body: string): string
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${style}${body}</svg>`
 }
 
-// A graphic span as an Svg: the bar a 60×6 rounded track filled to the exact percentage, with a 2 px tick
-// standing past it where auto-compaction runs; the sparkline one 4 px column per gain on a shared baseline,
+// A graphic span as an Svg: the bar a 60×6 rounded track filled to the exact percentage; the sparkline one 4 px column per gain on a shared baseline,
 // 14 px at the largest and 3 px at the least so the smallest still shows its colour, each in its tier's
 // colour.
 export function svgOf(s: Span): Graphic | undefined {
   if (s.bar !== undefined) {
     const ink = s.dimColor ? DIM : (GAIN[s.tier ?? -1] ?? DIM)
     const w = Math.round((Math.min(Math.max(s.bar, 0), 100) * 60) / 100)
-    const marked = s.mark !== undefined
-    const y = marked ? 2 : 0
-    const height = marked ? 10 : 6
-    const track = `<rect x="0" y="${y}" width="60" height="6" rx="3" fill="${TRACK}"/>`
-    const done = w > 0 ? `<rect class="k" x="0" y="${y}" width="${w}" height="6" rx="3"/>` : ''
-    const markInk = s.dimColor ? DIM : (GAIN[s.markTier ?? -1] ?? DIM)
-    const x = marked ? Math.min(Math.max(Math.round(((s.mark ?? 0) * 60) / 100) - 1, 0), 58) : 0
-    const tick = marked ? `<rect class="m" x="${x}" y="0" width="2" height="10" rx="1"/>` : ''
-    const alt = `context ${s.bar}% used${marked ? `, auto-compacts at ${Math.round(s.mark ?? 0)}%` : ''}`
-    return { source: svg(60, height, inks([['k', ink], ['m', markInk]]), track + done + tick), alt, width: 60, height }
+    const track = `<rect x="0" y="0" width="60" height="6" rx="3" fill="${TRACK}"/>`
+    const done = w > 0 ? `<rect class="k" x="0" y="0" width="${w}" height="6" rx="3"/>` : ''
+    return { source: svg(60, 6, inks([['k', ink]]), track + done), alt: `context ${s.bar}% used`, width: 60, height: 6 }
   }
   if (s.spark && s.spark.length > 0) {
     const top = Math.max(...s.spark, 1)
@@ -180,19 +164,10 @@ export function kshort(t: number): string {
   return x % 10 === 0 ? `${x / 10}${u}` : `${Math.floor(x / 10)}.${x % 10}${u}`
 }
 
-// 10 cells, rounded to the nearest tenth: ■■■□□□□□□□; with a mark (a percentage), the mark between the two
-// cells nearest it: ■■■□□□□□│□□.
-export function bar(p: number, mark?: number): string {
+// 10 cells, rounded to the nearest tenth: ■■■□□□□□□□.
+export function bar(p: number): string {
   const filled = Math.max(Math.min(Math.floor((p + 5) / 10), 10), 0)
-  const cells = '■'.repeat(filled) + '□'.repeat(10 - filled)
-  if (mark === undefined) return cells
-  const at = markCell(mark)
-  return cells.slice(0, at) + MARK + cells.slice(at)
-}
-
-// How many cells stand before the mark: at least one, so a mark never reads as the bar's start.
-export function markCell(mark: number): number {
-  return Math.min(Math.max(Math.round(mark / 10), 1), 10)
+  return '■'.repeat(filled) + '□'.repeat(10 - filled)
 }
 
 export function gains(history: number[]): number[] {
@@ -267,25 +242,15 @@ function growth(history: number[], window: number): Span[] {
   ]
 }
 
-// Where auto-compaction runs as a share of the window, coloured by how near `used` is to it: none when no
-// threshold is known or it lies at or past the window's end.
-export function compactMark(ctx: OverheadCtx, used?: number): { mark?: number; markTier?: number } {
-  const { compactAt, window } = ctx
-  if (compactAt === undefined || compactAt <= 0 || compactAt >= window) return {}
-  return { mark: (compactAt * 100) / window, ...(used !== undefined && { markTier: pctTier((used * 100) / compactAt) }) }
-}
-
-// The main conversation's context: bar (with the auto-compaction mark), percentage, tokens and growth.
+// The main conversation's context: bar, percentage, tokens and growth.
 function contextGroup(b: BandInput, ctx: OverheadCtx, d: Detail): Span[] {
   const { tokens, window, estimate } = ctx
-  const { mark } = compactMark(ctx)
   if (tokens !== undefined && tokens > 0) {
     const p = Math.trunc(ctx.percent ?? (tokens * 100) / window)
-    const { markTier } = compactMark(ctx, tokens)
     const g: Span[] = [
       { text: 'ctx' },
       { text: ' ' },
-      { text: bar(p, mark), tier: pctTier(p), bar: p, mark, markTier },
+      { text: bar(p), tier: pctTier(p), bar: p },
       { text: ` ${p}%`, tier: pctTier(p) },
     ]
     if (d.tokens) g.push({ text: ` ${ktok(tokens)}/${ktok(window)}`, dimColor: true })
@@ -298,7 +263,7 @@ function contextGroup(b: BandInput, ctx: OverheadCtx, d: Detail): Span[] {
     const g: Span[] = [
       { text: 'ctx' },
       { text: ' ' },
-      { text: bar(p, mark), dimColor: true, bar: p, mark },
+      { text: bar(p), dimColor: true, bar: p },
       { text: ` ~${p}%`, dimColor: true },
     ]
     if (d.tokens) g.push({ text: ` ~${ktok(estimate)}/${ktok(window)}`, dimColor: true })
