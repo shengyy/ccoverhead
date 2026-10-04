@@ -6,6 +6,7 @@
   --muted: #ada99d;
   --line: #3d3a32;
   --accent: #d0a474;
+  --layout-unit: clamp(16px, .55vw + 9px, 22px);
   --serif: "Iowan Old Style", "Baskerville", "Palatino Linotype", Georgia, serif;
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
@@ -29,7 +30,7 @@ h1 { font-size: clamp(54px, 6.2vw, 144px); line-height: 1.04; letter-spacing: -.
 h2 { font-size: clamp(35px, 3.65vw, 72px); line-height: 1.13; letter-spacing: -.04em; }
 h1 em, h2 em { font-weight: 400; }
 h3 { font-size: 17px; line-height: 1.4; font-weight: 600; letter-spacing: -.015em; }
-.page-shell { width: 100%; max-width: 3840px; margin: 0 auto; padding: 0 clamp(24px, 4.5vw, 180px); }
+.page-shell { width: min(calc(72 * var(--layout-unit)), calc(100% - 2 * var(--layout-unit))); margin: 0 auto; }
 .hero > *, .detail-section > *, .session-stories > *, .design-sheets > *, .install-section > *, .faq-section > * { min-width: 0; }
 .skip-link { position: absolute; top: -100px; left: 24px; padding: 12px 20px; background: var(--ink); color: var(--canvas); z-index: 10; }
 .skip-link:focus { top: 12px; }
@@ -159,7 +160,6 @@ summary { cursor: pointer; }
   .button { font-size: 13px; }
 }
 @media (max-width: 860px) {
-  .page-shell { padding: 0 24px; }
   .site-header { min-height: 87px; gap: 18px; }
   .brand { font-size: 18px; }
   .site-header nav { gap: 17px; font-size: 12px; }
@@ -190,7 +190,6 @@ summary { cursor: pointer; }
   .footer-top p { max-width: 220px; text-align: right; font-size: 15px; }
 }
 @media (max-width: 480px) {
-  .page-shell { padding: 0 20px; }
   .site-header { flex-wrap: wrap; justify-content: start; padding: 18px 0; gap: 17px; }
   .site-header .brand img { width: 29px; height: 29px; }
   .site-header nav { width: 100%; justify-content: space-between; font-size: 12px; gap: 12px; }
