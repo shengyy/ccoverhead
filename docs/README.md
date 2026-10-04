@@ -30,6 +30,7 @@ only long-lived **current** facts that every maintainer needs; history lives in 
 | `assets/brand/` | The logo source (SVG) |
 | `assets/screenshots/` | Rendered README previews and bilingual design sheets; regenerate, never hand-edit |
 | `scripts/screenshot/` | The preview and design-sheet renderers and their shared fictional figures |
+| `site/` | The public website: index page, stylesheet, client scripts |
 | `docs/` | The documents above |
 | `.github/` | CI; issue and pull request templates |
 

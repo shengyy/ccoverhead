@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ccOverhead — Your Claude Code overhead, right overhead</title>
+    <meta
+      name="description"
+      content="Context, each turn's growth, quota and prompt-cache warmth in one quiet band above the prompt. A Claude Code mod colored on a single scale from safe to warning."
+    />
+    <meta property="og:title" content="ccOverhead" />
+    <meta property="og:description" content="Your Claude Code overhead, right overhead." />
+    <meta property="og:image" content="https://shengyy.github.io/ccoverhead/assets/screenshots/desktop.png" />
+    <meta property="og:url" content="https://shengyy.github.io/ccoverhead/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="assets/brand/logo.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="site.js" defer></script>
+  </head>
+  <body>
+    <header class="nav">
+      <a class="brand" href="./">
+        <img src="assets/brand/logo.svg" alt="" width="30" height="30" />
+        ccOverhead
+      </a>
+      <nav>
+        <a href="#features">Features</a>
+        <a href="#band">The Band</a>
+        <a href="#scale">Color Scale</a>
+        <a href="#install">Install</a>
+        <a href="#faq">FAQ</a>
+        <a class="github" href="https://github.com/shengyy/ccoverhead">GitHub</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">A Claude Code Mod</p>
+          <h1>Your overhead,<br />right overhead.</h1>
+          <p class="lede">
+            Context, each turn's growth, quota and prompt-cache warmth in one quiet band above the prompt.
+            Colored on a single scale from safe to warning.
+          </p>
+          <div class="install-box">
+            <div class="install-command">
+              <code>/plugin marketplace add shengyy/ccoverhead</code>
+              <button class="copy-btn" data-copy="/plugin marketplace add shengyy/ccoverhead" aria-label="Copy install command">
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 3.5h6a1 1 0 0 1 1 1v6m-2-5h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1z" /></svg>
+                <span>Copy</span>
+              </button>
+            </div>
+            <div class="downloads">
+              <a class="button primary" href="#install">
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3.5 3.5 6.5-6.5" /></svg>
+                <span>Installation Guide</span>
+              </a>
+              <a class="button" href="https://github.com/shengyy/ccoverhead">
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5a6.5 6.5 0 0 0-2.05 12.67c.33.06.45-.14.45-.32v-1.12c-1.81.39-2.19-.87-2.19-.87-.3-.75-.72-.95-.72-.95-.59-.4.04-.39.04-.39.65.05 1 .67 1 .67.58 1 1.53.71 1.9.54.06-.42.23-.71.41-.87-1.44-.16-2.96-.72-2.96-3.21 0-.71.25-1.29.67-1.74-.07-.16-.29-.82.06-1.72 0 0 .55-.17 1.79.67a6.2 6.2 0 0 1 3.26 0c1.24-.84 1.79-.67 1.79-.67.35.9.13 1.56.06 1.72.42.45.67 1.03.67 1.74 0 2.5-1.52 3.05-2.97 3.21.23.2.44.6.44 1.2v1.78c0 .18.12.39.45.32A6.5 6.5 0 0 0 8 1.5z" /></svg>
+                <span>GitHub</span>
+              </a>
+            </div>
+          </div>
+          <p class="meta">
+            <span data-version>Latest release</span> · Claude Code 2.1.288+ · Terminal &amp; Desktop ·
+            Free &amp; open source (MIT) · Zero telemetry
+          </p>
+        </div>
+
+        <div class="hero-preview">
+          <div class="surface-switcher" role="tablist">
+            <button class="surface-tab active" data-surface="desktop" role="tab" aria-selected="true">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2.5" width="12" height="9" rx="1.5" /><path d="M5.5 13.5h5M8 11.5v2" /></svg>
+              Desktop App
+            </button>
+            <button class="surface-tab" data-surface="terminal" role="tab" aria-selected="false">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="1.5" /><path d="M5 6.5l2 2-2 2M8.5 10.5h2.5" /></svg>
+              Terminal
+            </button>
+          </div>
+          <div class="preview-frame">
+            <img
+              id="preview-img"
+              src="assets/screenshots/desktop.png"
+              width="760"
+              alt="ccOverhead band in Claude desktop app"
+            />
+          </div>
+          <p class="preview-caption">
+            Renders crisp vector SVGs on Desktop and lightweight glyphs in Terminal.
+          </p>
+        </div>
+      </section>
+
+      <section id="band" class="band-section">
+        <p class="eyebrow">The Anatomy</p>
+        <h2>Four signals, one quiet band</h2>
+        <p class="section-lede">
+          Reads left to right from what changes every turn to what changes slowly. It shows figures without clutter,
+          giving you instant awareness of budget and context pressure.
+        </p>
+
+        <div class="band-card">
+          <div class="band-display">
+            <span class="group-token label">ctx</span>
+            <span class="group-token bar-text">■■■□□□□□□□</span>
+            <span class="group-token tier-sky">27%</span>
+            <span class="group-token dim">271k/1M</span>
+            <span class="group-token sparkline">▁▂▄█▂▇▁</span>
+            <span class="group-token dim">↑3.4k</span>
+            <span class="sep">|</span>
+            <span class="group-token label">5h</span>
+            <span class="group-token tier-teal">42%</span>
+            <span class="group-token dim">↻2h34m</span>
+            <span class="sep">|</span>
+            <span class="group-token label">7d</span>
+            <span class="group-token tier-yellow">63%</span>
+            <span class="group-token dim">↻2d7h</span>
+            <span class="sep">|</span>
+            <span class="group-token label">cache</span>
+            <span class="group-token tier-teal">warm</span>
+            <span class="group-token dim">38m</span>
+          </div>
+
+          <div class="band-breakdown">
+            <div class="breakdown-item">
+              <span class="dot tier-sky-dot"></span>
+              <div>
+                <h4>Context Window</h4>
+                <p>Usage bar, percentage and <code>used/window</code> tokens. Pre-response estimate marked <code>~</code>.</p>
+              </div>
+            </div>
+            <div class="breakdown-item">
+              <span class="dot tier-amber-dot"></span>
+              <div>
+                <h4>7-Turn Growth</h4>
+                <p>Sparkline of recent turn additions. Each bar is colored by its share of the window to flag heavy turns.</p>
+              </div>
+            </div>
+            <div class="breakdown-item">
+              <span class="dot tier-teal-dot"></span>
+              <div>
+                <h4>5-Hour Quota</h4>
+                <p>Percentage of the rolling 5-hour window used, with countdown <code>↻</code> to reset.</p>
+              </div>
+            </div>
+            <div class="breakdown-item">
+              <span class="dot tier-yellow-dot"></span>
+              <div>
+                <h4>Weekly Quota</h4>
+                <p>Weekly window with countdown. Follows the model family's own window (e.g. <code>7d fable</code>) when reported.</p>
+              </div>
+            </div>
+            <div class="breakdown-item">
+              <span class="dot tier-teal-dot"></span>
+              <div>
+                <h4>Prompt Cache</h4>
+                <p><code>warm</code> with remaining minutes, or <code>cold</code>. Avoids costly 1.25× cache rewrites after pauses.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="features" class="features">
+        <h2>Built for focused Claude Code sessions</h2>
+        <div class="grid">
+          <article>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3" /><path d="M7 14h3M7 10h6M7 6h10" /></svg>
+            <h3>Context at a glance</h3>
+            <p>Percentage and token counts. Before the first response or after <code>/clear</code>, it shows Claude Code's estimate instead of a blank.</p>
+          </article>
+          <article>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V11m5 8V7m5 12v-6m5 6V4" /></svg>
+            <h3>Each turn's growth</h3>
+            <p>Seven-bar sparkline of recent context additions. Each bar colored by its share of the window, so a heavy diff or dump stands out.</p>
+          </article>
+          <article>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2M8 3.5l-4 4M20 3.5l4 4" /></svg>
+            <h3>Quota &amp; reset countdowns</h3>
+            <p>The 5-hour and weekly windows side by side, with exact time until each resets. Dimmed when remembered from a previous session.</p>
+          </article>
+          <article>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1.5 3.5 4 6 4 9a6 6 0 1 1-10 0c0-3 2.5-5.5 4-9z" /><path d="M12 12c1 1.5 2 2.5 2 4a3 3 0 1 1-6 0c0-1.5 1-2.5 2-4z" /></svg>
+            <h3>Prompt-cache warmth</h3>
+            <p>Know whether the last request hit the prompt cache and how many minutes it remains warm before expiring.</p>
+          </article>
+          <article>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 3a9 9 0 0 1 9 9h-9z" /><path d="M7 7.5l5 4.5" /></svg>
+            <h3>One color scale</h3>
+            <p>Ten tiers from cool to warm. Cool is safe, yellow is caution, warm to red is warning. Red-green color-blind accessible.</p>
+          </article>
+          <article>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3L4 7v6c0 5 3.5 9.5 8 10.5 4.5-1 8-5.5 8-10.5V7l-8-4z" /><path d="M9 12l2 2 4-4" /></svg>
+            <h3>Zero telemetry, pure privacy</h3>
+            <p>Only reads numbers Claude Code already exposes. No network requests, no model requests, no background processes.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="scale" class="scale-section">
+        <p class="eyebrow">Design System</p>
+        <h2>The ten-tier cool-to-warm scale</h2>
+        <p class="section-lede">
+          Instead of green-yellow-red which fails for red-green color-blind users, ccOverhead walks smoothly
+          from indigo through sky, cyan, teal and lime into amber and red.
+        </p>
+
+        <div class="scale-strip">
+          <div class="scale-block tier-0" data-label="Tier 0: <0.1%"><span>#5965cd</span><small>&lt;0.1%</small></div>
+          <div class="scale-block tier-1" data-label="Tier 1: 0.1–0.2%"><span>#4087de</span><small>0.1%</small></div>
+          <div class="scale-block tier-2" data-label="Tier 2: 0–29% ctx"><span>#37aae3</span><small>0–29%</small></div>
+          <div class="scale-block tier-3" data-label="Tier 3: 30–39%"><span>#35c5db</span><small>30%</small></div>
+          <div class="scale-block tier-4" data-label="Tier 4: 40–49%"><span>#49d6cc</span><small>40%</small></div>
+          <div class="scale-block tier-5" data-label="Tier 5: 50–59%"><span>#b8e45c</span><small>50%</small></div>
+          <div class="scale-block tier-6" data-label="Tier 6: 60–69%"><span>#f9e149</span><small>60%</small></div>
+          <div class="scale-block tier-7" data-label="Tier 7: 70–79%"><span>#fea92f</span><small>70%</small></div>
+          <div class="scale-block tier-8" data-label="Tier 8: 80–89%"><span>#fd7933</span><small>80%</small></div>
+          <div class="scale-block tier-9" data-label="Tier 9: ≥90%"><span>#ed4b43</span><small>≥90%</small></div>
+        </div>
+
+        <div class="scale-notes">
+          <div class="scale-note">
+            <h4>Red-Green Accessible</h4>
+            <p>Under protanopia and deuteranopia simulations, cool tiers (0–4) and warm tiers (7–9) maintain at least ΔE 17 perceptual distance.</p>
+          </div>
+          <div class="scale-note">
+            <h4>Logarithmic Growth Tiers</h4>
+            <p>Growth tiers double from 0.1% of the window. Everyday turns stay cool, while rare heavy turns (e.g. 64k+ dumps) immediately flash warm.</p>
+          </div>
+          <div class="scale-note">
+            <h4>Graceful Narrowing</h4>
+            <p>On narrow terminals, secondary details yield first: chart, then cache, then token numbers, keeping context visible the longest.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="rationale-section">
+        <div class="rationale-header">
+          <div>
+            <p class="eyebrow">Architecture &amp; Rules</p>
+            <h2>Design rationale sheets</h2>
+            <p class="section-lede">
+              Explore the layout rules, responsive narrowing stages, state machine transitions, and verification boundaries.
+            </p>
+          </div>
+          <div class="lang-switcher">
+            <button class="lang-btn active" data-lang="en">English</button>
+            <button class="lang-btn" data-lang="zh-cn">简体中文</button>
+          </div>
+        </div>
+
+        <div class="diagram-grid">
+          <figure class="diagram-card">
+            <figcaption>Layout &amp; Color System</figcaption>
+            <img
+              id="sheet-layout"
+              src="assets/screenshots/design-layout-en.png"
+              width="1000"
+              alt="ccOverhead layout and color design specification"
+              loading="lazy"
+            />
+          </figure>
+          <figure class="diagram-card">
+            <figcaption>State Machine &amp; Data Flow</figcaption>
+            <img
+              id="sheet-states"
+              src="assets/screenshots/design-states-en.png"
+              width="1000"
+              alt="ccOverhead state reference and verification boundaries"
+              loading="lazy"
+            />
+          </figure>
+        </div>
+      </section>
+
+      <section id="install" class="install">
+        <h2>Install in seconds</h2>
+        <p class="section-lede">ccOverhead is distributed via Claude Code's official plugin marketplace system.</p>
+
+        <ol class="install-steps">
+          <li>
+            <h3>Add marketplace</h3>
+            <p>Register the repository as a plugin marketplace in Claude Code:</p>
+            <div class="code-box">
+              <code>/plugin marketplace add shengyy/ccoverhead</code>
+              <button class="copy-btn" data-copy="/plugin marketplace add shengyy/ccoverhead">Copy</button>
+            </div>
+          </li>
+          <li>
+            <h3>Install plugin</h3>
+            <p>Install the ccOverhead mod from the newly registered marketplace:</p>
+            <div class="code-box">
+              <code>/plugin install ccoverhead@ccoverhead</code>
+              <button class="copy-btn" data-copy="/plugin install ccoverhead@ccoverhead">Copy</button>
+            </div>
+          </li>
+          <li>
+            <h3>Reload</h3>
+            <p>Apply the hooks into your active session:</p>
+            <div class="code-box">
+              <code>/reload-plugins</code>
+              <button class="copy-btn" data-copy="/reload-plugins">Copy</button>
+            </div>
+          </li>
+        </ol>
+
+        <div class="manage-box">
+          <details>
+            <summary>Updating and uninstallation commands</summary>
+            <div class="manage-content">
+              <p><strong>To update to the latest release:</strong></p>
+              <pre><code>/plugin marketplace update ccoverhead
+/plugin update ccoverhead@ccoverhead
+/reload-plugins</code></pre>
+              <p><strong>To uninstall:</strong></p>
+              <pre><code>/plugin uninstall ccoverhead@ccoverhead
+/reload-plugins</code></pre>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <section id="faq" class="faq">
+        <h2>Frequently asked questions</h2>
+        <details>
+          <summary>Does ccOverhead make network requests or consume API tokens?</summary>
+          <p>
+            No. ccOverhead makes zero network requests, zero file reads, zero background processes, and zero model calls.
+            It only reads the usage and limit numbers that Claude Code's mod system already reports into memory.
+          </p>
+        </details>
+        <details>
+          <summary>Which Claude Code versions are supported?</summary>
+          <p>
+            Claude Code 2.1.288 or later with mods (function-hook plugins) support. Verified versions are maintained
+            in <a href="https://github.com/shengyy/ccoverhead/blob/main/docs/status.md">docs/status.md</a>.
+          </p>
+        </details>
+        <details>
+          <summary>Why does the band look different in Terminal and Desktop?</summary>
+          <p>
+            The terminal uses monospace block glyphs (<code>■□</code>, <code>▁▂▃</code>) for context and sparklines.
+            In the Claude desktop app, which uses proportional typography, ccOverhead renders crisp vector <code>Svg</code>
+            elements and native <code>Box</code> layouts to ensure perfect pixel alignment.
+          </p>
+        </details>
+        <details>
+          <summary>How does the prompt cache warmth indicator work?</summary>
+          <p>
+            ccOverhead monitors request events. When a request reads or writes the cache, it tracks warmth over
+            its 1-hour lifetime (the <code>ephemeral_1h</code> cache window). If no subsequent query occurs before the window
+            runs out, the status turns <code>cold</code>.
+          </p>
+        </details>
+        <details>
+          <summary>What happens on narrow terminal windows?</summary>
+          <p>
+            The band gracefully narrows in six discrete stages: it first drops the growth sparkline, then the cache group,
+            then token counts, followed by weekly and 5-hour countdown timers, preserving the essential context indicator longest.
+          </p>
+        </details>
+      </section>
+    </main>
+
+    <footer>
+      <p>
+        <a href="https://github.com/shengyy/ccoverhead">Source on GitHub</a> · MIT License ·
+        <a href="https://github.com/shengyy/ccoverhead/blob/main/README.zh-CN.md">简体中文文档</a>
+      </p>
+      <p class="fine">
+        ccOverhead is an independent open-source project and is not affiliated with or endorsed by Anthropic.
+        "Claude" and "Claude Code" are trademarks of Anthropic, PBC.
+      </p>
+    </footer>
+  </body>
+</html>
