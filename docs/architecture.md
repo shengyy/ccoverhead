@@ -58,7 +58,7 @@ plugin from a folder (ignored by Git).
 | `limits` | `OverheadLimit[]` | the same | Every window reported; the band shows the 5-hour one, one weekly one and a spend limit |
 | `limitsLive` | `boolean` | the same | Whether `limits` is this session's own reading (drawn in color) or remembered (dim) |
 | `cache` | `OverheadCache \| null` | `turn.step`, `classic.PostModelSwitch`, cleared by `classic.SessionStart` | When the last main-thread request finished and whether it touched the cache |
-| `cacheStats` | `OverheadCacheStats` | `turn.step`, `session.compact`, cleared by `classic.SessionStart` | The main conversation's input, cache-read and cache-written tokens, the last request's total, and a rewrite of this turn |
+| `cacheStats` | `OverheadCacheStats` | `turn.step`, `session.compact`, cleared by `classic.SessionStart` | The main conversation's input, cache-read and cache-written tokens, the last request's total, and the latest rewrite, until a later turn reads the cache |
 | `cacheTtl` | `number` | `classic.PostModelSwitch` | The cache lifetime in ms; one hour until a switch reports it |
 | `model` | `string \| null` | load, `session.measure`, `classic.PostModelSwitch` | The main loop's model; picks its own weekly window (`weeklyWindow`) |
 | `agents` | `OverheadAgent[]` | `turn.step`, cleared by `classic.SessionStart` | Up to eight subagents: type, model and last eight changed input totals |

@@ -241,7 +241,8 @@ export type BandInput = {
   limitsLive: boolean
   cache: OverheadCache | null
   cacheTtl: number
-  // Tokens the main conversation's request rewrote to the cache this turn instead of reading them.
+  // Tokens the main conversation's latest rewrite wrote to the cache instead of reading them, until a later
+  // turn reads the cache.
   rewrite?: number
   model: string | null
   view?: AgentView
@@ -321,8 +322,8 @@ function agentGroup(b: BandInput, view: AgentView, d: Detail): Span[] {
   return g
 }
 
-// Warm with its lifetime left, or cold; then a request of this turn that rewrote the cache instead of reading
-// it, tiered like a growth bar by its share of the window.
+// Warm with its lifetime left, or cold; then the latest request that rewrote the cache instead of reading it,
+// kept until a later turn reads the cache, tiered like a growth bar by its share of the window.
 function cacheGroup(b: BandInput, cache: OverheadCache, d: Detail): Span[] {
   const left = cache.at + b.cacheTtl - b.now
   let g: Span[] = [{ text: 'cache' }, { text: ' cold', dimColor: true }]

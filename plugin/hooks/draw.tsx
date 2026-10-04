@@ -112,13 +112,17 @@ export function paneRich(els: Rich, lines: PaneLine[]) {
             <Text bold>{l.head}</Text>
           </Box>
         ) : (
+          // Spaces do not align in a proportional font: a figure label is right-aligned by its Box, and a line
+          // that belongs to the one above is indented by padding.
           <Box key={`l-${i}`} flexDirection="row" alignItems="center" gap={1}>
-            <Box width={LABEL} flexShrink={0}>
+            <Box width={LABEL} flexShrink={0} justifyContent={l.end ? 'flex-end' : 'flex-start'}>
               <Text color={colorOf(l.label)} dimColor={l.label.dimColor}>
                 {l.label.text.trim()}
               </Text>
             </Box>
-            {itemRun(els, l.spans, String(i))}
+            <Box flexDirection="row" alignItems="center" gap={1} paddingLeft={l.nested ? 2 : 0}>
+              {itemRun(els, l.spans, String(i))}
+            </Box>
           </Box>
         ),
       )}

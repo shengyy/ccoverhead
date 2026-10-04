@@ -102,6 +102,10 @@ describe('the /ccoverhead pane', () => {
       if (surface !== 'terminal') {
         expect(await ui.find({ type: 'Text', text: /[■□▁▂▃▄▅▆▇█]/ })).toBeUndefined()
         expect((await ui.findAll({ type: 'Svg' })).length).toBeGreaterThan(0)
+        // A proportional font drops alignment spaces: figures are right-aligned and servers indented by layout.
+        const boxes = await ui.findAll({ type: 'Box' })
+        expect(boxes.some(b => b.props.justifyContent === 'flex-end')).toBe(true)
+        expect(boxes.some(b => b.props.paddingLeft === 2)).toBe(true)
       }
     })
 

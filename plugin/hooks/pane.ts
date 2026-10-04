@@ -16,7 +16,8 @@ export type PaneInput = BandInput & {
   viewing?: string
 }
 
-export type PaneLine = { head: string } | { label: Span; spans: Span[] }
+// `end`: the label is a figure, right-aligned in its column; `nested`: the line belongs to the one above.
+export type PaneLine = { head: string } | { label: Span; spans: Span[]; end?: boolean; nested?: boolean }
 
 // Cells the label column takes on the terminal.
 export const LABEL = 12
@@ -29,6 +30,7 @@ const SPANS: [test: (kind: string) => boolean, ms: number][] = [
 ]
 
 const line = (label: string | Span, ...spans: Span[]): PaneLine => ({ label: typeof label === 'string' ? { text: label } : label, spans })
+const figure = (label: Span, ...spans: Span[]): PaneLine => ({ label, spans, end: true })
 const dim = (text: string): Span => ({ text, dimColor: true })
 const pad = (text: string, n: number) => text.padStart(n)
 
@@ -78,15 +80,15 @@ function breakdown(p: PaneInput): PaneLine[] {
   const used = b.rows.reduce((n, r) => n + r.tokens, 0)
   const out: PaneLine[] = [{ head: 'In the window, as /context estimates it' }]
   for (const r of [...b.rows].sort((x, y) => y.tokens - x.tokens)) {
-    out.push(line({ text: pad(kshort(r.tokens), LABEL - 2), tier: gainTier(r.tokens, window) }, dim(` ${pad(`${Math.round((r.tokens * 100) / Math.max(used, 1))}%`, 4)}`), { text: `  ${r.name}` }))
+    out.push(figure({ text: pad(kshort(r.tokens), LABEL - 2), tier: gainTier(r.tokens, window) }, dim(` ${pad(`${Math.round((r.tokens * 100) / Math.max(used, 1))}%`, 4)}`), { text: `  ${r.name}` }))
     if (r.name.startsWith('MCP tools')) {
       for (const s of [...b.mcp].sort((x, y) => y.tokens - x.tokens).slice(0, SERVERS)) {
-        out.push(line(dim(pad(kshort(s.tokens), LABEL - 2)), dim(`         ${s.server}`)))
+        out.push({ ...figure(dim(pad(kshort(s.tokens), LABEL - 2)), dim(`         ${s.server}`)), nested: true })
       }
-      if (b.mcp.length > SERVERS) out.push(line('', dim(`         and ${b.mcp.length - SERVERS} more servers`)))
+      if (b.mcp.length > SERVERS) out.push({ ...line('', dim(`         and ${b.mcp.length - SERVERS} more servers`)), nested: true })
     }
   }
-  if (b.deferred > 0) out.push(line(dim(pad(kshort(b.deferred), LABEL - 2)), dim('       tool schemas loaded on demand, outside the window')))
+  if (b.deferred > 0) out.push(figure(dim(pad(kshort(b.deferred), LABEL - 2)), dim('       tool schemas loaded on demand, outside the window')))
   return out
 }
 
