@@ -14,9 +14,9 @@ ctx ■■■□□□□□□□ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | 
   `↑` latest growth), cache (`warm` and the minutes left, or `cold`; then `rewrote` and its tokens
   on a turn that rewrote the cache), 5-hour quota, weekly quota, `spend` (a gateway's spend limit, when
   reported). A dim ` | ` separates groups.
-- `warm` and its minutes are one span in one color, a state rather than a scale: cyan (tier 3) while more
-  than a fifth of the lifetime is left, orange (tier 8) in the last fifth, when the next request should come
-  soon; `cold` is dim. The minutes already say how long, so no gauge repeats them.
+- `warm` and its minutes are one span in one color, the share of the lifetime gone on the percentage
+  scale: sky while fresh, up through the tiers to red in the last tenth; `cold` is dim. The minutes already
+  say how long, so no gauge repeats them.
 - The bar carries no auto-compaction mark. On the 1M window most sessions run, the threshold (967k) rounds
   to the bar's end, where a mark read as a separator between the bar and its figures; the pane gives the
   threshold and the tokens to go instead.
@@ -49,8 +49,8 @@ One scale, one meaning: cool is safe, yellow is caution, warm to red is warning.
 
 The colors are defined once, in `plugin/hooks/format.ts`; this table follows it.
 
-The percentage column also colors figures that are shares of something else: the pane's tokens to
-auto-compaction (the context as a share of the threshold), its hit rate (the share the cache did not serve),
+The percentage column also colors figures that are shares of something else: `warm` and its minutes (the
+share of the cache lifetime gone), the pane's tokens to auto-compaction (the context as a share of the threshold), its hit rate (the share the cache did not serve),
 and each category in its breakdown (its share of the window, as the context bar colors the whole). The growth column also colors `rewrote`, a token amount, by its
 share of the window: a rewrite is a cost like a turn's growth, while a category's size is not an alarm.
 

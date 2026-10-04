@@ -91,9 +91,8 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
   switch to another model leaves the cache cold: each model has its own.
 - A resumed or forked conversation shows its cache warm or cold at once, aged from the transcript's last
   response, and its first request counts as a rewrite when it writes the transcript again.
-- `warm` and its minutes share one state color: cool while more than a fifth of the lifetime is left,
-  orange in the last fifth, when a pause will soon cost a rewrite. The cache is a state, so it takes two
-  colors of the palette rather than the ten-step scale; the minutes say how long.
+- `warm` and its minutes share one color: the share of the lifetime gone, on the percentage scale, as a
+  quota's share used is, so the cache warms toward red as a pause nears a rewrite.
 - A rewrite shows `rewrote` and its tokens until a request of a later turn reads the cache again. The first
   request after a compaction is not counted as one: it writes a new conversation, not a lapsed cache.
 

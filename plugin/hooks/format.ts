@@ -5,15 +5,10 @@ import type { OverheadAgent, OverheadCache, OverheadCtx, OverheadLimit } from '.
 // on a Claude Pro account was ephemeral_1h. The other lifetime is five minutes.
 export const CACHE_TTL_MS = 60 * 60 * 1000
 export const SHORT_TTL_MS = 5 * 60 * 1000
-// The warm cache's two states, as tiers of the one palette: plenty left, and the last fifth of the lifetime,
-// when the next request should come soon or rewrite the cache. A state, not a scale: the minutes say how long.
-const WARM_TIER = 3
-const EXPIRING_TIER = 8
-const EXPIRING_SHARE = 0.2
-
-// The warm cache's state colour for `left` of a `ttl` lifetime.
+// The warm cache's colour for `left` of a `ttl` lifetime: the share of it gone, on the percentage scale, as a
+// quota's share used is. Sky while fresh, one tier per 10% gone from 30%, red in its last tenth.
 export function cacheTier(left: number, ttl: number): number {
-  return left > ttl * EXPIRING_SHARE ? WARM_TIER : EXPIRING_TIER
+  return pctTier(((ttl - left) * 100) / ttl)
 }
 // Context totals kept for the sparkline: 8 totals, 7 bars.
 export const HISTORY = 8
@@ -291,7 +286,7 @@ function agentGroup(b: BandInput, view: AgentView, d: Detail): Span[] {
   return g
 }
 
-// Warm and its minutes left in the state's colour (`cacheTier`), or cold; then the latest request that rewrote
+// Warm and its minutes left in one colour (`cacheTier`), or cold; then the latest request that rewrote
 // the cache instead of reading it, kept until a later turn reads the cache, tiered like a growth bar by its
 // share of the window.
 function cacheGroup(b: BandInput, cache: OverheadCache, d: Detail): Span[] {

@@ -44,7 +44,7 @@ and opens the detail behind them in a pane when you ask.
 - **Quota with reset countdowns.** The 5-hour and weekly windows (and a Claude gateway's spend limit), as a
   percentage used and the time until each resets.
 - **Prompt-cache warmth.** Whether the last main-conversation request hit the cache and how long it stays
-  warm, turning orange in its last minutes, so you know when a pause will cost a cache rewrite; when a turn did
+  warm, warming in color as it drains, so you know when a pause will cost a cache rewrite; when a turn did
   rewrite it, the band says how much.
 - **Subagents too.** Open a subagent's transcript and the band follows that agent's context and growth.
 - **The `/ccoverhead` pane.** What is in the window by category (which MCP server costs what), growth since
@@ -94,7 +94,7 @@ ctx ■■■□□□□□□□ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | 
 |---|---|
 | `ctx` | Context used: bar, percentage, tokens. `~` marks the pre-response estimate. Reads `agent` while a subagent's transcript is on screen |
 | Bars and `↑` | What each of the last seven turns added; `↑` is the latest turn |
-| `cache` | `warm` and its minutes, cyan and orange in the last fifth of the lifetime, or `cold`; `rewrote` and its tokens on a turn that wrote the cache again instead of reading it |
+| `cache` | `warm` and its minutes, warming in color as the lifetime drains, or `cold`; `rewrote` and its tokens on a turn that wrote the cache again instead of reading it |
 | `5h`, `7d` | Quota used in each window, and `↻` the time until it resets. Dim when remembered from an earlier session. `7d` follows the main model's own weekly window when Claude Code reports one, such as `7d fable` (not verified) |
 | `spend` | A Claude gateway's spend limit, when reported; it can pass 100% (not verified) |
 

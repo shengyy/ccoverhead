@@ -103,8 +103,8 @@ describe('ccoverhead', () => {
       for await (const _ of $.turn.step(STEP)) {
         // drain
       }
-      // A freshly warm cache, its minutes in the same colour: the warm state's cyan.
-      expect((await ui.find({ type: 'Text', text: /^ ?warm 1h0m$/ }))?.props.color).toBe(TIER_HEX[3])
+      // A freshly warm cache, its minutes in the same colour: none of the lifetime gone, the scale's sky.
+      expect((await ui.find({ type: 'Text', text: /^ ?warm 1h0m$/ }))?.props.color).toBe(TIER_HEX[2])
       // The conversation's state first (context, then cache), then the account's quota.
       const order = (await ui.findAll({ type: 'Text' })).map(t => t.text.trim())
       expect(order.indexOf('ctx') < order.indexOf('cache') && order.indexOf('cache') < order.indexOf('5h') && order.indexOf('5h') < order.indexOf('7d')).toBe(true)
@@ -359,12 +359,14 @@ describe('ccoverhead', () => {
       await step('t5')
       expect(await ui.find({ type: 'Text', text: /rewrote/ })).toBeUndefined()
 
-      // Two states, not a scale: cyan with 13 of 60 minutes left, orange in the last fifth (12 minutes), and no
-      // gauge of the lifetime beside the minutes.
-      await clock.advance(47 * MIN)
-      expect((await ui.find({ type: 'Text', text: /^ ?warm 13m$/ }))?.props.color).toBe(TIER_HEX[3])
-      await clock.advance(3 * MIN)
+      // The lifetime drains up the percentage scale: 30 of 60 minutes gone is tier 5, 50 is tier 8, 55 is red;
+      // no gauge of the lifetime beside the minutes.
+      await clock.advance(30 * MIN)
+      expect((await ui.find({ type: 'Text', text: /^ ?warm 30m$/ }))?.props.color).toBe(TIER_HEX[5])
+      await clock.advance(20 * MIN)
       expect((await ui.find({ type: 'Text', text: /^ ?warm 10m$/ }))?.props.color).toBe(TIER_HEX[8])
+      await clock.advance(5 * MIN)
+      expect((await ui.find({ type: 'Text', text: /^ ?warm 5m$/ }))?.props.color).toBe(TIER_HEX[9])
       expect(await ui.find({ type: 'Text', text: /^ [▁▂▃▄▅▆▇█]$/ })).toBeUndefined()
       if (surface === 'desktop') expect((await ui.findAll({ type: 'Svg' })).some(one => /cache/.test(String(one.props.alt)))).toBe(false)
     })
