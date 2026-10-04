@@ -120,12 +120,13 @@ as close-ups of those groups from the shared state fixtures for the website. Nev
 real session.
 
 The website uses a warm charcoal background, off-white text, a sand-colored action and serif headings,
-with the dark product previews as the main visual material. Its fluid shell grows up to a 3840px viewport;
-paragraphs keep a readable line length while previews and columns use the extra width. Wide screens show
-the pane introduction, feature list and preview in three columns; installation and FAQ use extra columns
-on the widest screens. It introduces the band before the pane and the state examples, then the shared
-scale, design sheets, installation and verification notes. Version and palette are read
-from their code owners by `scripts/site/build.ts`; the website does not fetch release metadata at runtime.
+with the dark product previews as the main visual material. Its centered shell scales from 1152px to
+1584px as the viewport grows, with a scaled gutter on smaller screens. Paragraphs keep a readable line
+length, and the pane, installation and FAQ use two columns before stacking on narrow screens. Install
+commands stay in a vertical sequence so each command has enough room. It introduces the band before
+the pane and the state examples, then the shared scale, design sheets, installation and verification
+notes. Version and palette are read from their code owners by `scripts/site/build.ts`; the website does
+not fetch release metadata at runtime.
 
 ### Design rationale sheets
 
