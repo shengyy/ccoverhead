@@ -1,122 +1,9 @@
 import { describe, expect, mock, test } from 'claude-code/testing'
-import type { MountTarget, Mounted } from 'claude-code/testing'
-import type {
-  ClassicResultOf,
-  SessionContextBreakdown,
-  SessionContextUsage,
-  SessionMeasureInput,
-  SessionRateLimit,
-  SessionStartInput,
-  SessionUsage,
-  TurnStepInput,
-  TurnStepResult,
-} from 'claude-code'
+import type { ClassicResultOf, SessionRateLimit } from 'claude-code'
 
 import { gainTier, modelFamily, pctTier, weeklyWindow } from '../hooks/format'
-
-const NOW = Date.parse('2026-10-03T15:00:00Z')
-const iso = (ms: number) => new Date(NOW + ms).toISOString()
-const MIN = 60_000
-const WINDOW = 1_000_000
-
-const SURFACES = ['terminal', 'desktop'] as const
-type Surface = (typeof SURFACES)[number]
-
-const session = (surface: Surface): SessionStartInput => ({ surface, isInteractive: true, cwd: '/work' })
-
-// The band as the engine asks for it: rows to spare, so nothing scrolls.
-const band = <P extends Surface>(surface: P, bodyColumns = 160): MountTarget<P, 'AbovePrompt'> => ({
-  plugin: 'ccoverhead',
-  surface,
-  component: 'AbovePrompt',
-  props: { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns, scroll: { offset: 0, bodyRows: 9 }, view: {} },
-})
-
-const fill = (tokens: number, percent = Math.round(tokens / 10_000)): SessionContextUsage => ({ tokens, window: WINDOW, percent })
-
-const measured = (context: SessionContextUsage, rateLimits: SessionRateLimit[] = []): SessionMeasureInput => ({
-  context,
-  rateLimits,
-  changed: ['context', 'rateLimits'],
-})
-
-// /context's local count on a fresh session in this repo: system prompt, tools, memory files and skills.
-const ESTIMATE = 13_689
-const BREAKDOWN: SessionContextBreakdown = {
-  categories: [],
-  totalTokens: ESTIMATE,
-  maxTokens: WINDOW,
-  rawMaxTokens: WINDOW,
-  autocompactSource: 'model-default',
-  percentage: 1,
-  gridRows: [],
-  model: 'claude-opus-5-5',
-  memoryFiles: [],
-  mcpTools: [],
-  agents: [],
-  isAutoCompactEnabled: true,
-  apiUsage: null,
-}
-
-// What `$.session.usage()` answers: no fill before a response in the window, and the
-// breakdown only when the call asks for one.
-const usage = (tokens: number | undefined, rateLimits: SessionRateLimit[], breakdown: boolean): SessionUsage => ({
-  startedAt: 0,
-  rateLimits,
-  context: {
-    ...(tokens === undefined ? { window: WINDOW } : fill(tokens)),
-    ...(breakdown && { breakdown: BREAKDOWN }),
-  },
-})
-
-const STEP: TurnStepInput = { turnId: 't', index: 0, model: 'claude-opus-5-5', messageCount: 3 }
-// Claude Code's answer to one main-conversation request that touched the prompt cache.
-const cached = (read: number, created: number): TurnStepResult => ({
-  turnId: 't',
-  index: 0,
-  answer: '',
-  toolUses: [],
-  stopReason: 'end_turn',
-  usage: {
-    model: 'claude-opus-5-5',
-    input_tokens: 1,
-    output_tokens: 1,
-    cache_read_input_tokens: read,
-    cache_creation_input_tokens: created,
-  },
-})
-
-// The ctx bar: block glyphs on the terminal; on the desktop an Svg filled in the tier's dark-card colour (or
-// the dim grey), and no glyph or space-padded text anywhere in the band.
-const DIM_HEX = '#898781'
-async function graphic(ui: Mounted<Surface, 'AbovePrompt'>, kind: 'bar' | 'spark', surface: Surface, glyphs: RegExp, ink: number | 'dim') {
-  if (surface === 'terminal') {
-    const el = await ui.find({ type: 'Text', text: glyphs })
-    expect(ink === 'dim' ? el?.props.dimColor : el?.props.color).toBe(ink === 'dim' ? true : TIER_HEX[ink])
-    return
-  }
-  const alt = kind === 'bar' ? /^context \d+% used$/ : /^context added in each of the last \d+ changes$/
-  const svgs = await ui.findAll({ type: 'Svg' })
-  const el = svgs.find(one => alt.test(String(one.props.alt)))
-  expect(String(el?.props.source)).toContain(ink === 'dim' ? DIM_HEX : TIER_HEX[ink])
-  expect(await ui.find({ type: 'Text', text: /[■□▁▂▃▄▅▆▇█]/ })).toBeUndefined()
-  expect(await ui.find({ type: 'Text', text: /^\s|\s$/ })).toBeUndefined()
-}
-
-// The sparkline's tiers: one coloured glyph per bar on the terminal, one classed column per bar in the
-// desktop's Svg, the class painted in the tier's dark-card colour.
-const TIER_HEX = ['#5965cd', '#4087de', '#37aae3', '#35c5db', '#49d6cc', '#b8e45c', '#f9e149', '#fea92f', '#fd7933', '#ed4b43']
-async function tiers(ui: Mounted<Surface, 'AbovePrompt'>, surface: Surface, want: number[]) {
-  if (surface === 'terminal') {
-    const bars = await ui.findAll({ type: 'Text', text: /^[▁▂▃▄▅▆▇█]$/ })
-    expect(bars.map(b => b.props.color)).toEqual(want.map(t => TIER_HEX[t]))
-    return
-  }
-  const svgs = await ui.findAll({ type: 'Svg' })
-  const source = String(svgs.find(one => /^context added/.test(String(one.props.alt)))?.props.source)
-  expect([...source.matchAll(/<rect class="t(\d)"/g)].map(m => Number(m[1]))).toEqual(want)
-  for (const t of want) expect(source).toContain(`.t${t}{fill:${TIER_HEX[t]}}`)
-}
+import { addAgentStep } from '../hooks/track'
+import { BREAKDOWN, MIN, NOW, STEP, SURFACES, TIER_HEX, band, cached, fill, graphic, iso, measured, session, tiers, usage } from './kit'
 
 test('the weekly window follows the main model when one is named after it (not verified against a real window)', () => {
   expect(['claude-fable-5-1', 'claude-opus-5-5', 'claude-haiku-4-5-20251001', 'some-other-model', null].map(modelFamily)).toEqual(['fable', 'opus', 'haiku', undefined, undefined])
@@ -137,6 +24,16 @@ test('the weekly window follows the main model when one is named after it (not v
   ]
   expect(weeklyWindow(scoped, 'claude-fable-5-1')).toEqual({ limit: scoped[2], label: '7d fable' })
   expect(weeklyWindow(scoped, 'claude-opus-5-5')).toEqual({ limit: scoped[1], label: '7d' })
+})
+
+test('a subagent keeps its totals as the main context does: changed ones only, restarting on a drop', () => {
+  const u = (t: number) => ({ input_tokens: 0, cache_read_input_tokens: t, cache_creation_input_tokens: 0 })
+  let list = addAgentStep([], 'a1', 'm', u(10_000), 'Explore')
+  for (const t of [10_000, 10_000, 12_000]) list = addAgentStep(list, 'a1', 'm', u(t))
+  expect(list[0]?.totals).toEqual([10_000, 12_000])
+  expect(list[0]?.label).toBe('Explore')
+  list = addAgentStep(list, 'a1', 'm', u(4_000))
+  expect(list[0]?.totals).toEqual([4_000])
 })
 
 test('percent tiers step every 10% from tier 2', () => {
@@ -206,11 +103,11 @@ describe('ccoverhead', () => {
       for await (const _ of $.turn.step(STEP)) {
         // drain
       }
-      // A warm cache is safe: the teal tier.
-      expect((await ui.find({ type: 'Text', text: /^ ?warm$/ }))?.props.color).toBe(TIER_HEX[4])
-      // Context first, then the quota, the cache last.
+      // A freshly warm cache is safe: the first percentage tier, sky.
+      expect((await ui.find({ type: 'Text', text: /^ ?warm$/ }))?.props.color).toBe(TIER_HEX[2])
+      // The conversation's state first (context, then cache), then the account's quota.
       const order = (await ui.findAll({ type: 'Text' })).map(t => t.text.trim())
-      expect(order.indexOf('ctx') < order.indexOf('5h') && order.indexOf('5h') < order.indexOf('7d') && order.indexOf('7d') < order.indexOf('cache')).toBe(true)
+      expect(order.indexOf('ctx') < order.indexOf('cache') && order.indexOf('cache') < order.indexOf('5h') && order.indexOf('5h') < order.indexOf('7d')).toBe(true)
       expect(await ui.find({ type: 'Text', text: /^ ?1h0m$/ })).toBeDefined()
 
       // Compaction: total drops, history restarts, sparkline hides.
@@ -384,6 +281,314 @@ describe('ccoverhead', () => {
       expect(await ui.find({ type: 'Text', text: /↑/ })).toBeUndefined()
       expect(await ui.find({ type: 'Text', text: /^ ?warm$/ })).toBeUndefined()
       expect(await ui.find({ type: 'Text', text: /^ ?~13k\/1M$/ })).toBeDefined()
+    })
+
+    test(`the context bar marks where auto-compaction runs (${surface})`, async ($, on) => {
+      let threshold: number | undefined = 335_000
+      on('session.start', ($, e) => ({ cwd: e.cwd }))
+      on('session.measure', ($, e) => ({ changed: e.changed }))
+      mock.store(on)
+      // A compaction window of 368k on the 1M model: the threshold sits a third of the way along the bar.
+      on('session.usage', ($, e) => ({
+        value: usage(300_000, [], e.breakdown !== undefined && { ...BREAKDOWN, autoCompactThreshold: threshold, isAutoCompactEnabled: threshold !== undefined }),
+      }))
+      mock.clock(on, { now: NOW })
+      await $.session.start(session(surface))
+      await $.session.measure(measured(fill(300_000, 30)))
+      const ui = await $.ui.mount(band(surface))
+      // 30% used, the mark at 33.5%: three cells, the mark, seven. 300k of 335k is 89%: the mark is orange.
+      if (surface === 'terminal') {
+        expect((await ui.find({ type: 'Text', text: /^■■■$/ }))?.props.color).toBe(TIER_HEX[3])
+        expect((await ui.find({ type: 'Text', text: /^│$/ }))?.props.color).toBe(TIER_HEX[8])
+        expect((await ui.find({ type: 'Text', text: /^□{7}$/ }))?.props.color).toBe(TIER_HEX[3])
+      } else {
+        const bar = (await ui.findAll({ type: 'Svg' })).find(one => /^context/.test(String(one.props.alt)))
+        expect(bar?.props.alt).toBe('context 30% used, auto-compacts at 34%')
+        expect(String(bar?.props.source)).toContain(`.m{fill:${TIER_HEX[8]}}`)
+        expect(String(bar?.props.source)).toContain('<rect class="m" x="19"')
+      }
+
+      // Auto-compaction off: no mark.
+      threshold = undefined
+      await $.session.measure(measured(fill(310_000, 31)))
+      await graphic(ui, 'bar', surface, /^■■■□{7}$/, 3)
+      expect(await ui.find({ type: 'Text', text: /│/ })).toBeUndefined()
+    })
+
+    test(`a request that reads back little of the cache shows the rewrite until a later turn reads again (${surface})`, async ($, on) => {
+      const steps: [turnId: string, read: number, write: number][] = [
+        ['t1', 0, 20_000], // the first request writes everything: no rewrite
+        ['t2', 20_000, 1_000],
+        ['t3', 0, 120_000], // the cache had lapsed
+        ['t3', 121_000, 500], // the same turn reads again: still shown
+        ['t4', 0, 0], // a later request that reads nothing (no cache at all): still shown
+        ['t5', 121_500, 300], // a later turn reads the cache again: gone
+      ]
+      let at = 0
+      on('session.start', ($, e) => ({ cwd: e.cwd }))
+      on('session.measure', ($, e) => ({ changed: e.changed }))
+      mock.store(on)
+      on('session.usage', () => ({ value: usage(40_000, [], false) }))
+      on('turn.step', async function* () {
+        const [turnId, read, write] = steps[at++]!
+        return { ...cached(read, write), turnId }
+      })
+      const clock = mock.clock(on, { now: NOW })
+      await $.session.start(session(surface))
+      await $.session.measure(measured(fill(40_000, 4)))
+      const ui = await $.ui.mount(band(surface))
+      const step = async (turnId: string) => {
+        for await (const _ of $.turn.step({ ...STEP, turnId })) {
+          // drain
+        }
+      }
+      await step('t1')
+      await step('t2')
+      expect(await ui.find({ type: 'Text', text: /rewrote/ })).toBeUndefined()
+      await step('t3')
+      // 120k of the 1M window is a tier-7 growth: amber.
+      expect((await ui.find({ type: 'Text', text: /^ ?rewrote 120k$/ }))?.props.color).toBe(TIER_HEX[7])
+      await step('t3')
+      expect(await ui.find({ type: 'Text', text: /^ ?rewrote 120k$/ })).toBeDefined()
+      await step('t4')
+      expect(await ui.find({ type: 'Text', text: /^ ?rewrote 120k$/ })).toBeDefined()
+      await step('t5')
+      expect(await ui.find({ type: 'Text', text: /rewrote/ })).toBeUndefined()
+
+      // A fresh lifetime: the terminal's gauge full, in the warm figure's colour.
+      if (surface === 'terminal') expect((await ui.find({ type: 'Text', text: /^ █$/ }))?.props.color).toBe(TIER_HEX[2])
+      // The lifetime drains toward the warm end of the scale: 50 of 60 minutes gone is the 80s tier, orange.
+      await clock.advance(50 * MIN)
+      expect((await ui.find({ type: 'Text', text: /^ ?warm$/ }))?.props.color).toBe(TIER_HEX[8])
+      expect(await ui.find({ type: 'Text', text: /^ ?10m$/ })).toBeDefined()
+      if (surface === 'terminal') expect((await ui.find({ type: 'Text', text: /^ ▂$/ }))?.props.color).toBe(TIER_HEX[8])
+      if (surface === 'desktop') {
+        const ring = (await ui.findAll({ type: 'Svg' })).find(one => /^cache lifetime/.test(String(one.props.alt)))
+        expect(ring?.props.alt).toBe('cache lifetime 17% left')
+      }
+    })
+
+    test(`a model switch leaves the cache cold and sets its lifetime (${surface})`, async ($, on) => {
+      on('session.start', ($, e) => ({ cwd: e.cwd }))
+      on('session.measure', ($, e) => ({ changed: e.changed }))
+      mock.store(on)
+      on('session.usage', () => ({ value: usage(40_000, [], false) }))
+      on('classic.PostModelSwitch', () => ({}))
+      on('turn.step', async function* () {
+        return cached(30_000, 1_000)
+      })
+      mock.clock(on, { now: NOW })
+      await $.session.start(session(surface))
+      await $.session.measure(measured(fill(40_000, 4)))
+      const ui = await $.ui.mount(band(surface))
+      for await (const _ of $.turn.step(STEP)) {
+        // drain
+      }
+      expect(await ui.find({ type: 'Text', text: /^ ?1h0m$/ })).toBeDefined()
+      await $.classic.PostModelSwitch({
+        from_model: 'claude-opus-5-5',
+        to_model: 'claude-haiku-4-5-20251001',
+        requested_model: 'haiku',
+        source: 'command',
+        context_tokens: 40_000,
+        prompt_cache_warm: true,
+        cache_ttl: '5m',
+        estimated_cache_write_usd: 0,
+        pricing: 'catalog',
+      })
+      expect(await ui.find({ type: 'Text', text: /^ ?cold$/ })).toBeDefined()
+      for await (const _ of $.turn.step(STEP)) {
+        // drain
+      }
+      expect(await ui.find({ type: 'Text', text: /^ ?5m$/ })).toBeDefined()
+    })
+
+    test(`a gateway's spend limit shows past 100% with no reset (${surface})`, async ($, on) => {
+      on('session.start', ($, e) => ({ cwd: e.cwd }))
+      on('session.measure', ($, e) => ({ changed: e.changed }))
+      mock.store(on)
+      on('session.usage', () => ({ value: usage(40_000, [], false) }))
+      mock.clock(on, { now: NOW })
+      await $.session.start(session(surface))
+      // A fictional gateway reading: Claude Code's declarations name the kind; none has been seen live.
+      await $.session.measure(measured(fill(40_000, 4), [{ kind: 'spend_limit', percentUsed: 112.5 }]))
+      const ui = await $.ui.mount(band(surface))
+      expect(await ui.find({ type: 'Text', text: /^spend$/ })).toBeDefined()
+      expect((await ui.find({ type: 'Text', text: /^ ?112%$/ }))?.props.color).toBe(TIER_HEX[9])
+      expect(await ui.find({ type: 'Text', text: /↻/ })).toBeUndefined()
+    })
+
+    test(`the band follows the subagent whose transcript is on screen (${surface})`, async ($, on) => {
+      const steps: [agentId: string, model: string, read: number, write: number][] = [
+        ['a1', 'claude-opus-5-5', 0, 11_739],
+        ['a1', 'claude-opus-5-5', 11_739, 1_263],
+        ['a2', 'claude-haiku-4-5-20251001', 0, 9_000],
+      ]
+      let at = 0
+      on('session.start', ($, e) => ({ cwd: e.cwd }))
+      on('session.measure', ($, e) => ({ changed: e.changed }))
+      mock.store(on)
+      on('session.usage', () => ({ value: usage(40_000, [], false) }))
+      on('session.model', () => ({ value: 'claude-opus-5-5' }))
+      on('agent.list', () => ({
+        value: [
+          { id: 'a1', type: 'Explore', description: 'fictional', status: 'running' },
+          { id: 'a2', type: 'general-purpose', description: 'fictional', status: 'running' },
+        ],
+      }))
+      on('turn.step', async function* () {
+        const [, model, read, write] = steps[at++]!
+        const r = cached(read, write)
+        return { ...r, usage: { ...r.usage!, model } }
+      })
+      mock.clock(on, { now: NOW })
+      await $.session.start(session(surface))
+      await $.session.measure(measured(fill(40_000, 4)))
+      for (const [agentId, model] of steps) {
+        for await (const _ of $.turn.step({ ...STEP, agentId, model })) {
+          // drain
+        }
+      }
+      const viewing = (agentId: string) => ({ ...band(surface), props: { ...band(surface).props, view: { agentId } } })
+      // Same model as the main loop: its window, so a bar; 13k of 1M is 1%.
+      const a1 = await $.ui.mount(viewing('a1'))
+      expect(await a1.find({ type: 'Text', text: /^agent$/ })).toBeDefined()
+      expect(await a1.find({ type: 'Text', text: /^ctx$/ })).toBeUndefined()
+      expect(await a1.find({ type: 'Text', text: /^ ?13k\/1M$/ })).toBeDefined()
+      expect(await a1.find({ type: 'Text', text: /^ ?↑1\.3k$/ })).toBeDefined()
+      // Another model: its window is not reported, so the tokens alone.
+      const a2 = await $.ui.mount(viewing('a2'))
+      expect(await a2.find({ type: 'Text', text: /^ ?9k$/ })).toBeDefined()
+      expect(await a2.find({ type: 'Text', text: /%/ })).toBeUndefined()
+      // An agent with no request yet.
+      const a3 = await $.ui.mount(viewing('a3'))
+      expect(await a3.find({ type: 'Text', text: /^ ?--$/ })).toBeDefined()
+    })
+
+    test(`a compaction starts growth over and its next request is no rewrite (${surface})`, async ($, on) => {
+      // 80k compacted to 30k; the next turn writes the new prefix and adds a 100k tool result: 130k, above
+      // the total before, so only the compaction event tells this from growth.
+      const steps: [turnId: string, read: number, write: number][] = [
+        ['t1', 0, 80_000],
+        ['t2', 0, 30_000],
+        ['t2', 30_000, 100_000],
+      ]
+      let at = 0
+      on('session.start', ($, e) => ({ cwd: e.cwd }))
+      on('session.measure', ($, e) => ({ changed: e.changed }))
+      // A fictional summary: the compaction's content does not matter here, only that it ran.
+      const SUMMARY = [{ role: 'user' as const, text: 'Fictional summary.', toolUses: [] }]
+      on('session.compact', () => ({ messages: SUMMARY, tokensBefore: 80_000, tokensAfter: 30_000 }))
+      mock.store(on)
+      on('session.usage', () => ({ value: usage(80_000, [], false) }))
+      on('turn.step', async function* () {
+        const [turnId, read, write] = steps[at++]!
+        return { ...cached(read, write), turnId }
+      })
+      mock.clock(on, { now: NOW })
+      await $.session.start(session(surface))
+      const ui = await $.ui.mount(band(surface))
+      const step = async (turnId: string) => {
+        for await (const _ of $.turn.step({ ...STEP, turnId })) {
+          // drain
+        }
+      }
+      await $.session.measure(measured(fill(50_000, 5)))
+      await step('t1')
+      await $.session.measure(measured(fill(80_000, 8)))
+      expect(await ui.find({ type: 'Text', text: /^ ?↑30k$/ })).toBeDefined()
+      await $.session.compact({ trigger: 'manual', messages: SUMMARY })
+      await step('t2')
+      await step('t2')
+      await $.session.measure(measured(fill(130_000, 13)))
+      expect(await ui.find({ type: 'Text', text: /rewrote/ })).toBeUndefined()
+      // One total since the compaction: no growth chart, no ↑50k.
+      expect(await ui.find({ type: 'Text', text: /↑/ })).toBeUndefined()
+    })
+
+    test(`after a model switch a subagent does not borrow the old model's window (${surface})`, async ($, on) => {
+      let current = 'claude-opus-5-5'
+      on('session.start', ($, e) => ({ cwd: e.cwd }))
+      on('session.measure', ($, e) => ({ changed: e.changed }))
+      on('session.model', () => ({ value: current }))
+      on('classic.PostModelSwitch', () => ({}))
+      on('agent.list', () => ({ value: [{ id: 'a1', type: 'Explore', description: 'fictional', status: 'running' }] }))
+      mock.store(on)
+      on('session.usage', () => ({ value: usage(40_000, [], false) }))
+      on('turn.step', async function* () {
+        const r = cached(0, 100_000)
+        return { ...r, usage: { ...r.usage!, model: 'claude-haiku-4-5-20251001' } }
+      })
+      mock.clock(on, { now: NOW })
+      await $.session.start(session(surface))
+      await $.session.measure(measured(fill(40_000, 4)))
+      current = 'claude-haiku-4-5-20251001'
+      await $.classic.PostModelSwitch({
+        from_model: 'claude-opus-5-5',
+        to_model: current,
+        requested_model: 'haiku',
+        source: 'command',
+        context_tokens: 40_000,
+        prompt_cache_warm: true,
+        cache_ttl: '1h',
+        estimated_cache_write_usd: 0,
+        pricing: 'catalog',
+      })
+      for await (const _ of $.turn.step({ ...STEP, agentId: 'a1', model: current })) {
+        // drain
+      }
+      // The 1M window was read for Opus; until a reading for Haiku arrives, the agent shows its tokens alone.
+      const ui = await $.ui.mount({ ...band(surface), props: { ...band(surface).props, view: { agentId: 'a1' } } })
+      expect(await ui.find({ type: 'Text', text: /^ ?100k$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /\/1M/ })).toBeUndefined()
+    })
+
+    test(`a spend limit withdrawn by a later reading goes (${surface})`, async ($, on) => {
+      on('session.start', ($, e) => ({ cwd: e.cwd }))
+      on('session.measure', ($, e) => ({ changed: e.changed }))
+      mock.store(on)
+      on('session.usage', () => ({ value: usage(40_000, [], false) }))
+      mock.clock(on, { now: NOW })
+      await $.session.start(session(surface))
+      await $.session.measure(measured(fill(40_000, 4), [{ kind: 'spend_limit', percentUsed: 112.5 }]))
+      const ui = await $.ui.mount(band(surface))
+      expect(await ui.find({ type: 'Text', text: /^spend$/ })).toBeDefined()
+      await $.session.measure({ context: fill(40_000, 4), rateLimits: [], changed: ['rateLimits'] })
+      expect(await ui.find({ type: 'Text', text: /^spend$/ })).toBeUndefined()
+    })
+
+    test(`a compaction seen only as a drop keeps its first request as the base for the next (${surface})`, async ($, on) => {
+      const steps: [turnId: string, read: number, write: number][] = [
+        ['t1', 0, 80_000],
+        ['t2', 0, 30_000], // the compaction's first request, the compaction itself unseen
+        ['t3', 0, 31_000], // an hour later: the cache lapsed, a real rewrite
+      ]
+      let at = 0
+      on('session.start', ($, e) => ({ cwd: e.cwd }))
+      on('session.measure', ($, e) => ({ changed: e.changed }))
+      mock.store(on)
+      on('session.usage', () => ({ value: usage(80_000, [], false) }))
+      on('turn.step', async function* () {
+        const [turnId, read, write] = steps[at++]!
+        return { ...cached(read, write), turnId }
+      })
+      const clock = mock.clock(on, { now: NOW })
+      await $.session.start(session(surface))
+      const ui = await $.ui.mount(band(surface))
+      const step = async (turnId: string) => {
+        for await (const _ of $.turn.step({ ...STEP, turnId })) {
+          // drain
+        }
+      }
+      await step('t1')
+      await $.session.measure(measured(fill(80_000, 8)))
+      await step('t2')
+      await $.session.measure(measured(fill(30_000, 3)))
+      // The drop marks the compaction: its request is no rewrite.
+      expect(await ui.find({ type: 'Text', text: /rewrote/ })).toBeUndefined()
+      await clock.advance(61 * MIN)
+      await step('t3')
+      expect(await ui.find({ type: 'Text', text: /^ ?rewrote 31k$/ })).toBeDefined()
     })
   }
 })

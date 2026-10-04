@@ -4,7 +4,7 @@
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { CACHE_TTL_MS, DEGRADE, HISTORY, colorOf, fit, gainTier, groups, items, pctTier, sparkCells, svgOf, width, SEP } from '../../plugin/hooks/format'
+import { CACHE_TTL_MS, DEGRADE, HISTORY, cells, colorOf, fit, gainTier, groups, items, pctTier, svgOf, width, SEP } from '../../plugin/hooks/format'
 import type { BandInput, Span } from '../../plugin/hooks/format'
 import { band } from './fixture'
 
@@ -19,9 +19,10 @@ const escape = (text: string) => text.replaceAll('&', '&amp;').replaceAll('<', '
 const plain = (value: Span[][]) => value.map(g => g.map(s => s.text).join('')).join(SEP)
 const textSpan = (s: Span) => `<span style="color:${s.dimColor ? '#898781' : colorOf(s) ?? '#e8e6dc'}">${escape(s.text)}</span>`
 function terminal(value: Span[][]) {
-  return value.map(g => g.map(s => s.spark
-    ? sparkCells(s).map(c => `<span style="color:${c.color}">${escape(c.text)}</span>`).join('')
-    : textSpan(s)).join('')).join('<span class="dim"> | </span>')
+  return value.map(g => g.map(s => {
+    const parts = cells(s)
+    return parts ? parts.map(c => `<span style="color:${c.dimColor ? '#898781' : c.color}">${escape(c.text)}</span>`).join('') : textSpan(s)
+  }).join('')).join('<span class="dim"> | </span>')
 }
 function desktop(value: Span[][]) {
   return value.map(g => `<span class="band-group">${items(g).map(it => it.kind === 'graphic'
@@ -33,14 +34,16 @@ function groupByLabel(input: BandInput, label: string) {
 }
 const full = fit(band, 110)
 const featureDescriptions = [
-  ['上下文容量', '进度条 / 已用比例 / token 数', '容量来自最后一次回复的实际读数。', 'ctx'],
+  ['上下文容量', '进度条 / 已用比例 / token 数 / 压缩刻度', '容量来自最后一次回复的实际读数。', 'ctx'],
   ['每轮增长', '最近 7 次变化 / 最新增量', '柱高相对比较，颜色按窗口占比。', 'growth'],
-  ['使用额度', '5 小时 / 每周 / 重置倒计时', '显示已用比例，额度读数来自宿主。', 'quota'],
   ['缓存冷热', 'warm / cold / 剩余分钟', '仅跟踪主对话请求的缓存读写。', 'cache'],
+  ['使用额度', '5 小时 / 每周 / 重置倒计时', '显示已用比例，额度读数来自宿主。', 'quota'],
 ]
-const steps = ['完整信息', '隐藏增长图与 ↑', '再隐藏缓存', '再隐藏 token 数', '再隐藏每周倒计时', '再隐藏 5 小时倒计时']
+const steps = ['完整信息', '隐藏增长图与 ↑', '再隐藏缓存改写', '再隐藏缓存', '再隐藏 token 数', '再隐藏每周倒计时', '再隐藏 5 小时倒计时']
+// A turn that rewrote the cache, so the narrowing table shows that step too.
+const rewriting: BandInput = { ...band, rewrite: 41_000 }
 const responsive = DEGRADE.map((detail, i) => {
-  const gs = groups(band, detail)
+  const gs = groups(rewriting, detail)
   return `<div class="responsive-row"><span class="step-no">${String(i + 1).padStart(2, '0')}</span><span class="step-label">${steps[i]}</span><code class="demo-band">${terminal(gs)}</code><span class="cell-count">${width(gs)} cells</span></div>`
 }).join('')
 const estimate: BandInput = { ...band, ctx: { window: band.ctx!.window, estimate: band.ctx!.tokens }, history: [] }
@@ -181,9 +184,9 @@ const layout = `
     <div class="surface-label"><span>CLAUDE DESKTOP · CODE TAB</span><span>比例字体 · Svg 图形 · gap 间距</span></div>
     <div class="desktop-band"><div class="band-row">${desktop(full)}</div></div>
     <div class="input-line"><span>Type / for commands</span><span>↵</span></div>
-    <div class="surface-caption"><b>↑ AbovePrompt</b><span>主上下文与增长 → 5 小时额度 → 每周额度 → 缓存</span><span>有调查问卷时，让出横条。</span></div>
+    <div class="surface-caption"><b>↑ AbovePrompt</b><span>主上下文与增长 → 缓存 → 5 小时额度 → 每周额度</span><span>有调查问卷时，让出横条。</span></div>
   </div>
-  <div class="feature-grid">${featureDescriptions.map((d, i) => `<div class="feature"><div class="feature-top"><span class="dot" style="background:${i < 2 ? inks[2] : i === 2 ? inks[6] : inks[4]}"></span><h3>${d[0]}</h3></div><div class="detail">${d[1]}</div><div class="rule">${d[2]}</div></div>`).join('')}</div>
+  <div class="feature-grid">${featureDescriptions.map((d, i) => `<div class="feature"><div class="feature-top"><span class="dot" style="background:${i < 2 ? inks[2] : i === 2 ? inks[4] : inks[6]}"></span><h3>${d[0]}</h3></div><div class="detail">${d[1]}</div><div class="rule">${d[2]}</div></div>`).join('')}</div>
   <div class="terminal-demo"><div class="surface-label"><span>TERMINAL</span><span>等宽字体 · 字符进度条 · 字符增长图</span></div><div class="terminal-line">${terminal(full)}</div><div class="terminal-prompt"><span>&gt;</span><span class="cursor"></span></div></div>
   <div class="section-heading"><span class="index">02</span><h2>空间不足时，按顺序删细节</h2><span class="aside">cell 数为横条内容宽度，不是窗口断点</span></div>
   <div class="responsive-table">${responsive}</div>
@@ -192,7 +195,7 @@ const layout = `
   <div class="palette-label"><span>深色主题 · Text 与 Svg</span><span>每列依次：颜色 / 上下文与额度已用比例 / 单次增长占窗口比例</span></div>
   <div class="scale">${scale}</div><div class="scale-meanings"><span>安全 · 冷色</span><span>注意 · 黄绿到黄</span><span>警告 · 暖色到红</span></div>
   <div class="light-palette"><div class="palette-label"><span>浅色主题 · 仅 Svg 自动切换</span><span>Text 仍用深色列；浅色主题尚未实测</span></div><div class="scale">${lightScale}</div></div>
-  <div class="mapping"><p><b>图形尺寸</b>　桌面进度条 60 × 6 px；增长柱宽 4 px，柱间距 2 px，柱高 3–14 px。终端进度条为 10 格，按最接近的 10% 绘制。</p><p><b>增长与缓存</b>　保留 ${HISTORY} 个不同总量，形成最多 ${HISTORY - 1} 根柱。柱高相对比较，颜色按绝对占比；warm 用第 4 档，cold 为暗色。</p></div>
+  <div class="mapping"><p><b>图形尺寸</b>　桌面进度条 60 × 6 px，自动压缩刻度 2 × 10 px；缓存环 12 px（终端为单格量表 ▁–█）；增长柱宽 4 px，柱间距 2 px，柱高 3–14 px。终端进度条为 10 格，按最接近的 10% 绘制，刻度 │ 插在离阈值最近的两格之间。</p><p><b>增长与缓存</b>　保留 ${HISTORY} 个不同总量，形成最多 ${HISTORY - 1} 根柱。柱高相对比较，颜色按绝对占比；warm 按缓存寿命已过的比例取色，cold 为暗色。</p></div>
   <footer>${stamp}</footer>
 </section>`
 
@@ -205,23 +208,23 @@ const states = `
     <div class="state"><h3>首个回复前的本地估算</h3><code class="context-code">${terminal(groupByLabel(estimate, 'ctx'))}</code><p>使用宿主 /context 估算，带 ~；进度条和数值变暗，不发送模型请求。</p></div>
     <div class="state"><h3>没有估算值</h3><code class="context-code">${terminal(groupByLabel(placeholder, 'ctx'))}</code><p>保留窗口大小，用 -- 占位；不沿用上个窗口的数字。</p></div>
     <div class="state quota-state"><h3>额度：本会话读数 / 跨会话记忆</h3><div class="state-pair"><span class="state-tag">当前</span><code>${terminal(groups(band, DEGRADE[0]!).filter(g => ['5h', '7d'].includes(g[0]!.text)))}</code></div><div class="state-pair"><span class="state-tag">记忆</span><code>${terminal(groups(remembered, DEGRADE[0]!).filter(g => ['5h', '7d'].includes(g[0]!.text)))}</code></div><p>新会话拿到自己的读数前，显示最近一次额度，数值与倒计时变暗。重置时间已过的窗口直接隐藏。</p></div>
-    <div class="state"><h3>缓存：warm → cold</h3><div class="state-pair"><code>${terminal(groupByLabel(band, 'cache'))}</code><span class="state-tag">→</span><code>${terminal(groupByLabel(expiredCache, 'cache'))}</code></div><p>主对话读 / 写缓存后变热；未触及或到期变冷，没有读数时隐藏。寿命按 ${CACHE_TTL_MS / 3_600_000} 小时计算（Claude Pro 实测）。</p></div>
+    <div class="state"><h3>缓存：warm → cold</h3><div class="state-pair"><code>${terminal(groupByLabel(band, 'cache'))}</code><span class="state-tag">→</span><code>${terminal(groupByLabel(expiredCache, 'cache'))}</code></div><p>主对话读 / 写缓存后变热，颜色随寿命流逝由冷转暖；未触及、到期或切换模型变冷，没有读数时隐藏。寿命默认 ${CACHE_TTL_MS / 3_600_000} 小时（Claude Pro 实测），切换模型时取宿主上报的寿命。</p></div>
   </div>
   <div class="section-heading"><span class="index">02</span><h2>会话变化时，重置该重置的状态</h2></div>
   <table class="lifecycle"><thead><tr><th>触发</th><th>状态变化</th><th>画面规则</th></tr></thead><tbody>
     <tr><td>新会话 / 模块重载<br><code>session.start</code></td><td>加载宿主读数、主模型与额度记忆</td><td>有数字才绘制；首个回复前显示本地估算或窗口占位。</td></tr>
     <tr><td>新对话<br><code>/clear · /resume · /branch</code></td><td>清空增长历史与缓存时间，再加载读数</td><td>新的对话不带入旧增长或旧缓存状态；账户额度仍可沿用。</td></tr>
-    <tr><td>上下文总量下降（compact）</td><td>增长历史从当前总量重新开始</td><td>不足两条总量时不显示增长图；缺回复读数时重新取本地估算。</td></tr>
-    <tr><td>主模型切换<br><code>classic.PostModelSwitch</code></td><td>更新主模型，用它选择周窗口</td><td>宿主提供该模型周额度才显示；否则使用全模型周额度。此分支尚未实测。</td></tr>
+    <tr><td>压缩<br><code>session.compact</code>（漏见时按总量下降补认）</td><td>增长历史重新开始，旧分类作废</td><td>不足两条总量时不显示增长图；缺回复读数时重新取本地估算。</td></tr>
+    <tr><td>主模型切换<br><code>classic.PostModelSwitch</code></td><td>更新主模型，用它选择周窗口；缓存变冷</td><td>宿主提供该模型周额度才显示；否则使用全模型周额度。此分支尚未实测。</td></tr>
   </tbody></table>
   <div class="section-heading"><span class="index">03</span><h2>事件写状态，绘制只读取</h2><span class="aside">每个事实只有一个来源</span></div>
   <div class="flow"><div class="flow-main">
     <div class="flow-node"><h3>Claude Code 已上报</h3><p><span class="mono">$.session.usage() · $.session.model()</span><br>上下文、额度与主模型<br><span class="mono">session.measure · turn.step</span> 事件读数</p></div>
-    <div class="flow-arrow">→</div><div class="flow-node"><h3>每会话 $.state</h3><p>ctx · history · limits · limitsLive<br>cache · model<br>事件更新状态，触发横条重绘</p></div>
+    <div class="flow-arrow">→</div><div class="flow-node"><h3>每会话 $.state</h3><p>ctx · history · timeline · limits · limitsLive<br>cache · cacheStats · cacheTtl · model · agents · breakdown<br>事件更新状态，触发横条与面板重绘</p></div>
     <div class="flow-arrow">→</div><div class="flow-node"><h3>ui.render · AbovePrompt</h3><p>只读状态 → fit → 分组与颜色<br>terminal：Text / 字符图形<br>desktop：Box / Text / Svg</p></div>
   </div><div class="flow-detail"><span><code>$.store · limits</code>　跨会话只保存最近一次额度，且只在本会话读数变化时写入。</span><span><code>$.clock · 30 s</code>　定时刷新倒计时，绘制过程不写状态。</span></div></div>
   <div class="section-heading"><span class="index">04</span><h2>展示与验证边界</h2></div>
-  <div class="boundary"><p><strong>只显示数字，决策留给用户。</strong><br>不读写用户文件、不起进程、不联网、不发模型请求、不收集遥测。<br>额度只在宿主上报时显示；API key 会话可能只有上下文与缓存。</p><p><strong>能力描述与实测分开。</strong><br>横条用于 terminal 与 desktop Code；VS Code / mobile 不绘制。<br><span class="review-only">浅色主题、其他套餐、按模型周额度未实测；当前色阶与顺序仅经测试及渲染核对。</span></p></div>
+  <div class="boundary"><p><strong>只显示数字，决策留给用户。</strong><br>不读写用户文件、不起进程、不联网、不发模型请求、不收集遥测。<br>额度只在宿主上报时显示；API key 会话可能只有上下文与缓存。</p><p><strong>能力描述与实测分开。</strong><br>横条用于 terminal 与 desktop Code；/ccoverhead 面板在各界面都可打开。<br><span class="review-only">浅色主题、其他套餐、按模型周额度、网关花费额度、VS Code 与 mobile 上的面板未实测；当前色阶与顺序仅经测试及渲染核对。</span></p></div>
   <div class="source-links"><a href="https://github.com/shengyy/ccoverhead/blob/main/PRODUCT.md">PRODUCT.md</a><a href="https://github.com/shengyy/ccoverhead/blob/main/docs/design.md">docs/design.md</a><a href="https://github.com/shengyy/ccoverhead/blob/main/docs/status.md">docs/status.md</a><a href="https://github.com/shengyy/ccoverhead/blob/main/docs/architecture.md">docs/architecture.md</a></div>
   <footer>${stamp}</footer>
 </section>`
@@ -243,10 +246,10 @@ const english: Record<string, string> = {
   '信息放在输入框上方，从变化快的读到变化慢的': 'Above the prompt. Fast signals first.',
   '所有百分比均为已用比例': 'All percentages show usage',
   '比例字体 · Svg 图形 · gap 间距': 'Proportional font · Svg graphics · gap spacing',
-  '主上下文与增长 → 5 小时额度 → 每周额度 → 缓存': 'Context & growth → 5-hour quota → weekly quota → cache',
+  '主上下文与增长 → 缓存 → 5 小时额度 → 每周额度': 'Context & growth → cache → 5-hour quota → weekly quota',
   '有调查问卷时，让出横条。': 'Yield the band to a survey.',
   '上下文容量': 'Context window',
-  '进度条 / 已用比例 / token 数': 'Bar / used percentage / tokens',
+  '进度条 / 已用比例 / token 数 / 压缩刻度': 'Bar / used percentage / tokens / compaction mark',
   '容量来自最后一次回复的实际读数。': 'Figures from the last response.',
   '每轮增长': 'Per-turn growth',
   '最近 7 次变化 / 最新增量': 'Last 7 changes / latest delta',
@@ -262,6 +265,7 @@ const english: Record<string, string> = {
   'cell 数为横条内容宽度，不是窗口断点': 'Cells measure content, not viewport breakpoints',
   '完整信息': 'Full detail',
   '隐藏增长图与 ↑': 'Hide growth and ↑',
+  '再隐藏缓存改写': 'Then hide cache rewrite',
   '再隐藏缓存': 'Then hide cache',
   '再隐藏 token 数': 'Then hide tokens',
   '再隐藏每周倒计时': 'Then weekly reset',
@@ -277,9 +281,9 @@ const english: Record<string, string> = {
   '浅色主题 · 仅 Svg 自动切换': 'Light theme · Svg switches automatically',
   'Text 仍用深色列；浅色主题尚未实测': 'Text keeps dark colors; light themes are not verified',
   '图形尺寸': 'Graphic dimensions',
-  '桌面进度条 60 × 6 px；增长柱宽 4 px，柱间距 2 px，柱高 3–14 px。终端进度条为 10 格，按最接近的 10% 绘制。': 'Desktop bar: 60 × 6 px. Growth columns: 4 px wide, 2 px apart, 3–14 px tall. The terminal bar has 10 cells, rounded to the nearest 10%.',
+  '桌面进度条 60 × 6 px，自动压缩刻度 2 × 10 px；缓存环 12 px（终端为单格量表 ▁–█）；增长柱宽 4 px，柱间距 2 px，柱高 3–14 px。终端进度条为 10 格，按最接近的 10% 绘制，刻度 │ 插在离阈值最近的两格之间。': 'Desktop bar: 60 × 6 px, auto-compaction tick 2 × 10 px; cache ring 12 px (a one-cell ▁–█ gauge in the terminal). Growth columns: 4 px wide, 2 px apart, 3–14 px tall. The terminal bar has 10 cells, rounded to the nearest 10%, with the │ mark between the two cells nearest the threshold.',
   '增长与缓存': 'Growth and cache',
-  [`保留 ${HISTORY} 个不同总量，形成最多 ${HISTORY - 1} 根柱。柱高相对比较，颜色按绝对占比；warm 用第 4 档，cold 为暗色。`]: `Keep ${HISTORY} changed totals for up to ${HISTORY - 1} bars. Heights compare recent gains; colors use absolute window share. Warm uses tier 4; cold is dim.`,
+  [`保留 ${HISTORY} 个不同总量，形成最多 ${HISTORY - 1} 根柱。柱高相对比较，颜色按绝对占比；warm 按缓存寿命已过的比例取色，cold 为暗色。`]: `Keep ${HISTORY} changed totals for up to ${HISTORY - 1} bars. Heights compare recent gains; colors use absolute window share. Warm takes the tier of its lifetime gone; cold is dim.`,
   '状态规则与数据边界': 'State rules and data boundaries',
   '读数的可信程度，直接体现在画面里': 'Reading confidence is visible in the band',
   '以下示例沿用同一份虚构数据': 'Examples share the same fictional figures',
@@ -294,7 +298,7 @@ const english: Record<string, string> = {
   '记忆': 'Saved',
   '新会话拿到自己的读数前，显示最近一次额度，数值与倒计时变暗。重置时间已过的窗口直接隐藏。': 'Show the last quota reading until this session gets its own; figures and countdowns are dim. Hide any window whose reset time has passed.',
   '缓存：warm → cold': 'Cache: warm → cold',
-  [`主对话读 / 写缓存后变热；未触及或到期变冷，没有读数时隐藏。寿命按 ${CACHE_TTL_MS / 3_600_000} 小时计算（Claude Pro 实测）。`]: `A main-conversation cache read/write makes it warm. No touch or expiry makes it cold; no reading hides it. Lifetime: ${CACHE_TTL_MS / 3_600_000} hour (verified on Claude Pro).`,
+  [`主对话读 / 写缓存后变热，颜色随寿命流逝由冷转暖；未触及、到期或切换模型变冷，没有读数时隐藏。寿命默认 ${CACHE_TTL_MS / 3_600_000} 小时（Claude Pro 实测），切换模型时取宿主上报的寿命。`]: `A main-conversation cache read/write makes it warm, its color warming as the lifetime drains. No touch, expiry or a model switch makes it cold; no reading hides it. Lifetime: ${CACHE_TTL_MS / 3_600_000} hour by default (verified on Claude Pro), or what a model switch reports.`,
   '会话变化时，重置该重置的状态': 'Conversation changes reset the relevant state',
   '触发': 'Trigger',
   '状态变化': 'State change',
@@ -305,11 +309,12 @@ const english: Record<string, string> = {
   '新对话': 'New conversation',
   '清空增长历史与缓存时间，再加载读数': 'Clear growth history and cache time, then reload',
   '新的对话不带入旧增长或旧缓存状态；账户额度仍可沿用。': 'Do not carry over old growth or cache state. Account quota may still be reused.',
-  '上下文总量下降（compact）': 'Context total drops (compact)',
-  '增长历史从当前总量重新开始': 'Restart growth history at the current total',
+  '压缩': 'Compaction',
+  '（漏见时按总量下降补认）': '(or a drop in the total, if unseen)',
+  '增长历史重新开始，旧分类作废': 'Restart growth history; the old breakdown goes',
   '不足两条总量时不显示增长图；缺回复读数时重新取本地估算。': 'Hide growth with fewer than two totals. Without a response reading, get a fresh local estimate.',
   '主模型切换': 'Main model switches',
-  '更新主模型，用它选择周窗口': 'Update the main model and select its weekly window',
+  '更新主模型，用它选择周窗口；缓存变冷': 'Update the main model and select its weekly window; the cache turns cold',
   '宿主提供该模型周额度才显示；否则使用全模型周额度。此分支尚未实测。': 'Use a model’s own weekly quota only if the host reports it; otherwise use the all-models week. Not verified live.',
   '事件写状态，绘制只读取': 'Events write state; rendering only reads',
   '每个事实只有一个来源': 'One source for each fact',
@@ -317,7 +322,7 @@ const english: Record<string, string> = {
   '上下文、额度与主模型': 'Context, quota and main model',
   '事件读数': 'event figures',
   '每会话 $.state': 'Per-session $.state',
-  '事件更新状态，触发横条重绘': 'Events update state and redraw the band',
+  '事件更新状态，触发横条与面板重绘': 'Events update state and redraw the band and pane',
   '只读状态 → fit → 分组与颜色': 'Read state → fit → groups and colors',
   'terminal：Text / 字符图形': 'terminal: Text / glyph graphics',
   'desktop：Box / Text / Svg': 'desktop: Box / Text / Svg',
@@ -328,8 +333,8 @@ const english: Record<string, string> = {
   '不读写用户文件、不起进程、不联网、不发模型请求、不收集遥测。': 'No user files, processes, network, model requests or telemetry.',
   '额度只在宿主上报时显示；API key 会话可能只有上下文与缓存。': 'Quota appears only when reported; API-key sessions may show just context and cache.',
   '能力描述与实测分开。': 'Separate behavior from live verification.',
-  '横条用于 terminal 与 desktop Code；VS Code / mobile 不绘制。': 'Drawn in terminal and desktop Code; not raised on VS Code or mobile.',
-  '浅色主题、其他套餐、按模型周额度未实测；当前色阶与顺序仅经测试及渲染核对。': 'Light themes, other plans and model-specific weekly quota are unverified. Current colors and order have test/render coverage only.',
+  '横条用于 terminal 与 desktop Code；/ccoverhead 面板在各界面都可打开。': 'The band is drawn in terminal and desktop Code; the /ccoverhead pane opens on every surface.',
+  '浅色主题、其他套餐、按模型周额度、网关花费额度、VS Code 与 mobile 上的面板未实测；当前色阶与顺序仅经测试及渲染核对。': 'Light themes, other plans, model-specific weekly quota, gateway spend limits and the pane on VS Code and mobile are unverified. Current colors and order have test/render coverage only.',
 }
 let englishHtml = html.replace('lang="zh-CN"', 'lang="en"')
 for (const [from, to] of Object.entries(english).sort((a, b) => b[0].length - a[0].length)) {

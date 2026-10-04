@@ -7,17 +7,26 @@ figures, warm ones only when something deserves attention. What it shows and whe
 ## The band
 
 ```text
-ctx ■■■□□□□□□□ 27% 271k/1M  ▁▂▄█▂▇▁ ↑3.4k | 5h 42% ↻2h34m | 7d 63% ↻2d7h | cache warm 38m
+ctx ■■■□□□□□□□│ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | cache ▆ warm 38m | 5h 42% ↻2h34m | 7d 63% ↻2d7h
 ```
 
-- Groups, left to right: context (bar, percentage, tokens, growth chart, `↑` latest growth), 5-hour quota,
-  weekly quota, cache. A dim ` | ` separates groups.
+- Groups, left to right: context (bar with the auto-compaction mark, percentage, tokens, growth chart,
+  `↑` latest growth), cache (a gauge, `warm` and the minutes left, or `cold`; then `rewrote` and its tokens
+  on a turn that rewrote the cache), 5-hour quota, weekly quota, `spend` (a gateway's spend limit, when
+  reported). A dim ` | ` separates groups.
+- The terminal's cache gauge is one block glyph of the lifetime left, `█` fresh down to `▁` in its last
+  eighth, in `warm`'s color: the terminal's form of the desktop's ring.
+- The terminal draws the auto-compaction mark `│` between the two cells nearest the threshold, at least one
+  cell in, so on a 1M window (threshold 967k) it closes the bar and on a 368k compaction window it stands a
+  third of the way along.
+- While a subagent's transcript is on screen, the first group reads `agent` instead of `ctx`.
 - The weekly label names the model family when the group shows the main model's own window: `7d fable`
   instead of `7d`.
 - Labels (`ctx`, `5h`, `7d`, `cache`) are plain text. Figures take their tier's color. Secondary detail
   (tokens, countdowns, `↑`, remembered quota, the estimate) is dim.
-- Widths are counted in terminal cells. Narrowing drops the growth chart, the cache, the context tokens,
-  the weekly countdown and the 5-hour countdown, in that order, then truncates the end.
+- Widths are counted in terminal cells. Narrowing drops the growth chart, the cache rewrite, the cache, the
+  context tokens, the weekly and spend countdowns and the 5-hour countdown, in that order, then truncates the
+  end.
 - The band redraws every 30 s so countdowns keep time.
 
 ## Color scale
@@ -30,7 +39,7 @@ One scale, one meaning: cool is safe, yellow is caution, warm to red is warning.
 | 1 | blue `#4087de` | `#266ec3` | 0.1–0.2% | 1–2k | — |
 | 2 | sky `#37aae3` | `#0481b3` | 0.2–0.4% | 2–4k | 0–29% |
 | 3 | cyan `#35c5db` | `#0c8d9e` | 0.4–0.8% | 4–8k | 30–39% |
-| 4 | teal `#49d6cc` | `#17938b` | 0.8–1.6% | 8–16k | 40–49%; `cache warm` |
+| 4 | teal `#49d6cc` | `#17938b` | 0.8–1.6% | 8–16k | 40–49% |
 | 5 | lime `#b8e45c` | `#74980d` | 1.6–3.2% | 16–32k | 50–59% |
 | 6 | yellow `#f9e149` | `#b39b00` | 3.2–6.4% | 32–64k | 60–69% |
 | 7 | amber `#fea92f` | `#b77610` | 6.4–12.8% | 64–128k | 70–79% |
@@ -38,6 +47,11 @@ One scale, one meaning: cool is safe, yellow is caution, warm to red is warning.
 | 9 | red `#ed4b43` | `#bb0916` | ≥ 25.6% | ≥ 256k | ≥ 90% |
 
 The colors are defined once, in `plugin/hooks/format.ts`; this table follows it.
+
+The percentage column also colors three figures that are shares of something else: the auto-compaction
+mark (the context as a share of the threshold), `warm` and its gauge (the share of the cache lifetime gone) and the pane's
+hit rate (the share the cache did not serve). The growth column also colors token amounts: `rewrote`, and
+each category in the pane's breakdown, by their share of the window.
 
 - **Why cool to warm.** Safe is cool rather than green: red-green color-blind readers cannot tell green from
   red, but they keep cool against warm. Under a protan/deutan simulation the safe tiers (0–4) and warning
@@ -62,10 +76,23 @@ The desktop app draws the band in a proportional font, where block glyphs (`■�
 There, and only there:
 
 - Each group is a `Box` row; items are spaced by `gap`, not by spaces, and text is trimmed.
-- The context bar is a 60×6 rounded `Svg`, filled to the exact percentage over a translucent track.
+- The context bar is a 60×6 rounded `Svg`, filled to the exact percentage over a translucent track; with
+  auto-compaction on, a 2×10 tick stands across it at the threshold, the Svg 10 px tall.
+- The cache's lifetime is a 12 px ring before `warm`, its arc draining clockwise from the top, in place of
+  the terminal's one-cell gauge.
 - The growth chart is an `Svg` of 4 px columns, 14 px at the tallest and 3 px at the least, so even a
   small bar shows its color.
 - Each `Svg` carries both palettes and picks the light one under `prefers-color-scheme: light`.
+
+## The pane
+
+`/ccoverhead` opens a pane of headed sections. Each line is a 12-cell label column and a run of the band's
+own spans, so the bars, sparkline and colors are the band's: block glyphs on the terminal, `Svg` on the
+surfaces with a proportional font (desktop, VS Code, mobile), where a line is a `Box` row spaced by `gap`.
+Headings are bold; explanations and secondary figures are dim. The breakdown's label column holds each
+category's tokens, right-aligned, colored by its share of the window; MCP servers are indented under the
+`MCP tools` row and dim. The engine places the pane (docked beside a fullscreen transcript, else above the
+prompt) and scrolls it; it opens asking for 24 rows.
 
 ## Logo
 
@@ -88,8 +115,9 @@ current design and never show a real session:
 bun scripts/screenshot/render.ts   # needs Google Chrome and ImageMagick
 ```
 
-It stages the band in a terminal frame and in a desktop frame, screenshots both at 2x with headless Chrome
-and trims them into `assets/screenshots/{terminal,desktop}.png`. Never commit screenshots of a real session.
+It stages the band in a terminal frame and in a desktop frame, and the pane in a terminal frame,
+screenshots them at 2x with headless Chrome and trims them into
+`assets/screenshots/{terminal,desktop,pane}.png`. Never commit screenshots of a real session.
 
 ### Design rationale sheets
 
