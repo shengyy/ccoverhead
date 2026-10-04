@@ -22,7 +22,7 @@ Claude Code raises the band's site (`AbovePrompt`) on the terminal and desktop s
 
 - In a live session (Claude Code 2.1.288, macOS 27): the band and its layout on the terminal, the desktop's
   Svg bar and growth chart, dark theme. The color scale and group order introduced in 1.0.0, and the
-  cache state colors, `rewrote`, `spend`, `agent` view and pane added since 1.2.0,
+  cache colors, `rewrote`, `spend`, `agent` view and pane added since 1.2.0,
   are covered by the tests and by renders of the plugin's own output (`scripts/screenshot/`), not yet by a
   live look.
 - In a headless session with the plugin loaded from this repository (Claude Code 2.1.289, Haiku 4.5, one
@@ -33,6 +33,9 @@ Claude Code raises the band's site (`AbovePrompt`) on the terminal and desktop s
 - In a headless session with the installed plugin: before the first response the plugin's state holds the
   window and the local estimate (about 13.8k tokens from `{ breakdown: 'summary' }`, about 20 ms, no
   request sent).
+- With a command hook on `SessionStart` (Claude Code 2.1.289, Haiku 4.5, Claude Pro): a resume or fork
+  reports the transcript's last context, its age and whether the cache likely lapsed; resumed after 343
+  seconds the cache was still read, the hour's lifetime ccOverhead assumes.
 - Installing from this repository: `claude plugin marketplace add shengyy/ccoverhead` then
   `claude plugin install ccoverhead@ccoverhead` (and `update` from 1.0.0) installs the released version
   enabled, the installed copy matches `plugin/` file for file, and it loads and records its state in a
