@@ -1,9 +1,9 @@
 # ccOverhead
 
-Your Claude Code overhead, right overhead. ccOverhead is a Claude Code mod that puts context usage and
-where auto-compaction runs, per-turn growth, 5-hour and weekly quota, and prompt-cache warmth in one quiet
+Your Claude Code overhead, right overhead. ccOverhead is a Claude Code mod that puts context usage,
+per-turn growth, 5-hour and weekly quota, and prompt-cache warmth in one quiet
 band above the prompt. One cool-to-warm color scale makes changes easy to notice while you work. Type
-`/ccoverhead` for a pane with the detail: the window by category and MCP server, growth and compactions,
+`/ccoverhead` for a pane with the detail: where auto-compaction runs, the window by category and MCP server, growth and compactions,
 cache hit rate, quota with how much of each window's time is gone, and subagents.
 
 The band uses text and glyphs in the terminal, and vector graphics in the Claude desktop app's Code tab.

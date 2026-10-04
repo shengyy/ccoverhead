@@ -55,9 +55,9 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
   new session, after `/clear`, after compaction) it shows Claude Code's local `/context` estimate, dim and
   marked `~`; the estimate sends no request.
 - If Claude Code cannot give an estimate, the band shows the window size with `--`, never a stale figure.
-- A mark on the bar shows where auto-compaction runs, at the threshold's share of the window; its color is
-  how near the context is to the threshold, on the percentage scale. No mark while auto-compaction is off.
-  The threshold is read with the same local count as the estimate, so it costs no request.
+- The band draws no auto-compaction mark: on a 1M window the threshold (967k) sits at the bar's end, where
+  a mark read as a separator and said no more than the bar's end. The pane gives the threshold and the
+  tokens to go, read with the same local count as the estimate, so it costs no request.
 
 ### Growth
 
@@ -86,10 +86,14 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
 
 - Only main-conversation requests count, not subagents. A request that read or wrote the cache makes it
   warm for the cache lifetime from that moment; anything else, or an expired lifetime, is cold.
-- The lifetime is one hour until a model switch reports the session's own (`5m` or `1h`). A switch to
-  another model leaves the cache cold: each model has its own.
-- `warm` takes its color from the share of the lifetime gone, on the percentage scale, so it warms as the
-  cache drains. A one-cell gauge before it (a ring on the desktop) shows the lifetime left.
+- The lifetime is one hour until a model switch reports the session's own (`5m` or `1h`), or a resume
+  shows it: the engine's verdict on a cache between five minutes and an hour old tells the two apart. A
+  switch to another model leaves the cache cold: each model has its own.
+- A resumed or forked conversation shows its cache warm or cold at once, aged from the transcript's last
+  response, and its first request counts as a rewrite when it writes the transcript again.
+- `warm` and its minutes share one state color: cool while more than a fifth of the lifetime is left,
+  orange in the last fifth, when a pause will soon cost a rewrite. The cache is a state, so it takes two
+  colors of the palette rather than the ten-step scale; the minutes say how long.
 - A rewrite shows `rewrote` and its tokens until a request of a later turn reads the cache again. The first
   request after a compaction is not counted as one: it writes a new conversation, not a lapsed cache.
 

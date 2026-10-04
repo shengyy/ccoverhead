@@ -6,7 +6,7 @@ import type { EngineInterface, Register, SessionContextBreakdown, SessionContext
 
 import type { OverheadAgent, OverheadBreakdown, OverheadCache, OverheadCacheStats, OverheadCompaction, OverheadCtx, OverheadLimit } from '../types'
 import { bandRich, bandTerminal, paneRich, paneTerminal } from './draw'
-import { CACHE_TTL_MS, fit } from './format'
+import { CACHE_TTL_MS, SHORT_TTL_MS, fit } from './format'
 import type { AgentView, BandInput } from './format'
 import { paneLines } from './pane'
 import { NO_CACHE_STATS, TIMELINE, addAgentStep, addCompaction, addSample, addStep, baseModel, clearRewrite, compacted } from './track'
@@ -65,6 +65,7 @@ export const register: Register = on => {
       await update($, cacheStats, () => NO_CACHE_STATS)
       await update($, agents, () => [])
       await load($)
+      if (e.source !== 'clear') await resumed($, e)
     }
   })
 
@@ -100,7 +101,7 @@ export const register: Register = on => {
   on('classic.PostModelSwitch', async ($, e, next) => {
     const result = await next(e)
     await update($, model, () => e.to_model)
-    await update($, cacheTtl, () => (e.cache_ttl === '5m' ? 5 * 60_000 : 60 * 60_000))
+    await update($, cacheTtl, () => (e.cache_ttl === '5m' ? SHORT_TTL_MS : CACHE_TTL_MS))
     if (baseModel(e.from_model) !== baseModel(e.to_model)) {
       const at = await $.clock.now()
       await update($, cache, c => (c ? { at, warm: false } : c))
@@ -297,6 +298,18 @@ function withoutReading({ window, compactAt, model }: OverheadCtx): OverheadCtx 
 // The context without the old model's auto-compaction threshold.
 function withoutThreshold({ compactAt: _, ...rest }: OverheadCtx): OverheadCtx {
   return rest
+}
+
+// A resumed or forked conversation, before its first request. That request re-sends what the transcript last
+// sent, so a lapsed cache makes it a rewrite (`last`). The engine's age of the cache shows it warm or cold
+// already, and an age between the two lifetimes tells which one the account gets.
+async function resumed($: EngineInterface, e: { context_tokens?: number; seconds_since_last_response?: number; prompt_cache_likely_expired?: boolean }) {
+  const { context_tokens: tokens, seconds_since_last_response: age, prompt_cache_likely_expired: expired } = e
+  if (tokens !== undefined && tokens > 0) await update($, cacheStats, s => ({ ...s, last: tokens }))
+  if (age === undefined || expired === undefined) return
+  const at = (await $.clock.now()) - age * 1000
+  await update($, cache, () => ({ at, warm: !expired }))
+  if (age * 1000 > SHORT_TTL_MS && age * 1000 < CACHE_TTL_MS) await update($, cacheTtl, () => (expired ? SHORT_TTL_MS : CACHE_TTL_MS))
 }
 
 // Every window reported, so a model's own weekly window is at hand when the model switches. A reset time that

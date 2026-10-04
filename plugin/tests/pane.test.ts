@@ -2,7 +2,7 @@ import { describe, expect, mock, test } from 'claude-code/testing'
 import type { MountTarget } from 'claude-code/testing'
 import type { PaneOpenArgs, RenderSurface, SessionStartInput } from 'claude-code'
 
-import { BREAKDOWN, MIN, NOW, STEP, cached, fill, iso, measured, usage } from './kit'
+import { BREAKDOWN, MIN, NOW, STEP, TIER_HEX, cached, fill, iso, measured, usage } from './kit'
 
 // The pane is raised on every surface, unlike the band.
 const SURFACES = ['terminal', 'desktop', 'vscode', 'mobile'] as const
@@ -86,14 +86,16 @@ describe('the /ccoverhead pane', () => {
       expect(await text(/^ ?· 895k to go$/)).toBeDefined()
       // The breakdown, largest first, with each MCP server's loaded schemas.
       expect(await text(/^ *400k$/)).toBeDefined()
+      // Coloured by its share of the window, as the context bar is: 40% is tier 4, not a growth's red.
+      if (surface === 'terminal') expect((await ui.find({ type: 'Text', text: /^ *400k$/ }))?.props.color).toBe(TIER_HEX[4])
       expect(await text(/^ *tracker$/)).toBeDefined()
       expect(await text(/^ *notes$/)).toBeDefined()
       expect(await text(/^ *28\.2k$/)).toBeDefined()
       // Growth since the compaction, and the compaction itself.
       expect(await text(/^ ?↑12k$/)).toBeDefined()
       expect(await text(/^ ?431k → 60k$/)).toBeDefined()
-      expect(await text(/^ ?warm$/)).toBeDefined()
-      expect(await text(/^ ?1h0m left of 1h$/)).toBeDefined()
+      expect(await text(/^ ?warm 1h0m$/)).toBeDefined()
+      expect(await text(/^ ?left of 1h$/)).toBeDefined()
       // 400k of 431k read from the cache.
       expect(await text(/^ ?92%$/)).toBeDefined()
       // Quota with the share of each window's time gone: 2.5h of 5h left, 3d of 7d left.

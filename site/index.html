@@ -104,16 +104,14 @@
         <div class="band-card">
           <div class="band-display">
             <span class="group-token label">ctx</span>
-            <span class="group-token bar-text">■■■□□□□□□□│</span>
+            <span class="group-token bar-text">■■■□□□□□□□</span>
             <span class="group-token tier-sky">27%</span>
             <span class="group-token dim">271k/1M</span>
             <span class="group-token sparkline">▁▂▄█▂▇▁</span>
             <span class="group-token dim">↑3.4k</span>
             <span class="sep">|</span>
             <span class="group-token label">cache</span>
-            <span class="group-token tier-cyan">▆</span>
-            <span class="group-token tier-cyan">warm</span>
-            <span class="group-token dim">38m</span>
+            <span class="group-token tier-cyan">warm 38m</span>
             <span class="sep">|</span>
             <span class="group-token label">5h</span>
             <span class="group-token tier-teal">42%</span>
@@ -129,7 +127,7 @@
               <span class="dot tier-sky-dot"></span>
               <div>
                 <h4>Context Window</h4>
-                <p>Usage bar, percentage and <code>used/window</code> tokens; <code>│</code> marks where auto-compaction runs. Pre-response estimate marked <code>~</code>.</p>
+                <p>Usage bar, percentage and <code>used/window</code> tokens. Pre-response estimate marked <code>~</code>.</p>
               </div>
             </div>
             <div class="breakdown-item">
@@ -143,7 +141,7 @@
               <span class="dot tier-teal-dot"></span>
               <div>
                 <h4>Prompt Cache</h4>
-                <p>A gauge of the lifetime left, <code>warm</code> with remaining minutes, warming in color as it drains, or <code>cold</code>. <code>rewrote</code> shows when a turn had to write the cache again.</p>
+                <p><code>warm</code> with remaining minutes, turning orange in the last fifth of the lifetime, or <code>cold</code>. <code>rewrote</code> shows when a turn had to write the cache again.</p>
               </div>
             </div>
             <div class="breakdown-item">
@@ -196,11 +194,6 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3L4 7v6c0 5 3.5 9.5 8 10.5 4.5-1 8-5.5 8-10.5V7l-8-4z" /><path d="M9 12l2 2 4-4" /></svg>
             <h3>Zero telemetry, pure privacy</h3>
             <p>Only reads numbers Claude Code already exposes. No network requests, no model requests, no background processes.</p>
-          </article>
-          <article>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="9" width="18" height="6" rx="3" /><path d="M16 5v14" /></svg>
-            <h3>Where auto-compaction runs</h3>
-            <p>A mark on the context bar at Claude Code's own threshold, warming as you approach it. Compaction stops being a surprise.</p>
           </article>
           <article>
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3" /><path d="M7 8h10M7 12h6M7 16h8" /></svg>
