@@ -9,6 +9,8 @@ export const HISTORY = 8
 const BARS = '▁▂▃▄▅▆▇█'
 // Where auto-compaction runs, drawn between two cells of the context bar.
 export const MARK = '│'
+// The window growth is tiered by before any is known.
+export const FALLBACK_WINDOW = 1_000_000
 // Model families a rate-limit window may be named after.
 const FAMILIES = ['fable', 'opus', 'sonnet', 'haiku']
 
@@ -270,14 +272,21 @@ function growth(history: number[], window: number): Span[] {
   ]
 }
 
+// Where auto-compaction runs as a share of the window, coloured by how near `used` is to it: none when no
+// threshold is known or it lies at or past the window's end.
+export function compactMark(ctx: OverheadCtx, used?: number): { mark?: number; markTier?: number } {
+  const { compactAt, window } = ctx
+  if (compactAt === undefined || compactAt <= 0 || compactAt >= window) return {}
+  return { mark: (compactAt * 100) / window, ...(used !== undefined && { markTier: pctTier((used * 100) / compactAt) }) }
+}
+
 // The main conversation's context: bar (with the auto-compaction mark), percentage, tokens and growth.
 function contextGroup(b: BandInput, ctx: OverheadCtx, d: Detail): Span[] {
-  const { tokens, window, estimate, compactAt } = ctx
-  // The mark sits at the threshold's share of the window, coloured by how near the context is to it.
-  const mark = compactAt !== undefined && compactAt > 0 && compactAt < window ? (compactAt * 100) / window : undefined
+  const { tokens, window, estimate } = ctx
+  const { mark } = compactMark(ctx)
   if (tokens !== undefined && tokens > 0) {
     const p = Math.trunc(ctx.percent ?? (tokens * 100) / window)
-    const markTier = mark === undefined ? undefined : pctTier((tokens * 100) / (compactAt ?? window))
+    const { markTier } = compactMark(ctx, tokens)
     const g: Span[] = [
       { text: 'ctx' },
       { text: ' ' },
@@ -318,7 +327,7 @@ function agentGroup(b: BandInput, view: AgentView, d: Detail): Span[] {
   } else {
     g.push({ text: ` ${ktok(tokens)}` })
   }
-  if (d.spark && totals.length >= 2) g.push(...growth(totals, view.window ?? b.ctx?.window ?? 1_000_000))
+  if (d.spark && totals.length >= 2) g.push(...growth(totals, view.window ?? b.ctx?.window ?? FALLBACK_WINDOW))
   return g
 }
 

@@ -418,6 +418,26 @@ describe('ccoverhead', () => {
       expect(await ui.find({ type: 'Text', text: /↻/ })).toBeUndefined()
     })
 
+    test(`a reset time that does not parse is no reset (${surface})`, async ($, on) => {
+      on('session.start', ($, e) => ({ cwd: e.cwd }))
+      on('session.measure', ($, e) => ({ changed: e.changed }))
+      mock.store(on)
+      on('session.usage', () => ({ value: usage(40_000, [], false) }))
+      mock.clock(on, { now: NOW })
+      await $.session.start(session(surface))
+      // Fictional: a 5h window, which needs a reset to be shown, and a spend limit, which does not.
+      await $.session.measure(
+        measured(fill(40_000, 4), [
+          { kind: 'five_hour', percentUsed: 20, resetsAt: 'soon' },
+          { kind: 'spend_limit', percentUsed: 30, resetsAt: 'soon' },
+        ]),
+      )
+      const ui = await $.ui.mount(band(surface))
+      expect(await ui.find({ type: 'Text', text: /^5h$/ })).toBeUndefined()
+      expect(await ui.find({ type: 'Text', text: /^spend$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /NaN|↻/ })).toBeUndefined()
+    })
+
     test(`the band follows the subagent whose transcript is on screen (${surface})`, async ($, on) => {
       const steps: [agentId: string, model: string, read: number, write: number][] = [
         ['a1', 'claude-opus-5-5', 0, 11_739],

@@ -3,7 +3,7 @@
 // the surfaces with a proportional font).
 import type { OverheadAgent, OverheadBreakdown, OverheadCacheStats, OverheadCompaction } from '../types'
 import type { BandInput, Span } from './format'
-import { bar, dur, gainTier, gains, kshort, ktok, modelFamily, pctTier, sparkline, weeklyWindow } from './format'
+import { FALLBACK_WINDOW, bar, compactMark, dur, gainTier, gains, kshort, ktok, modelFamily, pctTier, sparkline, weeklyWindow } from './format'
 import { AGENTS, hitRate } from './track'
 
 export type PaneInput = BandInput & {
@@ -21,6 +21,8 @@ export type PaneLine = { head: string } | { label: Span; spans: Span[]; end?: bo
 
 // Cells the label column takes on the terminal.
 export const LABEL = 12
+// A label cut to the column, leaving a cell before the figures.
+const clip = (name: string) => (name.length > LABEL - 1 ? `${name.slice(0, LABEL - 2)}…` : name)
 // MCP servers listed under the breakdown, the costliest first.
 const SERVERS = 5
 // How long each known quota window runs, for the share of it gone.
@@ -43,11 +45,11 @@ function context(p: PaneInput): PaneLine[] {
   const ctx = p.ctx
   if (!ctx || ctx.window <= 0) return [...out, line('window', dim(' no reading yet'))]
   const { tokens, window, estimate, compactAt } = ctx
-  const mark = compactAt !== undefined && compactAt > 0 && compactAt < window ? (compactAt * 100) / window : undefined
+  const { mark } = compactMark(ctx)
   const now = tokens !== undefined && tokens > 0 ? tokens : undefined
   if (now !== undefined) {
     const pc = Math.trunc(ctx.percent ?? (now * 100) / window)
-    const markTier = compactAt ? pctTier((now * 100) / compactAt) : undefined
+    const { markTier } = compactMark(ctx, now)
     out.push(line('window', { text: ' ' }, { text: bar(pc, mark), tier: pctTier(pc), bar: pc, mark, markTier }, { text: ` ${pc}%`, tier: pctTier(pc) }, dim(` ${ktok(now)} of ${ktok(window)}`)))
   } else if (estimate !== undefined && estimate > 0) {
     const pc = Math.trunc((estimate * 100) / window)
@@ -55,7 +57,8 @@ function context(p: PaneInput): PaneLine[] {
   } else {
     out.push(line('window', dim(` -- of ${ktok(window)}`)))
   }
-  if (compactAt !== undefined && compactAt > 0) {
+  // Said only where the band draws the mark: a threshold at or past the window's end is never reached.
+  if (compactAt !== undefined && mark !== undefined) {
     const used = now ?? estimate
     const left = used === undefined ? undefined : Math.max(compactAt - used, 0)
     out.push(
@@ -76,7 +79,7 @@ function context(p: PaneInput): PaneLine[] {
 function breakdown(p: PaneInput): PaneLine[] {
   const b = p.breakdown
   if (!b || b.rows.length === 0) return []
-  const window = p.ctx?.window ?? 1_000_000
+  const window = p.ctx?.window ?? FALLBACK_WINDOW
   const used = b.rows.reduce((n, r) => n + r.tokens, 0)
   const out: PaneLine[] = [{ head: 'In the window, as /context estimates it' }]
   for (const r of [...b.rows].sort((x, y) => y.tokens - x.tokens)) {
@@ -94,7 +97,7 @@ function breakdown(p: PaneInput): PaneLine[] {
 
 // The conversation's growth since its last compaction, and its last compactions as the sizes before and after.
 function growth(p: PaneInput): PaneLine[] {
-  const window = p.ctx?.window ?? 1_000_000
+  const window = p.ctx?.window ?? FALLBACK_WINDOW
   const out: PaneLine[] = [{ head: 'Growth' }]
   const gs = gains(p.timeline)
   if (gs.length === 0) out.push(line('changes', dim(' none yet')))
@@ -128,7 +131,7 @@ function cache(p: PaneInput): PaneLine[] {
   if (hit !== undefined) {
     out.push(line('hit rate', { text: ` ${Math.trunc(hit)}%`, tier: pctTier(100 - hit) }, dim(` · read ${kshort(s.read)} · written ${kshort(s.write)} · uncached ${kshort(s.input)}`)))
   }
-  if (p.rewrite) out.push(line('rewrote', { text: ` ${kshort(p.rewrite)}`, tier: gainTier(p.rewrite, p.ctx?.window ?? 1_000_000) }, dim(' the latest rewrite, shown until a later turn reads the cache')))
+  if (p.rewrite) out.push(line('rewrote', { text: ` ${kshort(p.rewrite)}`, tier: gainTier(p.rewrite, p.ctx?.window ?? FALLBACK_WINDOW) }, dim(' the latest rewrite, shown until a later turn reads the cache')))
   return out
 }
 
@@ -140,8 +143,9 @@ function quota(p: PaneInput): PaneLine[] {
   if (shown.length === 0) return [...out, line('windows', dim(' none reported'))]
   for (const l of shown) {
     const pc = Math.trunc(l.percentUsed)
-    const label =
-      l.kind === 'five_hour' ? '5h' : l === weekly.limit ? weekly.label : l.kind === 'seven_day' ? '7d' : l.kind === 'spend_limit' ? 'spend' : l.kind
+    const label = clip(
+      l.kind === 'five_hour' ? '5h' : l === weekly.limit ? weekly.label : l.kind === 'seven_day' ? '7d' : l.kind === 'spend_limit' ? 'spend' : l.kind,
+    )
     const resets = l.resetsAt === undefined ? undefined : Date.parse(l.resetsAt)
     const span = SPANS.find(([test]) => test(l.kind))?.[1]
     const gone = span && resets !== undefined ? Math.min(Math.max(Math.round(((span - (resets - p.now)) * 100) / span), 0), 100) : undefined
@@ -164,14 +168,14 @@ function quota(p: PaneInput): PaneLine[] {
 // one is on screen.
 function agents(p: PaneInput): PaneLine[] {
   if (p.agents.length === 0) return []
-  const window = p.ctx?.window ?? 1_000_000
+  const window = p.ctx?.window ?? FALLBACK_WINDOW
   const out: PaneLine[] = [{ head: p.agents.length < AGENTS ? 'Subagents' : `Subagents, the last ${AGENTS} active` }]
   for (const a of p.agents) {
     const gs = gains(a.totals)
     const name = a.label ?? 'agent'
     out.push(
       line(
-        name.length > LABEL - 1 ? `${name.slice(0, LABEL - 2)}…` : name,
+        clip(name),
         { text: ` ${ktok(a.totals.at(-1) ?? 0)}` },
         ...(gs.length > 0 ? [{ text: ' ' }, { text: sparkline(gs), spark: gs, tiers: gs.map(v => gainTier(v, window)) }] : []),
         dim(` ${modelFamily(a.model) ?? a.model}`),
