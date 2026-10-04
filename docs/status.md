@@ -28,7 +28,8 @@ Claude Code raises the band's site (`AbovePrompt`) on the terminal and desktop s
 - In a headless session with the plugin loaded from this repository (Claude Code 2.1.289, Haiku 4.5, one
   Explore subagent): the plugin's state held the auto-compaction threshold (167k of 200k), the growth
   timeline, the main conversation's cache counts, the subagent with its type and three input totals, and
-  the local breakdown by category; `/ccoverhead` ran as a headless prompt and its pane was placed.
+  the local breakdown by category; `/ccoverhead` ran as a headless prompt, printed nothing and its pane was
+  placed; `/compact` on a continued conversation was recorded as one compaction with its sizes.
 - In a headless session with the installed plugin: before the first response the plugin's state holds the
   window and the local estimate (about 13.8k tokens from `{ breakdown: 'summary' }`, about 20 ms, no
   request sent).

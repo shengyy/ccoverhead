@@ -7,13 +7,15 @@ figures, warm ones only when something deserves attention. What it shows and whe
 ## The band
 
 ```text
-ctx ■■■□□□□□□□│ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | 5h 42% ↻2h34m | 7d 63% ↻2d7h | cache warm 38m
+ctx ■■■□□□□□□□│ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | 5h 42% ↻2h34m | 7d 63% ↻2d7h | cache ▆ warm 38m
 ```
 
 - Groups, left to right: context (bar with the auto-compaction mark, percentage, tokens, growth chart,
   `↑` latest growth), 5-hour quota, weekly quota, `spend` (a gateway's spend limit, when reported), cache
-  (`warm` and the minutes left or `cold`, then `rewrote` and its tokens on a turn that rewrote the cache). A
-  dim ` | ` separates groups.
+  (a gauge, `warm` and the minutes left, or `cold`; then `rewrote` and its tokens on a turn that rewrote the
+  cache). A dim ` | ` separates groups.
+- The terminal's cache gauge is one block glyph of the lifetime left, `█` fresh down to `▁` in its last
+  eighth, in `warm`'s color: the terminal's form of the desktop's ring.
 - The terminal draws the auto-compaction mark `│` between the two cells nearest the threshold, at least one
   cell in, so on a 1M window (threshold 967k) it closes the bar and on a 368k compaction window it stands a
   third of the way along.
@@ -47,7 +49,7 @@ One scale, one meaning: cool is safe, yellow is caution, warm to red is warning.
 The colors are defined once, in `plugin/hooks/format.ts`; this table follows it.
 
 The percentage column also colors three figures that are shares of something else: the auto-compaction
-mark (the context as a share of the threshold), `warm` (the share of the cache lifetime gone) and the pane's
+mark (the context as a share of the threshold), `warm` and its gauge (the share of the cache lifetime gone) and the pane's
 hit rate (the share the cache did not serve). The growth column also colors token amounts: `rewrote`, and
 each category in the pane's breakdown, by their share of the window.
 
@@ -76,8 +78,8 @@ There, and only there:
 - Each group is a `Box` row; items are spaced by `gap`, not by spaces, and text is trimmed.
 - The context bar is a 60×6 rounded `Svg`, filled to the exact percentage over a translucent track; with
   auto-compaction on, a 2×10 tick stands across it at the threshold, the Svg 10 px tall.
-- The cache's lifetime is a 12 px ring before `warm`, its arc draining clockwise from the top. The terminal
-  has no ring; its `warm` changes color alone.
+- The cache's lifetime is a 12 px ring before `warm`, its arc draining clockwise from the top, in place of
+  the terminal's one-cell gauge.
 - The growth chart is an `Svg` of 4 px columns, 14 px at the tallest and 3 px at the least, so even a
   small bar shows its color.
 - Each `Svg` carries both palettes and picks the light one under `prefers-color-scheme: light`.

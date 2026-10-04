@@ -11,7 +11,7 @@ import { LABEL } from './pane'
 type Term = Pick<Elements['terminal'], 'Box' | 'Text'>
 type Rich = Pick<Elements['desktop'], 'Box' | 'Text' | 'Svg'>
 
-// Spans as nested Text. A span with no text (the desktop's cache ring) draws nothing here.
+// Spans as nested Text; one with no text draws nothing.
 function textRun({ Text }: Term, spans: Span[], key: string) {
   return spans
     .filter(s => s.text)

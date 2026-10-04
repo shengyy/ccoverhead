@@ -18,6 +18,7 @@ const pane = <P extends RenderSurface>(surface: P): MountTarget<P, 'Pane'> => ({
 // A fictional /context breakdown: what occupies the window, a deferred row, and two MCP servers' schemas.
 const DETAILED = {
   ...BREAKDOWN,
+  totalTokens: 427_200,
   autoCompactThreshold: 967_000,
   categories: [
     { name: 'System prompt', tokens: 7_100, color: 'promptBorder', isDeferred: false, kind: 'used' as const },
@@ -123,6 +124,36 @@ describe('the /ccoverhead pane', () => {
       expect(await ui.find({ type: 'Text', text: /^ ?11k$/ })).toBeDefined()
       expect(await ui.find({ type: 'Text', text: /^ ?haiku$/ })).toBeDefined()
       expect(await ui.find({ type: 'Text', text: /^ ?· on screen$/ })).toBeDefined()
+    })
+
+    test(`a pane the surface cannot place yet still writes nothing to the conversation (${surface})`, async ($, on) => {
+      on('session.start', ($, e) => ({ cwd: e.cwd }))
+      on('command.register', ($, e) => ({ value: { command: e.name } }))
+      on('ui.open', () => ({ value: { isPlaced: false, reason: 'fictional: no surface places panes' } }))
+      mock.store(on)
+      on('session.usage', () => ({ value: usage(40_000, [], false) }))
+      mock.clock(on, { now: NOW })
+      await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
+      const ran = await $.command.run({ command: 'ccoverhead', args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 100 } })
+      expect(ran.text).toBeUndefined()
+    })
+
+    test(`a new conversation whose breakdown is refused shows none of the old one's (${surface})`, async ($, on) => {
+      let refuse = false
+      on('session.start', ($, e) => ({ cwd: e.cwd }))
+      on('session.measure', ($, e) => ({ changed: e.changed }))
+      on('classic.SessionStart', () => ({}))
+      mock.store(on)
+      on('session.usage', ($, e) => (e.breakdown && refuse ? { deny: 'fictional refusal' } : { value: usage(431_000, [], e.breakdown !== undefined && DETAILED) }))
+      mock.clock(on, { now: NOW })
+      await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
+      await $.session.measure(measured(fill(431_000)))
+      const ui = await $.ui.mount(pane(surface))
+      expect(await ui.find({ type: 'Text', text: /^ *Messages$/ })).toBeDefined()
+      refuse = true
+      await $.classic.SessionStart({ source: 'clear' })
+      expect(await ui.find({ type: 'Text', text: /^ *Messages$/ })).toBeUndefined()
+      expect(await ui.find({ type: 'Text', text: /967k/ })).toBeUndefined()
     })
   }
 })

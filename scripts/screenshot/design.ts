@@ -40,8 +40,10 @@ const featureDescriptions = [
   ['缓存冷热', 'warm / cold / 剩余分钟', '仅跟踪主对话请求的缓存读写。', 'cache'],
 ]
 const steps = ['完整信息', '隐藏增长图与 ↑', '再隐藏缓存改写', '再隐藏缓存', '再隐藏 token 数', '再隐藏每周倒计时', '再隐藏 5 小时倒计时']
+// A turn that rewrote the cache, so the narrowing table shows that step too.
+const rewriting: BandInput = { ...band, rewrite: 41_000 }
 const responsive = DEGRADE.map((detail, i) => {
-  const gs = groups(band, detail)
+  const gs = groups(rewriting, detail)
   return `<div class="responsive-row"><span class="step-no">${String(i + 1).padStart(2, '0')}</span><span class="step-label">${steps[i]}</span><code class="demo-band">${terminal(gs)}</code><span class="cell-count">${width(gs)} cells</span></div>`
 }).join('')
 const estimate: BandInput = { ...band, ctx: { window: band.ctx!.window, estimate: band.ctx!.tokens }, history: [] }
@@ -193,7 +195,7 @@ const layout = `
   <div class="palette-label"><span>深色主题 · Text 与 Svg</span><span>每列依次：颜色 / 上下文与额度已用比例 / 单次增长占窗口比例</span></div>
   <div class="scale">${scale}</div><div class="scale-meanings"><span>安全 · 冷色</span><span>注意 · 黄绿到黄</span><span>警告 · 暖色到红</span></div>
   <div class="light-palette"><div class="palette-label"><span>浅色主题 · 仅 Svg 自动切换</span><span>Text 仍用深色列；浅色主题尚未实测</span></div><div class="scale">${lightScale}</div></div>
-  <div class="mapping"><p><b>图形尺寸</b>　桌面进度条 60 × 6 px，自动压缩刻度 2 × 10 px；缓存环 12 px；增长柱宽 4 px，柱间距 2 px，柱高 3–14 px。终端进度条为 10 格，按最接近的 10% 绘制，刻度 │ 插在离阈值最近的两格之间。</p><p><b>增长与缓存</b>　保留 ${HISTORY} 个不同总量，形成最多 ${HISTORY - 1} 根柱。柱高相对比较，颜色按绝对占比；warm 按缓存寿命已过的比例取色，cold 为暗色。</p></div>
+  <div class="mapping"><p><b>图形尺寸</b>　桌面进度条 60 × 6 px，自动压缩刻度 2 × 10 px；缓存环 12 px（终端为单格量表 ▁–█）；增长柱宽 4 px，柱间距 2 px，柱高 3–14 px。终端进度条为 10 格，按最接近的 10% 绘制，刻度 │ 插在离阈值最近的两格之间。</p><p><b>增长与缓存</b>　保留 ${HISTORY} 个不同总量，形成最多 ${HISTORY - 1} 根柱。柱高相对比较，颜色按绝对占比；warm 按缓存寿命已过的比例取色，cold 为暗色。</p></div>
   <footer>${stamp}</footer>
 </section>`
 
@@ -279,7 +281,7 @@ const english: Record<string, string> = {
   '浅色主题 · 仅 Svg 自动切换': 'Light theme · Svg switches automatically',
   'Text 仍用深色列；浅色主题尚未实测': 'Text keeps dark colors; light themes are not verified',
   '图形尺寸': 'Graphic dimensions',
-  '桌面进度条 60 × 6 px，自动压缩刻度 2 × 10 px；缓存环 12 px；增长柱宽 4 px，柱间距 2 px，柱高 3–14 px。终端进度条为 10 格，按最接近的 10% 绘制，刻度 │ 插在离阈值最近的两格之间。': 'Desktop bar: 60 × 6 px, auto-compaction tick 2 × 10 px; cache ring 12 px. Growth columns: 4 px wide, 2 px apart, 3–14 px tall. The terminal bar has 10 cells, rounded to the nearest 10%, with the │ mark between the two cells nearest the threshold.',
+  '桌面进度条 60 × 6 px，自动压缩刻度 2 × 10 px；缓存环 12 px（终端为单格量表 ▁–█）；增长柱宽 4 px，柱间距 2 px，柱高 3–14 px。终端进度条为 10 格，按最接近的 10% 绘制，刻度 │ 插在离阈值最近的两格之间。': 'Desktop bar: 60 × 6 px, auto-compaction tick 2 × 10 px; cache ring 12 px (a one-cell ▁–█ gauge in the terminal). Growth columns: 4 px wide, 2 px apart, 3–14 px tall. The terminal bar has 10 cells, rounded to the nearest 10%, with the │ mark between the two cells nearest the threshold.',
   '增长与缓存': 'Growth and cache',
   [`保留 ${HISTORY} 个不同总量，形成最多 ${HISTORY - 1} 根柱。柱高相对比较，颜色按绝对占比；warm 按缓存寿命已过的比例取色，cold 为暗色。`]: `Keep ${HISTORY} changed totals for up to ${HISTORY - 1} bars. Heights compare recent gains; colors use absolute window share. Warm takes the tier of its lifetime gone; cold is dim.`,
   '状态规则与数据边界': 'State rules and data boundaries',

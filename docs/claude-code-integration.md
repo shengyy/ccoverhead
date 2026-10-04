@@ -16,11 +16,13 @@ row when you rely on it in a new version, and add the version you checked.
 | The breakdown's `categories` carry a `kind`: `used` rows (system prompt, system tools, MCP server instructions, skills, messages, …), `deferred` rows (tool schemas loaded on demand, outside the window) and the `free` row; `mcpTools` name each schema's `serverName` and `isLoaded` | 2.1.289 |
 | A breakdown the engine refuses rejects the call; ccOverhead treats that as no estimate | 2.1.288 (test kit) |
 | `session.measure` fires after each main-thread turn and when a rate-limit window moves a whole point, with `context`, `rateLimits` and `changed`; it also carries `cost` and fires when only the cost changed (`changed: ['context', 'cost']`) | 2.1.288, 2.1.289 |
+| A `session.measure` whose `changed` names `rateLimits` with an empty list means the windows went away; ccOverhead drops them | not verified |
 | `rateLimits` lists `five_hour` and `seven_day` with `percentUsed` and ISO `resetsAt` on a Claude subscription; it is empty off a subscription | 2.1.288, 2.1.289 (Claude Pro) |
 | A Claude gateway reports a `spend_limit` window, which may lack `resetsAt` and goes past 100 when exceeded (the declarations say so) | not verified |
 | A `turn.step` result carries `usage` with `cache_read_input_tokens` and `cache_creation_input_tokens`; `agentId` is absent on the main thread | 2.1.288, 2.1.289 |
 | A subagent's requests reach `turn.step` with its `agentId` and their own `usage` (the model that answered in `usage.model`); its first request reads nothing from the cache and writes its whole prefix | 2.1.289 |
-| The main context total `session.measure` reports equals the last main-thread request's `input_tokens + cache_read_input_tokens + cache_creation_input_tokens`; ccOverhead counts a subagent's context the same way | 2.1.289 |
+| The main context total `session.measure` reports equals the last main-thread request's `input_tokens + cache_read_input_tokens + cache_creation_input_tokens`; ccOverhead counts a subagent's context the same way | 2.1.289 (requests without a server-side tool loop) |
+| Under a server-side tool loop a step's `usage` sums several responses, so it may exceed the loop's last context | not verified (declarations of 2.1.289) |
 | `$.agent.list()` lists a running subagent with its `id` (the `agentId` of its steps) and its `type` (`Explore`) | 2.1.289 |
 | Main-conversation cache writes are `ephemeral_1h`; ccOverhead counts warmth over one hour | 2.1.288 (Claude Pro only; other plans not verified) |
 | On a Claude Pro account without Fable access, `rateLimits` holds only `five_hour` and `seven_day` (all models); a Fable request is refused with "Fable 5.1 requires usage credits" and reports no windows | 2.1.288 |
@@ -33,6 +35,9 @@ row when you rely on it in a new version, and add the version you checked.
 
 | Fact | Verified on |
 |---|---|
+| `/compact` raises `session.compact` with `trigger` `manual` and no `agentId`; the result carries `tokensBefore` and `tokensAfter` (22,480 → 2,022 in a short Haiku conversation). A plugin hook that passes `next(e)` through and reads the result changes nothing | 2.1.289 |
+| A compaction that fails (`summarization produced empty response` on a two-message conversation) leaves no result for the hook to read; ccOverhead records nothing | 2.1.289 |
+| Auto-compaction raises `session.compact` with `trigger` `auto`; a subagent's own compaction carries its `agentId`, a `precompute` installs nothing | not verified (declarations of 2.1.289) |
 | `session.start` fires once per load of the plugin, never for `/clear` | 2.1.288 |
 | `classic.SessionStart` with `source` `clear`, `resume` or `fork` marks another conversation in the same process | 2.1.288 |
 | Whether `/clear` empties a plugin's `$.state` is not documented; ccOverhead resets its own values | not verified |

@@ -116,4 +116,3 @@ export async function tiers(ui: Mounted<Surface, 'AbovePrompt'>, surface: Surfac
   expect([...source.matchAll(/<rect class="t(\d)"/g)].map(m => Number(m[1]))).toEqual(want)
   for (const t of want) expect(source).toContain(`.t${t}{fill:${TIER_HEX[t]}}`)
 }
-

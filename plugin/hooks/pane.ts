@@ -1,13 +1,14 @@
 // Pure formatting for the /ccoverhead pane: the detail the band has no room for, as headed sections of lines.
 // Each line is a label column and a run of spans, drawn like the band's (block glyphs on the terminal, Svg on
 // the surfaces with a proportional font).
-import type { OverheadAgent, OverheadBreakdown, OverheadCacheStats } from '../types'
+import type { OverheadAgent, OverheadBreakdown, OverheadCacheStats, OverheadCompaction } from '../types'
 import type { BandInput, Span } from './format'
 import { bar, dur, gainTier, gains, kshort, ktok, modelFamily, pctTier, sparkline, weeklyWindow } from './format'
-import { hitRate } from './track'
+import { AGENTS, hitRate } from './track'
 
 export type PaneInput = BandInput & {
   timeline: number[]
+  compactions: OverheadCompaction[]
   cacheStats: OverheadCacheStats
   agents: OverheadAgent[]
   breakdown: OverheadBreakdown | null
@@ -21,8 +22,6 @@ export type PaneLine = { head: string } | { label: Span; spans: Span[] }
 export const LABEL = 12
 // MCP servers listed under the breakdown, the costliest first.
 const SERVERS = 5
-// Compactions listed, the latest last.
-const COMPACTIONS = 3
 // How long each known quota window runs, for the share of it gone.
 const SPANS: [test: (kind: string) => boolean, ms: number][] = [
   [kind => kind === 'five_hour', 5 * 3_600_000],
@@ -84,20 +83,18 @@ function breakdown(p: PaneInput): PaneLine[] {
       for (const s of [...b.mcp].sort((x, y) => y.tokens - x.tokens).slice(0, SERVERS)) {
         out.push(line(dim(pad(kshort(s.tokens), LABEL - 2)), dim(`         ${s.server}`)))
       }
+      if (b.mcp.length > SERVERS) out.push(line('', dim(`         and ${b.mcp.length - SERVERS} more servers`)))
     }
   }
   if (b.deferred > 0) out.push(line(dim(pad(kshort(b.deferred), LABEL - 2)), dim('       tool schemas loaded on demand, outside the window')))
   return out
 }
 
-// The conversation's growth since its last compaction, and each compaction as the totals before and after.
+// The conversation's growth since its last compaction, and its last compactions as the sizes before and after.
 function growth(p: PaneInput): PaneLine[] {
-  const t = p.timeline
-  const drop = t.findLastIndex((v, i) => i > 0 && v < (t[i - 1] ?? v))
-  const run = drop < 0 ? t : t.slice(drop)
   const window = p.ctx?.window ?? 1_000_000
   const out: PaneLine[] = [{ head: 'Growth' }]
-  const gs = gains(run)
+  const gs = gains(p.timeline)
   if (gs.length === 0) out.push(line('changes', dim(' none yet')))
   else {
     const top = Math.max(...gs)
@@ -105,8 +102,10 @@ function growth(p: PaneInput): PaneLine[] {
     out.push(line(`last ${gs.length}`, { text: ' ' }, { text: sparkline(gs), spark: gs, tiers: gs.map(v => gainTier(v, window)) }, dim(` ↑${kshort(gs.at(-1) ?? 0)}`)))
     out.push(line('largest', { text: ` ↑${kshort(top)}`, tier: gainTier(top, window) }, dim(` · average ↑${kshort(Math.round(mean))}`)))
   }
-  const drops = t.flatMap((v, i) => (i > 0 && v < (t[i - 1] ?? v) ? [[t[i - 1] ?? v, v] as const] : []))
-  for (const [before, after] of drops.slice(-COMPACTIONS)) out.push(line('compacted', dim(` ${kshort(before)} → ${kshort(after)}`)))
+  for (const c of p.compactions) {
+    const size = (t: number | undefined) => (t === undefined ? '?' : kshort(t))
+    out.push(line('compacted', dim(` ${size(c.before)} → ${size(c.after)}`)))
+  }
   return out
 }
 
@@ -159,12 +158,12 @@ function quota(p: PaneInput): PaneLine[] {
   return out
 }
 
-// Each subagent seen this conversation: its type, model family and last context total, its growth, and which
+// The conversation's most recently active subagents: type, model family, last context total, growth, and which
 // one is on screen.
 function agents(p: PaneInput): PaneLine[] {
   if (p.agents.length === 0) return []
   const window = p.ctx?.window ?? 1_000_000
-  const out: PaneLine[] = [{ head: 'Subagents' }]
+  const out: PaneLine[] = [{ head: p.agents.length < AGENTS ? 'Subagents' : `Subagents, the last ${AGENTS} active` }]
   for (const a of p.agents) {
     const gs = gains(a.totals)
     const name = a.label ?? 'agent'

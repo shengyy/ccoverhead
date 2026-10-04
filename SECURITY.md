@@ -8,8 +8,9 @@ reads, what it keeps, and what it sends.
 Only figures Claude Code reports to plugins: the context window and its fill, the rate-limit windows, the
 token usage of each request (the main conversation's and each subagent's), the session's local `/context`
 count (tokens by category, the auto-compaction threshold, and the names of MCP servers with their tool
-schemas' tokens), the main loop's model id, and each subagent's type. ccOverhead does not read the
-conversation, your prompts, a subagent's task, files or the environment.
+schemas' tokens), the main loop's model id, each subagent's type, and each compaction's size before and
+after. ccOverhead does not read the conversation, your prompts, a subagent's task, files or the
+environment; its compaction hook passes the compaction on unchanged and reads only the sizes.
 
 `claude plugin validate plugin` lists every engine call the module makes; today they are `$.session.usage`
 (plain, and with the local `summary` breakdown, never `full`, which would send token-count requests),

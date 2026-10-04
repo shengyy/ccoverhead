@@ -7,10 +7,11 @@ the band from that state. External facts about the engine live in
 ## Data flow
 
 ```text
- session.start ─────────┐                     ┌─▶ $.state: ctx (with compactAt), history, timeline,
+ session.start ─────────┐                     ┌─▶ $.state: ctx (compactAt, model), history, timeline,
  classic.SessionStart ──┼─▶ load / take ──────┤             limits, limitsLive, breakdown
  session.measure ───────┤   ($.session.usage, └─▶ $.store "limits" (last quota reading, across sessions)
  command.run ccoverhead ┘    breakdown 'summary')
+ session.compact, main thread ────▶ $.state: compactions; history, timeline restart
  turn.step, main thread ──────────▶ $.state: cache, cacheStats
  turn.step, a subagent ($.agent.list once) ─▶ $.state: agents
  classic.PostModelSwitch, $.session.model() ─▶ $.state: model, cacheTtl, cache (cold)
@@ -32,8 +33,8 @@ band and the pane by itself; the clock invalidates only so the countdowns keep t
 |---|---|
 | `.claude-plugin/plugin.json` | Manifest; the only version source |
 | `hooks/hooks.json` | Names the hooks module |
-| `hooks/register.tsx` | Event hooks: loading figures, recording growth, cache and subagents, resetting on a new conversation, the `/ccoverhead` command, choosing the tree per surface |
-| `hooks/track.ts` | Pure state updates: the growth history and timeline, the cache's running counts and rewrite mark (`addStep`), each subagent's totals (`addAgentStep`) |
+| `hooks/register.tsx` | Event hooks: loading figures, recording growth, compactions, cache and subagents, resetting on a new conversation, the `/ccoverhead` command, choosing the tree per surface |
+| `hooks/track.ts` | Pure state updates: the growth history and timeline, compactions, the cache's running counts and rewrite mark (`addStep`, `compacted`), each subagent's totals (`addAgentStep`) |
 | `hooks/format.ts` | Pure formatting of the band: groups and spans, narrowing (`fit`), the weekly window for the model (`weeklyWindow`, `modelFamily`), the color scale (`GAIN`, `pctTier`, `gainTier`), the auto-compaction mark, multi-colored spans (`cells`), the desktop's Svg (`svgOf`, `items`) |
 | `hooks/pane.ts` | Pure formatting of the pane: its sections as lines of a label and spans (`paneLines`) |
 | `hooks/draw.tsx` | The band and the pane as element trees, for the terminal and for the surfaces with Svg |
@@ -49,17 +50,18 @@ plugin from a folder (ignored by Git).
 
 | Key | Type | Written by | Holds |
 |---|---|---|---|
-| `ctx` | `OverheadCtx \| null` | `session.start`, `session.measure`, `classic.SessionStart`, `command.run` | Window, tokens and percent of the last response, or the pre-response estimate; the auto-compaction threshold |
+| `ctx` | `OverheadCtx \| null` | `session.start`, `session.measure`, `classic.SessionStart`, `command.run` | Window, tokens and percent of the last response, or the pre-response estimate; the auto-compaction threshold; the model the window was read for |
 | `history` | `number[]` | the same | Up to eight context totals; reset on a drop or a new conversation |
-| `timeline` | `number[]` | the same | Up to 48 context totals for the pane, drops (compactions) kept; reset on a new conversation |
+| `timeline` | `number[]` | the same, `session.compact` | Up to 48 context totals since the last compaction, for the pane |
+| `compactions` | `OverheadCompaction[]` | `session.compact`, a drop in `session.measure` | The last three compactions' sizes before and after |
 | `breakdown` | `OverheadBreakdown \| null` | the same | `/context`'s local count by category and by MCP server, without paths or file names |
 | `limits` | `OverheadLimit[]` | the same | Every window reported; the band shows the 5-hour one, one weekly one and a spend limit |
 | `limitsLive` | `boolean` | the same | Whether `limits` is this session's own reading (drawn in color) or remembered (dim) |
 | `cache` | `OverheadCache \| null` | `turn.step`, `classic.PostModelSwitch`, cleared by `classic.SessionStart` | When the last main-thread request finished and whether it touched the cache |
-| `cacheStats` | `OverheadCacheStats` | `turn.step`, cleared by `classic.SessionStart` | The main conversation's input, cache-read and cache-written tokens, the last request's total, and a rewrite of this turn |
+| `cacheStats` | `OverheadCacheStats` | `turn.step`, `session.compact`, cleared by `classic.SessionStart` | The main conversation's input, cache-read and cache-written tokens, the last request's total, and a rewrite of this turn |
 | `cacheTtl` | `number` | `classic.PostModelSwitch` | The cache lifetime in ms; one hour until a switch reports it |
 | `model` | `string \| null` | load, `session.measure`, `classic.PostModelSwitch` | The main loop's model; picks its own weekly window (`weeklyWindow`) |
-| `agents` | `OverheadAgent[]` | `turn.step`, cleared by `classic.SessionStart` | Up to eight subagents: type, model and last eight input totals |
+| `agents` | `OverheadAgent[]` | `turn.step`, cleared by `classic.SessionStart` | Up to eight subagents: type, model and last eight changed input totals |
 
 `$.store` keeps one key, `limits`, written only when this session's own reading changes.
 

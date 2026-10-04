@@ -43,8 +43,9 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
   longest.
 - It yields to a survey that holds the band, and draws nothing until it has a figure to show.
 - While a subagent's transcript is on screen, the context group shows that agent instead, labeled `agent`:
-  its last input total, its growth, and its bar and percentage when it runs the main loop's model (the only
-  window Claude Code reports); otherwise its tokens alone. Quota and cache stay the account's and the main
+  its last input total, its growth, and its bar and percentage when it runs the model the context window was
+  last read for (the only window Claude Code reports); otherwise, and after a model switch until the next
+  reading, its tokens alone. Quota and cache stay the account's and the main
   conversation's.
 
 ### Context
@@ -59,7 +60,8 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
 
 ### Growth
 
-- A total is recorded only when it changes; a drop (compaction) starts the history over. Eight totals are
+- A total is recorded only when it changes; a compaction of the main conversation, as Claude Code reports
+  it, starts the history over, and so does a drop no compaction announced. Eight totals are
   kept, which makes seven bars; fewer than two show no chart.
 - Bar height is relative to the largest bar shown. Bar color is absolute: the bar's share of the window,
   in tiers that double from 0.1% (see [the scale](docs/design.md#color-scale)).
@@ -69,7 +71,8 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
 ### Quota
 
 - The band shows the 5-hour and weekly windows and a Claude gateway's spend limit; a window whose reset
-  time has passed is dropped. A spend limit may have no reset time and may go past 100%. *Not verified*: no
+  time has passed is dropped, and so is one a later reading no longer reports. A spend limit may have no
+  reset time and may go past 100%. *Not verified*: no
   spend limit has reached a plugin yet.
 - The weekly group follows the main model: when Claude Code reports a weekly window of the model's own, it
   shows that window, labeled with the model family (`7d fable`), and switches at once on `/model`;
@@ -85,19 +88,20 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
 - The lifetime is one hour until a model switch reports the session's own (`5m` or `1h`). A switch to
   another model leaves the cache cold: each model has its own.
 - `warm` takes its color from the share of the lifetime gone, on the percentage scale, so it warms as the
-  cache drains.
-- A rewrite shows `rewrote` and its tokens until a request of a later turn reads the cache again. A
-  compaction's next request is not counted as one: it writes a new conversation, not a lapsed cache.
+  cache drains. A one-cell gauge before it (a ring on the desktop) shows the lifetime left.
+- A rewrite shows `rewrote` and its tokens until a request of a later turn reads the cache again. The first
+  request after a compaction is not counted as one: it writes a new conversation, not a lapsed cache.
 
 ### The pane
 
-- `/ccoverhead` opens it; it only displays, and the command writes nothing to the conversation.
+- `/ccoverhead` opens it; it only displays, and the command writes nothing to the conversation, also when
+  the surface cannot place the pane yet.
 - It is raised on every surface Claude Code has, so it is the one view on VS Code and mobile.
 - Sections: the context with the threshold and the tokens left to it; `/context`'s local estimate by
-  category with each MCP server's loaded tool schemas; the growth since the last compaction and each
-  compaction's totals before and after; the cache's state, hit rate and token counts; every quota window
-  with the share of its time gone beside the share used; each subagent with its type, model family, last
-  context total and growth.
+  category with the five costliest MCP servers' loaded tool schemas (and how many more there are); the
+  growth since the last compaction and the last three compactions' sizes before and after; the cache's
+  state, hit rate and token counts; every quota window with the share of its time gone beside the share
+  used; the eight most recently active subagents with type, model family, last context total and growth.
 - The share of a window's time gone is a fact about the clock. Nothing is extrapolated from it.
 
 ### Color

@@ -6,6 +6,8 @@ All notable changes to ccOverhead are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-04
+
 ### Added
 
 - An auto-compaction mark on the context bar (`│` in the terminal, a tick on the desktop), at the threshold
@@ -13,12 +15,14 @@ All notable changes to ccOverhead are documented here. The format follows
   is off.
 - A `/ccoverhead` pane, on every surface including VS Code and mobile: the context with the tokens left to
   auto-compaction, `/context`'s breakdown by category and by MCP server, growth since the last compaction
-  and each compaction, the cache's state, hit rate and token counts, every quota window with the share of
-  its time gone, and each subagent. The command adds nothing to the conversation.
+  and the last three compactions, the cache's state, hit rate and token counts, every quota window with the
+  share of its time gone, and the eight most recently active subagents. The command adds nothing to the
+  conversation.
 - The band follows a subagent while its transcript is on screen, labeled `agent`: its context, growth and,
   on the main loop's model, its bar. Not verified live.
 - `rewrote` in the cache group when a turn's request read back less than half of the previous request and
-  wrote the cache again, sized and colored like a growth bar, until a later turn reads it again.
+  wrote the cache again, sized and colored like a growth bar, until a request of a later turn reads the
+  cache again. The first request after a compaction does not count.
 - A Claude gateway's `spend_limit` window as a `spend` group, which can pass 100% and may have no reset.
   Not verified live.
 - A pane screenshot in the READMEs.
@@ -26,7 +30,9 @@ All notable changes to ccOverhead are documented here. The format follows
 ### Changed
 
 - `warm` takes its color from the share of the cache lifetime gone, cool when fresh and red in the last
-  minutes; the desktop shows a draining ring before it.
+  minutes, with a gauge of the lifetime left before it: one block glyph in the terminal (`cache ▆ warm
+  38m`), a draining ring on the desktop.
+- Growth starts over at a compaction as Claude Code reports it, not only when the context total drops.
 - A model switch leaves the cache cold and sets its lifetime from the switch's `cache_ttl`.
 
 ## [1.2.0] - 2026-10-04

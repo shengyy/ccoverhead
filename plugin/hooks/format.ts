@@ -16,7 +16,8 @@ const FAMILIES = ['fable', 'opus', 'sonnet', 'haiku']
 // absent for plain text (the labels). A span with `bar` (a used percentage, with the auto-compaction `mark`
 // in its `markTier`) or `spark` (the gains, with their `tiers`) is a graphic: block glyphs line up only in a
 // monospace font, so the desktop, which draws the band in a proportional one, draws those as an Svg instead
-// (`items`). A `ring` (the cache lifetime left, 0 to 1) is drawn on the desktop only, its `text` empty.
+// (`items`). A `ring` (the cache lifetime left, 0 to 1) is a one-cell gauge on the terminal (`gauge`) and a
+// ring on the desktop.
 export type Span = {
   text: string
   tier?: number
@@ -195,6 +196,12 @@ export function gains(history: number[]): number[] {
   return history.slice(1).map((t, i) => Math.max(t - (history[i] ?? t), 0))
 }
 
+// A share from 0 to 1 as one of the eight block heights, never below the lowest: the cache lifetime left,
+// █ fresh to ▁ in its last eighth.
+export function gauge(share: number): string {
+  return BARS[Math.min(Math.max(Math.ceil(share * 8), 1), 8) - 1] ?? '▁'
+}
+
 export function sparkline(values: number[]): string {
   const top = Math.max(...values, 1)
   return values.map(v => BARS[Math.floor((v * 7) / top)]).join('')
@@ -322,7 +329,8 @@ function cacheGroup(b: BandInput, cache: OverheadCache, d: Detail): Span[] {
   if (cache.warm && left > 0) {
     // Cool while the lifetime is fresh, warming as it drains: one tier per 10% of it gone.
     const tier = pctTier(((b.cacheTtl - left) * 100) / b.cacheTtl)
-    g = [{ text: 'cache' }, { text: '', ring: left / b.cacheTtl, tier }, { text: ' warm', tier }, { text: ` ${dur(left)}`, dimColor: true }]
+    const ring = left / b.cacheTtl
+    g = [{ text: 'cache' }, { text: ` ${gauge(ring)}`, ring, tier }, { text: ' warm', tier }, { text: ` ${dur(left)}`, dimColor: true }]
   }
   if (d.rewrite && b.rewrite) {
     const text = ` rewrote ${kshort(b.rewrite)}`

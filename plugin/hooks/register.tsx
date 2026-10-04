@@ -4,17 +4,18 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, SessionContextBreakdown, SessionContextUsage, SessionRateLimit, Timer } from 'claude-code'
 
-import type { OverheadAgent, OverheadBreakdown, OverheadCache, OverheadCacheStats, OverheadCtx, OverheadLimit } from '../types'
+import type { OverheadAgent, OverheadBreakdown, OverheadCache, OverheadCacheStats, OverheadCompaction, OverheadCtx, OverheadLimit } from '../types'
 import { bandRich, bandTerminal, paneRich, paneTerminal } from './draw'
 import { CACHE_TTL_MS, fit } from './format'
 import type { AgentView, BandInput } from './format'
 import { paneLines } from './pane'
-import { NO_CACHE_STATS, addAgentStep, addSample, addStep, addTimeline, baseModel, clearRewrite } from './track'
+import { NO_CACHE_STATS, addAgentStep, addCompaction, addSample, addStep, addTimeline, baseModel, compacted } from './track'
 
 // Session-long values the host keeps across a reload of this module.
 const ctx = atom({ plugin: 'ccoverhead', key: 'ctx' } as const, null as OverheadCtx | null)
 const history = atom({ plugin: 'ccoverhead', key: 'history' } as const, [] as number[])
 const timeline = atom({ plugin: 'ccoverhead', key: 'timeline' } as const, [] as number[])
+const compactions = atom({ plugin: 'ccoverhead', key: 'compactions' } as const, [] as OverheadCompaction[])
 const limits = atom({ plugin: 'ccoverhead', key: 'limits' } as const, [] as OverheadLimit[])
 const limitsLive = atom({ plugin: 'ccoverhead', key: 'limitsLive' } as const, false)
 const cache = atom({ plugin: 'ccoverhead', key: 'cache' } as const, null as OverheadCache | null)
@@ -49,14 +50,17 @@ export const register: Register = on => {
   })
 
   // /clear, /resume and /branch start another conversation with no new session.start: the old
-  // one's growth, cache and subagents no longer apply, the account's quota still does.
+  // one's context, breakdown, growth, cache and subagents no longer apply, the account's quota still does.
   on('classic.SessionStart', { source: ['clear', 'resume', 'fork'] }, async ($, e, next) => {
     // Return the chain's answer directly; refreshing our figures cannot change its first message.
     try {
       return await next(e)
     } finally {
+      await update($, ctx, () => null)
+      await update($, breakdown, () => null)
       await update($, history, () => [])
       await update($, timeline, () => [])
+      await update($, compactions, () => [])
       await update($, cache, () => null)
       await update($, cacheStats, () => NO_CACHE_STATS)
       await update($, agents, () => [])
@@ -64,11 +68,26 @@ export const register: Register = on => {
     }
   })
 
-  // After each turn, and whenever a quota window moves a point.
+  // After each turn, and whenever a quota window moves a point. A reading that says the windows changed is
+  // taken even when it is empty: a window withdrawn (a spend limit has no reset to expire it) goes too.
   on('session.measure', async ($, e, next) => {
     const result = await next(e)
-    await take($, e.context, e.rateLimits)
     await readModel($)
+    await take($, e.context, e.rateLimits, e.changed.includes('rateLimits'))
+    return result
+  })
+
+  // A compaction of the main conversation, observed and passed on unchanged: growth starts over from it,
+  // and its next request writes a new conversation, which is no rewrite of a lapsed cache.
+  on('session.compact', async ($, e, next) => {
+    const result = await next(e)
+    if (e.agentId === undefined && e.trigger !== 'precompute' && result.skip === undefined) {
+      const before = result.tokensBefore ?? (await read($, timeline)).at(-1)
+      await update($, compactions, list => addCompaction(list ?? [], { before, after: result.tokensAfter }))
+      await update($, history, () => [])
+      await update($, timeline, () => [])
+      await update($, cacheStats, s => compacted(s ?? NO_CACHE_STATS))
+    }
     return result
   })
 
@@ -107,9 +126,10 @@ export const register: Register = on => {
 
   on('command.run', { command: PANE }, async $ => {
     await load($)
-    const opened = await $.ui.open({ id: PANE, title: 'ccOverhead', rows: 24 })
-    // No text on success: a command's text is a transcript row the model reads too.
-    return opened.isPlaced ? {} : { text: `ccOverhead: the pane waits for room (${opened.reason})` }
+    // A pane the surface cannot place yet waits and is seated when one can. No text either way: a command's
+    // text is a transcript row the model reads too.
+    await $.ui.open({ id: PANE, title: 'ccOverhead', rows: 24 })
+    return {}
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
@@ -127,6 +147,7 @@ export const register: Register = on => {
     const lines = paneLines({
       ...band,
       timeline: await read($, timeline),
+      compactions: await read($, compactions),
       cacheStats: await read($, cacheStats),
       agents: await read($, agents),
       breakdown: await read($, breakdown),
@@ -145,8 +166,9 @@ async function bandInput($: EngineInterface, viewing: string | undefined): Promi
   let view: AgentView | undefined
   if (viewing !== undefined) {
     const agent = (await read($, agents)).find(a => a.id === viewing)
-    // An agent on the main loop's model has its window; on another model the window is not reported.
-    const window = agent && c && m && baseModel(agent.model) === baseModel(m) ? c.window : undefined
+    // An agent on the model the window was read for has that window; on another model (or before the first
+    // reading after a switch) the window is not reported.
+    const window = agent && c?.model && baseModel(agent.model) === baseModel(c.model) ? c.window : undefined
     view = { agent, window }
   }
   return {
@@ -166,8 +188,8 @@ async function bandInput($: EngineInterface, viewing: string | undefined): Promi
 // Start of session, a reload or the pane: the engine's figures, else the last live quota from the store.
 async function load($: EngineInterface) {
   const { context, rateLimits } = await $.session.usage()
-  await take($, context, rateLimits)
   await readModel($)
+  await take($, context, rateLimits, false)
   if (pick(rateLimits).length === 0) {
     const saved = await $.store.get(STORE_LIMITS)
     if (Array.isArray(saved) && !(await read($, limitsLive))) {
@@ -176,21 +198,26 @@ async function load($: EngineInterface) {
   }
 }
 
-async function take($: EngineInterface, context: SessionContextUsage | undefined, rateLimits: SessionRateLimit[] | undefined) {
+// `withdrawn`: an empty reading means the windows went away, not that there is no reading yet.
+async function take($: EngineInterface, context: SessionContextUsage | undefined, rateLimits: SessionRateLimit[] | undefined, withdrawn: boolean) {
   const b = await localBreakdown($)
   if (b) await update($, breakdown, () => slim(b))
   if (context?.window) {
-    const next: OverheadCtx = { tokens: context.tokens, window: context.window, percent: context.percent }
+    const m = await read($, model)
+    const next: OverheadCtx = { tokens: context.tokens, window: context.window, percent: context.percent, ...(m && { model: m }) }
     // Where auto-compaction runs; without a breakdown this time, where it ran last time.
     const compactAt = b ? (b.isAutoCompactEnabled ? (b.autoCompactThreshold ?? undefined) : undefined) : (await read($, ctx))?.compactAt
     if (compactAt) next.compactAt = compactAt
     if (context.tokens !== undefined && context.tokens > 0) {
       const t = context.tokens
-      const before = (await read($, history)).at(-1)
+      const before = (await read($, timeline)).at(-1)
       await update($, history, samples => addSample(samples, t))
       await update($, timeline, samples => addTimeline(samples, t))
-      // A compaction rewrites the conversation: its next request writes the new prefix, not a lapsed cache.
-      if (before !== undefined && t < before) await update($, cacheStats, s => clearRewrite(s ?? NO_CACHE_STATS))
+      // A drop no compaction event announced (one this plugin did not see): treated as one.
+      if (before !== undefined && t < before) {
+        await update($, compactions, list => addCompaction(list ?? [], { before, after: t }))
+        await update($, cacheStats, s => compacted(s ?? NO_CACHE_STATS))
+      }
     } else {
       // No response in this window yet (new, cleared or just compacted): /context's local estimate.
       next.estimate = b?.totalTokens
@@ -198,7 +225,7 @@ async function take($: EngineInterface, context: SessionContextUsage | undefined
     await update($, ctx, () => next)
   }
   const live = pick(rateLimits)
-  if (live.length > 0) {
+  if (live.length > 0 || withdrawn) {
     const before = JSON.stringify(await read($, limits))
     await update($, limits, () => live)
     await update($, limitsLive, () => true)

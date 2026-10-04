@@ -24,7 +24,8 @@ export const band: BandInput = {
 export const pane: PaneInput = {
   ...band,
   model: 'claude-opus-5-5',
-  timeline: [402_000, 455_000, 61_000, 92_000, 140_000, 180_000, 181_200, 186_000, 198_000, 232_000, 236_500, 268_000, 271_400],
+  timeline: [61_000, 92_000, 140_000, 180_000, 181_200, 186_000, 198_000, 232_000, 236_500, 268_000, 271_400],
+  compactions: [{ before: 455_000, after: 61_000 }],
   cacheStats: { input: 2_100, read: 3_412_000, write: 296_000, last: 271_400 },
   agents: [{ id: 'fictional', model: 'claude-haiku-4-5-20251001', totals: [9_100, 14_800, 22_300, 31_000], label: 'Explore' }],
   breakdown: {

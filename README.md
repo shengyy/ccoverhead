@@ -68,7 +68,8 @@ and opens the detail behind them in a pane when you ask.
 - Claude Code 2.1.288 or later, with mods (function-hook plugins). Verified versions are in
   [docs/status.md](docs/status.md).
 - The band is drawn in the terminal and in the Claude desktop app's Code tab. Quota appears on Claude
-  subscription plans, which report rate limits; API-key sessions show context and cache only.
+  subscription plans, which report rate limits, and as `spend` on a Claude gateway that reports a spend
+  limit; other API-key sessions show context and cache only.
 
 ## Install
 
@@ -88,7 +89,7 @@ Remove with `/plugin uninstall ccoverhead@ccoverhead`.
 The band reads left to right, from what changes every turn to what changes slowly:
 
 ```text
-ctx ■■■□□□□□□□│ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | 5h 42% ↻2h34m | 7d 63% ↻2d7h | cache warm 38m
+ctx ■■■□□□□□□□│ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | 5h 42% ↻2h34m | 7d 63% ↻2d7h | cache ▆ warm 38m
 ```
 
 | Group | Meaning |
@@ -97,7 +98,7 @@ ctx ■■■□□□□□□□│ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k
 | Bars and `↑` | What each of the last seven turns added; `↑` is the latest turn |
 | `5h`, `7d` | Quota used in each window, and `↻` the time until it resets. Dim when remembered from an earlier session. `7d` follows the main model's own weekly window when Claude Code reports one, such as `7d fable` (not verified) |
 | `spend` | A Claude gateway's spend limit, when reported; it can pass 100% (not verified) |
-| `cache` | `warm` with the minutes left on the cache, or `cold`; `rewrote` and its tokens on a turn that wrote the cache again instead of reading it |
+| `cache` | A gauge of the lifetime left, `warm` and its minutes, or `cold`; `rewrote` and its tokens on a turn that wrote the cache again instead of reading it |
 
 Colors follow one ten-step scale from cool to warm. Percentages (context and quota) move one step per 10%
 from sky blue at 0–29% to red at 90% and above; each growth bar takes a step by its share of the window,
