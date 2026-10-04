@@ -36,8 +36,9 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
 
 ### The band
 
-- Groups read left to right from what changes every turn to what changes slowly: context with its growth
-  chart, the 5-hour window, the weekly window, a gateway's spend limit, the cache.
+- Groups read left to right from what changes every turn to what changes slowly: the conversation's own
+  state first (context with its growth chart, then the cache, which every request renews), then the
+  account's quota (the 5-hour window, the weekly window, a gateway's spend limit).
 - When the band is too narrow it drops, in order, the growth chart, the cache rewrite, the cache, the
   context token counts, the weekly and spend resets, the 5-hour reset, then truncates. The context stays
   longest.

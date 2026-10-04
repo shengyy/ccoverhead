@@ -339,14 +339,15 @@ function cacheGroup(b: BandInput, cache: OverheadCache, d: Detail): Span[] {
   return g
 }
 
-// The band's groups, each a run of spans; drawn with a dim " | " between groups. The session's own state
-// first (context and its growth), then the account's quota, then the cache, so a narrow band cuts the
-// slow-moving groups before the context.
+// The band's groups, each a run of spans; drawn with a dim " | " between groups. The conversation's own state
+// first (context and its growth, then the cache, which every request renews), then the account's quota,
+// which moves slowest; narrowing drops details by `DEGRADE`, and a truncated end cuts the quota first.
 export function groups(b: BandInput, d: Detail): Span[][] {
   const out: Span[][] = []
 
   if (b.view) out.push(agentGroup(b, b.view, d))
   else if (b.ctx && b.ctx.window > 0) out.push(contextGroup(b, b.ctx, d))
+  if (d.cache && b.cache) out.push(cacheGroup(b, b.cache, d))
 
   const weekly = weeklyWindow(b.limits, b.model)
   const windows: [l: OverheadLimit | undefined, label: string, showReset: boolean][] = [
@@ -370,7 +371,6 @@ export function groups(b: BandInput, d: Detail): Span[][] {
     )
   }
 
-  if (d.cache && b.cache) out.push(cacheGroup(b, b.cache, d))
   return out
 }
 

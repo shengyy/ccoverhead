@@ -36,8 +36,8 @@ const full = fit(band, 110)
 const featureDescriptions = [
   ['上下文容量', '进度条 / 已用比例 / token 数 / 压缩刻度', '容量来自最后一次回复的实际读数。', 'ctx'],
   ['每轮增长', '最近 7 次变化 / 最新增量', '柱高相对比较，颜色按窗口占比。', 'growth'],
-  ['使用额度', '5 小时 / 每周 / 重置倒计时', '显示已用比例，额度读数来自宿主。', 'quota'],
   ['缓存冷热', 'warm / cold / 剩余分钟', '仅跟踪主对话请求的缓存读写。', 'cache'],
+  ['使用额度', '5 小时 / 每周 / 重置倒计时', '显示已用比例，额度读数来自宿主。', 'quota'],
 ]
 const steps = ['完整信息', '隐藏增长图与 ↑', '再隐藏缓存改写', '再隐藏缓存', '再隐藏 token 数', '再隐藏每周倒计时', '再隐藏 5 小时倒计时']
 // A turn that rewrote the cache, so the narrowing table shows that step too.
@@ -184,9 +184,9 @@ const layout = `
     <div class="surface-label"><span>CLAUDE DESKTOP · CODE TAB</span><span>比例字体 · Svg 图形 · gap 间距</span></div>
     <div class="desktop-band"><div class="band-row">${desktop(full)}</div></div>
     <div class="input-line"><span>Type / for commands</span><span>↵</span></div>
-    <div class="surface-caption"><b>↑ AbovePrompt</b><span>主上下文与增长 → 5 小时额度 → 每周额度 → 缓存</span><span>有调查问卷时，让出横条。</span></div>
+    <div class="surface-caption"><b>↑ AbovePrompt</b><span>主上下文与增长 → 缓存 → 5 小时额度 → 每周额度</span><span>有调查问卷时，让出横条。</span></div>
   </div>
-  <div class="feature-grid">${featureDescriptions.map((d, i) => `<div class="feature"><div class="feature-top"><span class="dot" style="background:${i < 2 ? inks[2] : i === 2 ? inks[6] : inks[4]}"></span><h3>${d[0]}</h3></div><div class="detail">${d[1]}</div><div class="rule">${d[2]}</div></div>`).join('')}</div>
+  <div class="feature-grid">${featureDescriptions.map((d, i) => `<div class="feature"><div class="feature-top"><span class="dot" style="background:${i < 2 ? inks[2] : i === 2 ? inks[4] : inks[6]}"></span><h3>${d[0]}</h3></div><div class="detail">${d[1]}</div><div class="rule">${d[2]}</div></div>`).join('')}</div>
   <div class="terminal-demo"><div class="surface-label"><span>TERMINAL</span><span>等宽字体 · 字符进度条 · 字符增长图</span></div><div class="terminal-line">${terminal(full)}</div><div class="terminal-prompt"><span>&gt;</span><span class="cursor"></span></div></div>
   <div class="section-heading"><span class="index">02</span><h2>空间不足时，按顺序删细节</h2><span class="aside">cell 数为横条内容宽度，不是窗口断点</span></div>
   <div class="responsive-table">${responsive}</div>
@@ -246,7 +246,7 @@ const english: Record<string, string> = {
   '信息放在输入框上方，从变化快的读到变化慢的': 'Above the prompt. Fast signals first.',
   '所有百分比均为已用比例': 'All percentages show usage',
   '比例字体 · Svg 图形 · gap 间距': 'Proportional font · Svg graphics · gap spacing',
-  '主上下文与增长 → 5 小时额度 → 每周额度 → 缓存': 'Context & growth → 5-hour quota → weekly quota → cache',
+  '主上下文与增长 → 缓存 → 5 小时额度 → 每周额度': 'Context & growth → cache → 5-hour quota → weekly quota',
   '有调查问卷时，让出横条。': 'Yield the band to a survey.',
   '上下文容量': 'Context window',
   '进度条 / 已用比例 / token 数 / 压缩刻度': 'Bar / used percentage / tokens / compaction mark',

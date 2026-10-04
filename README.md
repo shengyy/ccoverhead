@@ -23,7 +23,7 @@
 <p align="center"><a href="https://shengyy.github.io/ccoverhead/"><strong>Website</strong></a></p>
 
 <p align="center">
-  <img src="assets/screenshots/desktop.png" width="760" alt="The ccOverhead band in the Claude desktop app: a context bar at 27 percent with the auto-compaction tick at its end, a seven-bar growth chart in mixed colours, 5-hour quota 42 percent, weekly quota 63 percent, a cache ring, warm for 38 minutes">
+  <img src="assets/screenshots/desktop.png" width="760" alt="The ccOverhead band in the Claude desktop app: a context bar at 27 percent with the auto-compaction tick at its end, a seven-bar growth chart in mixed colours, a cache ring, warm for 38 minutes, 5-hour quota 42 percent, weekly quota 63 percent">
 </p>
 
 ---
@@ -89,16 +89,16 @@ Remove with `/plugin uninstall ccoverhead@ccoverhead`.
 The band reads left to right, from what changes every turn to what changes slowly:
 
 ```text
-ctx ■■■□□□□□□□│ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | 5h 42% ↻2h34m | 7d 63% ↻2d7h | cache ▆ warm 38m
+ctx ■■■□□□□□□□│ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | cache ▆ warm 38m | 5h 42% ↻2h34m | 7d 63% ↻2d7h
 ```
 
 | Group | Meaning |
 |---|---|
 | `ctx` | Context used: bar, percentage, tokens. `│` marks where auto-compaction runs. `~` marks the pre-response estimate. Reads `agent` while a subagent's transcript is on screen |
 | Bars and `↑` | What each of the last seven turns added; `↑` is the latest turn |
+| `cache` | A gauge of the lifetime left, `warm` and its minutes, or `cold`; `rewrote` and its tokens on a turn that wrote the cache again instead of reading it |
 | `5h`, `7d` | Quota used in each window, and `↻` the time until it resets. Dim when remembered from an earlier session. `7d` follows the main model's own weekly window when Claude Code reports one, such as `7d fable` (not verified) |
 | `spend` | A Claude gateway's spend limit, when reported; it can pass 100% (not verified) |
-| `cache` | A gauge of the lifetime left, `warm` and its minutes, or `cold`; `rewrote` and its tokens on a turn that wrote the cache again instead of reading it |
 
 Colors follow one ten-step scale from cool to warm. Percentages (context and quota) move one step per 10%
 from sky blue at 0–29% to red at 90% and above; each growth bar takes a step by its share of the window,

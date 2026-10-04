@@ -7,13 +7,13 @@ figures, warm ones only when something deserves attention. What it shows and whe
 ## The band
 
 ```text
-ctx ■■■□□□□□□□│ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | 5h 42% ↻2h34m | 7d 63% ↻2d7h | cache ▆ warm 38m
+ctx ■■■□□□□□□□│ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | cache ▆ warm 38m | 5h 42% ↻2h34m | 7d 63% ↻2d7h
 ```
 
 - Groups, left to right: context (bar with the auto-compaction mark, percentage, tokens, growth chart,
-  `↑` latest growth), 5-hour quota, weekly quota, `spend` (a gateway's spend limit, when reported), cache
-  (a gauge, `warm` and the minutes left, or `cold`; then `rewrote` and its tokens on a turn that rewrote the
-  cache). A dim ` | ` separates groups.
+  `↑` latest growth), cache (a gauge, `warm` and the minutes left, or `cold`; then `rewrote` and its tokens
+  on a turn that rewrote the cache), 5-hour quota, weekly quota, `spend` (a gateway's spend limit, when
+  reported). A dim ` | ` separates groups.
 - The terminal's cache gauge is one block glyph of the lifetime left, `█` fresh down to `▁` in its last
   eighth, in `warm`'s color: the terminal's form of the desktop's ring.
 - The terminal draws the auto-compaction mark `│` between the two cells nearest the threshold, at least one

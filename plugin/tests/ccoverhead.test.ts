@@ -105,9 +105,9 @@ describe('ccoverhead', () => {
       }
       // A freshly warm cache is safe: the first percentage tier, sky.
       expect((await ui.find({ type: 'Text', text: /^ ?warm$/ }))?.props.color).toBe(TIER_HEX[2])
-      // Context first, then the quota, the cache last.
+      // The conversation's state first (context, then cache), then the account's quota.
       const order = (await ui.findAll({ type: 'Text' })).map(t => t.text.trim())
-      expect(order.indexOf('ctx') < order.indexOf('5h') && order.indexOf('5h') < order.indexOf('7d') && order.indexOf('7d') < order.indexOf('cache')).toBe(true)
+      expect(order.indexOf('ctx') < order.indexOf('cache') && order.indexOf('cache') < order.indexOf('5h') && order.indexOf('5h') < order.indexOf('7d')).toBe(true)
       expect(await ui.find({ type: 'Text', text: /^ ?1h0m$/ })).toBeDefined()
 
       // Compaction: total drops, history restarts, sparkline hides.

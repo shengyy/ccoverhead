@@ -23,7 +23,7 @@
 <p align="center"><a href="https://shengyy.github.io/ccoverhead/"><strong>网站</strong></a></p>
 
 <p align="center">
-  <img src="assets/screenshots/desktop.png" width="760" alt="Claude 桌面端里的 ccOverhead 横条：上下文条 27%、末端是自动压缩刻度、七根颜色各异的增长柱、5 小时额度 42%、每周额度 63%、缓存环与「还热 38 分钟」">
+  <img src="assets/screenshots/desktop.png" width="760" alt="Claude 桌面端里的 ccOverhead 横条：上下文条 27%、末端是自动压缩刻度、七根颜色各异的增长柱、缓存环与「还热 38 分钟」、5 小时额度 42%、每周额度 63%">
 </p>
 
 ---
@@ -69,16 +69,16 @@
 横条从左到右，依次是每轮都在变的、变化慢的：
 
 ```text
-ctx ■■■□□□□□□□│ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | 5h 42% ↻2h34m | 7d 63% ↻2d7h | cache ▆ warm 38m
+ctx ■■■□□□□□□□│ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | cache ▆ warm 38m | 5h 42% ↻2h34m | 7d 63% ↻2d7h
 ```
 
 | 组 | 含义 |
 |---|---|
 | `ctx` | 上下文用量：进度条、百分比、token 数。`│` 是自动压缩触发的位置，`~` 表示第一个回复前的估算值。正在看 subagent 的记录时显示为 `agent` |
 | 柱子和 `↑` | 最近七轮各自加了多少；`↑` 是最后一轮 |
+| `cache` | 剩余寿命的小量表、`warm` 加剩余分钟数，或 `cold`；某一轮重新写入缓存而没能读到时，显示 `rewrote` 和写入量 |
 | `5h`、`7d` | 各窗口的额度已用比例，`↻` 是距离重置的时间。暗色表示沿用上一个会话的读数。Claude Code 上报了当前主模型自己的周额度时，`7d` 改显示它，例如 `7d fable`（未验证） |
 | `spend` | Claude 网关上报的花费额度，可能超过 100%（未验证） |
-| `cache` | 剩余寿命的小量表、`warm` 加剩余分钟数，或 `cold`；某一轮重新写入缓存而没能读到时，显示 `rewrote` 和写入量 |
 
 颜色是同一条从冷到暖的 10 档色阶。百分比（上下文和额度）每 10% 升一档：0–29% 天蓝，90% 及以上深红；每根增长柱按它占窗口的比例落档，从 0.1% 起每翻一倍升一档。完整对照表见 [docs/design.md](docs/design.md#color-scale)。窗口变窄时，横条依次省掉柱状图、缓存和其它细节，上下文保留得最久。
 

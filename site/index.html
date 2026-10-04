@@ -110,6 +110,11 @@
             <span class="group-token sparkline">▁▂▄█▂▇▁</span>
             <span class="group-token dim">↑3.4k</span>
             <span class="sep">|</span>
+            <span class="group-token label">cache</span>
+            <span class="group-token tier-cyan">▆</span>
+            <span class="group-token tier-cyan">warm</span>
+            <span class="group-token dim">38m</span>
+            <span class="sep">|</span>
             <span class="group-token label">5h</span>
             <span class="group-token tier-teal">42%</span>
             <span class="group-token dim">↻2h34m</span>
@@ -117,11 +122,6 @@
             <span class="group-token label">7d</span>
             <span class="group-token tier-yellow">63%</span>
             <span class="group-token dim">↻2d7h</span>
-            <span class="sep">|</span>
-            <span class="group-token label">cache</span>
-            <span class="group-token tier-cyan">▆</span>
-            <span class="group-token tier-cyan">warm</span>
-            <span class="group-token dim">38m</span>
           </div>
 
           <div class="band-breakdown">
@@ -142,6 +142,13 @@
             <div class="breakdown-item">
               <span class="dot tier-teal-dot"></span>
               <div>
+                <h4>Prompt Cache</h4>
+                <p>A gauge of the lifetime left, <code>warm</code> with remaining minutes, warming in color as it drains, or <code>cold</code>. <code>rewrote</code> shows when a turn had to write the cache again.</p>
+              </div>
+            </div>
+            <div class="breakdown-item">
+              <span class="dot tier-teal-dot"></span>
+              <div>
                 <h4>5-Hour Quota</h4>
                 <p>Percentage of the rolling 5-hour window used, with countdown <code>↻</code> to reset.</p>
               </div>
@@ -151,13 +158,6 @@
               <div>
                 <h4>Weekly Quota</h4>
                 <p>Weekly window with countdown. Follows the model family's own window (e.g. <code>7d fable</code>) when reported.</p>
-              </div>
-            </div>
-            <div class="breakdown-item">
-              <span class="dot tier-teal-dot"></span>
-              <div>
-                <h4>Prompt Cache</h4>
-                <p>A gauge of the lifetime left, <code>warm</code> with remaining minutes, warming in color as it drains, or <code>cold</code>. <code>rewrote</code> shows when a turn had to write the cache again.</p>
               </div>
             </div>
           </div>
