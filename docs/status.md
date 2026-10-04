@@ -15,7 +15,7 @@ Claude Code raises the band's site (`AbovePrompt`) on the terminal and desktop s
 | Covered by tests | Yes | Yes | — |
 | Seen in a live session | Yes, before 1.0.0: macOS 27, Terminal.app, Claude Code 2.1.288 | Yes, before 1.0.0: macOS 27, Claude Code 2.1.288 | — |
 
-## Verified (1.1.0)
+## Verified (1.2.0)
 
 - In a live session (Claude Code 2.1.288, macOS 27): the band and its layout on the terminal, the desktop's
   Svg bar and growth chart, dark theme. The color scale and group order introduced in 1.0.0 are covered by the

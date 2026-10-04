@@ -19,6 +19,8 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
 </p>
 
+<p align="center"><a href="https://shengyy.github.io/ccoverhead/"><strong>网站</strong></a></p>
+
 <p align="center">
   <img src="assets/screenshots/desktop.png" width="760" alt="Claude 桌面端里的 ccOverhead 横条：上下文条 27%、七根颜色各异的增长柱、5 小时额度 42%、每周额度 63%、缓存还热 38 分钟">
 </p>

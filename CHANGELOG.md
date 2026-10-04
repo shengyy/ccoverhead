@@ -6,6 +6,8 @@ All notable changes to ccOverhead are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-04
+
 ### Added
 
 - Detailed design sheets for layout, color thresholds and state rules in English and Simplified Chinese,
@@ -13,6 +15,8 @@ All notable changes to ccOverhead are documented here. The format follows
 - An English README inside the plugin folder for installation and usage, linking to the full documentation
   and design sheets.
 - A PNG directory icon rendered from the existing logo and the display name `ccOverhead`.
+- A public showcase website under `site/` with interactive surface switcher, 10-tier color scale visualizer,
+  one-click install command copy and automated GitHub Pages deployment.
 
 ### Fixed
 
