@@ -1,9 +1,20 @@
 // Pure formatting for the band: its groups, their widths and colours, and the desktop's Svg graphics.
 import type { OverheadAgent, OverheadCache, OverheadCtx, OverheadLimit } from '../types'
 
-// The prompt cache's lifetime until a model switch reports it: every main-conversation write seen on a
-// Claude Pro account was ephemeral_1h.
+// The prompt cache's lifetime until a model switch or a resume reports it: every main-conversation write seen
+// on a Claude Pro account was ephemeral_1h. The other lifetime is five minutes.
 export const CACHE_TTL_MS = 60 * 60 * 1000
+export const SHORT_TTL_MS = 5 * 60 * 1000
+// The warm cache's two states, as tiers of the one palette: plenty left, and the last fifth of the lifetime,
+// when the next request should come soon or rewrite the cache. A state, not a scale: the minutes say how long.
+const WARM_TIER = 3
+const EXPIRING_TIER = 8
+const EXPIRING_SHARE = 0.2
+
+// The warm cache's state colour for `left` of a `ttl` lifetime.
+export function cacheTier(left: number, ttl: number): number {
+  return left > ttl * EXPIRING_SHARE ? WARM_TIER : EXPIRING_TIER
+}
 // Context totals kept for the sparkline: 8 totals, 7 bars.
 export const HISTORY = 8
 const BARS = '▁▂▃▄▅▆▇█'
@@ -18,8 +29,7 @@ const FAMILIES = ['fable', 'opus', 'sonnet', 'haiku']
 // absent for plain text (the labels). A span with `bar` (a used percentage, with the auto-compaction `mark`
 // in its `markTier`) or `spark` (the gains, with their `tiers`) is a graphic: block glyphs line up only in a
 // monospace font, so the desktop, which draws the band in a proportional one, draws those as an Svg instead
-// (`items`). A `ring` (the cache lifetime left, 0 to 1) is a one-cell gauge on the terminal (`gauge`) and a
-// ring on the desktop.
+// (`items`).
 export type Span = {
   text: string
   tier?: number
@@ -29,7 +39,6 @@ export type Span = {
   markTier?: number
   spark?: number[]
   tiers?: number[]
-  ring?: number
 }
 
 type Ink = { dark: string; light: string }
@@ -94,9 +103,9 @@ export function cells(s: Span): Cell[] | undefined {
 
 export type Graphic = { source: string; alt: string; width: number; height: number }
 
-// The Svg's colours as classes: each its dark-card fill (or stroke), and its light-card one under the media query.
-function inks(classes: [name: string, ink: Ink][], paint: 'fill' | 'stroke' = 'fill'): string {
-  const rules = (mode: keyof Ink) => classes.map(([name, ink]) => `.${name}{${paint}:${ink[mode]}}`).join('')
+// The Svg's colours as classes: each its dark-card fill, and its light-card one under the media query.
+function inks(classes: [name: string, ink: Ink][]): string {
+  const rules = (mode: keyof Ink) => classes.map(([name, ink]) => `.${name}{fill:${ink[mode]}}`).join('')
   return `<style>${rules('dark')}@media (prefers-color-scheme: light){${rules('light')}}</style>`
 }
 
@@ -107,7 +116,7 @@ function svg(width: number, height: number, style: string, body: string): string
 // A graphic span as an Svg: the bar a 60×6 rounded track filled to the exact percentage, with a 2 px tick
 // standing past it where auto-compaction runs; the sparkline one 4 px column per gain on a shared baseline,
 // 14 px at the largest and 3 px at the least so the smallest still shows its colour, each in its tier's
-// colour; the ring a 12 px circle whose arc drains with the cache lifetime.
+// colour.
 export function svgOf(s: Span): Graphic | undefined {
   if (s.bar !== undefined) {
     const ink = s.dimColor ? DIM : (GAIN[s.tier ?? -1] ?? DIM)
@@ -122,14 +131,6 @@ export function svgOf(s: Span): Graphic | undefined {
     const tick = marked ? `<rect class="m" x="${x}" y="0" width="2" height="10" rx="1"/>` : ''
     const alt = `context ${s.bar}% used${marked ? `, auto-compacts at ${Math.round(s.mark ?? 0)}%` : ''}`
     return { source: svg(60, height, inks([['k', ink], ['m', markInk]]), track + done + tick), alt, width: 60, height }
-  }
-  if (s.ring !== undefined) {
-    const left = Math.min(Math.max(s.ring, 0), 1)
-    const c = 2 * Math.PI * 4.5
-    const ink = GAIN[s.tier ?? -1] ?? DIM
-    const track = `<circle cx="6" cy="6" r="4.5" fill="none" stroke="${TRACK}" stroke-width="2"/>`
-    const arc = `<circle class="k" cx="6" cy="6" r="4.5" fill="none" stroke-width="2" stroke-dasharray="${(c * left).toFixed(2)} ${c.toFixed(2)}" transform="rotate(-90 6 6)"/>`
-    return { source: svg(12, 12, inks([['k', ink]], 'stroke'), track + arc), alt: `cache lifetime ${Math.round(left * 100)}% left`, width: 12, height: 12 }
   }
   if (s.spark && s.spark.length > 0) {
     const top = Math.max(...s.spark, 1)
@@ -196,12 +197,6 @@ export function markCell(mark: number): number {
 
 export function gains(history: number[]): number[] {
   return history.slice(1).map((t, i) => Math.max(t - (history[i] ?? t), 0))
-}
-
-// A share from 0 to 1 as one of the eight block heights, never below the lowest: the cache lifetime left,
-// █ fresh to ▁ in its last eighth.
-export function gauge(share: number): string {
-  return BARS[Math.min(Math.max(Math.ceil(share * 8), 1), 8) - 1] ?? '▁'
 }
 
 export function sparkline(values: number[]): string {
@@ -331,17 +326,13 @@ function agentGroup(b: BandInput, view: AgentView, d: Detail): Span[] {
   return g
 }
 
-// Warm with its lifetime left, or cold; then the latest request that rewrote the cache instead of reading it,
-// kept until a later turn reads the cache, tiered like a growth bar by its share of the window.
+// Warm and its minutes left in the state's colour (`cacheTier`), or cold; then the latest request that rewrote
+// the cache instead of reading it, kept until a later turn reads the cache, tiered like a growth bar by its
+// share of the window.
 function cacheGroup(b: BandInput, cache: OverheadCache, d: Detail): Span[] {
   const left = cache.at + b.cacheTtl - b.now
-  let g: Span[] = [{ text: 'cache' }, { text: ' cold', dimColor: true }]
-  if (cache.warm && left > 0) {
-    // Cool while the lifetime is fresh, warming as it drains: one tier per 10% of it gone.
-    const tier = pctTier(((b.cacheTtl - left) * 100) / b.cacheTtl)
-    const ring = left / b.cacheTtl
-    g = [{ text: 'cache' }, { text: ` ${gauge(ring)}`, ring, tier }, { text: ' warm', tier }, { text: ` ${dur(left)}`, dimColor: true }]
-  }
+  const g: Span[] = [{ text: 'cache' }]
+  g.push(cache.warm && left > 0 ? { text: ` warm ${dur(left)}`, tier: cacheTier(left, b.cacheTtl) } : { text: ' cold', dimColor: true })
   if (d.rewrite && b.rewrite) {
     const text = ` rewrote ${kshort(b.rewrite)}`
     g.push(b.ctx?.window ? { text, tier: gainTier(b.rewrite, b.ctx.window) } : { text, dimColor: true })

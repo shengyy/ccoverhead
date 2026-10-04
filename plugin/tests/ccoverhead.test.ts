@@ -103,12 +103,11 @@ describe('ccoverhead', () => {
       for await (const _ of $.turn.step(STEP)) {
         // drain
       }
-      // A freshly warm cache is safe: the first percentage tier, sky.
-      expect((await ui.find({ type: 'Text', text: /^ ?warm$/ }))?.props.color).toBe(TIER_HEX[2])
+      // A freshly warm cache, its minutes in the same colour: the warm state's cyan.
+      expect((await ui.find({ type: 'Text', text: /^ ?warm 1h0m$/ }))?.props.color).toBe(TIER_HEX[3])
       // The conversation's state first (context, then cache), then the account's quota.
       const order = (await ui.findAll({ type: 'Text' })).map(t => t.text.trim())
       expect(order.indexOf('ctx') < order.indexOf('cache') && order.indexOf('cache') < order.indexOf('5h') && order.indexOf('5h') < order.indexOf('7d')).toBe(true)
-      expect(await ui.find({ type: 'Text', text: /^ ?1h0m$/ })).toBeDefined()
 
       // Compaction: total drops, history restarts, sparkline hides.
       await $.session.measure(measured(fill(80_000, 8), rateLimits))
@@ -275,11 +274,11 @@ describe('ccoverhead', () => {
         // drain
       }
       expect(await ui.find({ type: 'Text', text: /^ ?↑12\.3k$/ })).toBeDefined()
-      expect(await ui.find({ type: 'Text', text: /^ ?warm$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /^ ?warm 1h0m$/ })).toBeDefined()
 
       expect(await $.classic.SessionStart({ source: 'clear' })).toEqual(downstream)
       expect(await ui.find({ type: 'Text', text: /↑/ })).toBeUndefined()
-      expect(await ui.find({ type: 'Text', text: /^ ?warm$/ })).toBeUndefined()
+      expect(await ui.find({ type: 'Text', text: /warm/ })).toBeUndefined()
       expect(await ui.find({ type: 'Text', text: /^ ?~13k\/1M$/ })).toBeDefined()
     })
 
@@ -313,6 +312,43 @@ describe('ccoverhead', () => {
       await $.session.measure(measured(fill(310_000, 31)))
       await graphic(ui, 'bar', surface, /^■■■□{7}$/, 3)
       expect(await ui.find({ type: 'Text', text: /│/ })).toBeUndefined()
+    })
+
+    test(`a resumed conversation shows its cache's age at once and its first rewrite (${surface})`, async ($, on) => {
+      let read = 0
+      on('session.start', ($, e) => ({ cwd: e.cwd }))
+      on('session.measure', ($, e) => ({ changed: e.changed }))
+      mock.store(on)
+      on('session.usage', () => ({ value: usage(undefined, [], false) }))
+      on('classic.SessionStart', () => ({}))
+      on('turn.step', async function* () {
+        return cached(read, 300_000 - read)
+      })
+      mock.clock(on, { now: NOW })
+      await $.session.start(session(surface))
+      const ui = await $.ui.mount(band(surface))
+      const step = async () => {
+        for await (const _ of $.turn.step(STEP)) {
+          // drain
+        }
+      }
+
+      // Resumed 20 minutes after its last response, the cache still warm by the engine's count: 40 minutes left
+      // of the hour, an age past five minutes that shows the account's lifetime is the hour.
+      await $.classic.SessionStart({ source: 'resume', context_tokens: 300_000, seconds_since_last_response: 20 * 60, prompt_cache_likely_expired: false })
+      expect(await ui.find({ type: 'Text', text: /^ ?warm 40m$/ })).toBeDefined()
+      read = 290_000
+      await step()
+      expect(await ui.find({ type: 'Text', text: /rewrote/ })).toBeUndefined()
+
+      // Forked 10 minutes after, the cache already gone: cold, and the account's lifetime is five minutes. Its
+      // first request writes the transcript again, a rewrite.
+      await $.classic.SessionStart({ source: 'fork', context_tokens: 300_000, seconds_since_last_response: 10 * 60, prompt_cache_likely_expired: true })
+      expect(await ui.find({ type: 'Text', text: /^ ?cold$/ })).toBeDefined()
+      read = 20_000
+      await step()
+      expect(await ui.find({ type: 'Text', text: /^ ?rewrote 280k$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /^ ?warm 5m$/ })).toBeDefined()
     })
 
     test(`a request that reads back little of the cache shows the rewrite until a later turn reads again (${surface})`, async ($, on) => {
@@ -355,17 +391,14 @@ describe('ccoverhead', () => {
       await step('t5')
       expect(await ui.find({ type: 'Text', text: /rewrote/ })).toBeUndefined()
 
-      // A fresh lifetime: the terminal's gauge full, in the warm figure's colour.
-      if (surface === 'terminal') expect((await ui.find({ type: 'Text', text: /^ █$/ }))?.props.color).toBe(TIER_HEX[2])
-      // The lifetime drains toward the warm end of the scale: 50 of 60 minutes gone is the 80s tier, orange.
-      await clock.advance(50 * MIN)
-      expect((await ui.find({ type: 'Text', text: /^ ?warm$/ }))?.props.color).toBe(TIER_HEX[8])
-      expect(await ui.find({ type: 'Text', text: /^ ?10m$/ })).toBeDefined()
-      if (surface === 'terminal') expect((await ui.find({ type: 'Text', text: /^ ▂$/ }))?.props.color).toBe(TIER_HEX[8])
-      if (surface === 'desktop') {
-        const ring = (await ui.findAll({ type: 'Svg' })).find(one => /^cache lifetime/.test(String(one.props.alt)))
-        expect(ring?.props.alt).toBe('cache lifetime 17% left')
-      }
+      // Two states, not a scale: cyan with 13 of 60 minutes left, orange in the last fifth (12 minutes), and no
+      // gauge of the lifetime beside the minutes.
+      await clock.advance(47 * MIN)
+      expect((await ui.find({ type: 'Text', text: /^ ?warm 13m$/ }))?.props.color).toBe(TIER_HEX[3])
+      await clock.advance(3 * MIN)
+      expect((await ui.find({ type: 'Text', text: /^ ?warm 10m$/ }))?.props.color).toBe(TIER_HEX[8])
+      expect(await ui.find({ type: 'Text', text: /^ [▁▂▃▄▅▆▇█]$/ })).toBeUndefined()
+      if (surface === 'desktop') expect((await ui.findAll({ type: 'Svg' })).some(one => /cache/.test(String(one.props.alt)))).toBe(false)
     })
 
     test(`a model switch leaves the cache cold and sets its lifetime (${surface})`, async ($, on) => {
@@ -384,7 +417,7 @@ describe('ccoverhead', () => {
       for await (const _ of $.turn.step(STEP)) {
         // drain
       }
-      expect(await ui.find({ type: 'Text', text: /^ ?1h0m$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /^ ?warm 1h0m$/ })).toBeDefined()
       await $.classic.PostModelSwitch({
         from_model: 'claude-opus-5-5',
         to_model: 'claude-haiku-4-5-20251001',
@@ -400,7 +433,7 @@ describe('ccoverhead', () => {
       for await (const _ of $.turn.step(STEP)) {
         // drain
       }
-      expect(await ui.find({ type: 'Text', text: /^ ?5m$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /^ ?warm 5m$/ })).toBeDefined()
     })
 
     test(`a gateway's spend limit shows past 100% with no reset (${surface})`, async ($, on) => {

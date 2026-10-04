@@ -7,15 +7,16 @@ figures, warm ones only when something deserves attention. What it shows and whe
 ## The band
 
 ```text
-ctx ■■■□□□□□□□│ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | cache ▆ warm 38m | 5h 42% ↻2h34m | 7d 63% ↻2d7h
+ctx ■■■□□□□□□□│ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | cache warm 38m | 5h 42% ↻2h34m | 7d 63% ↻2d7h
 ```
 
 - Groups, left to right: context (bar with the auto-compaction mark, percentage, tokens, growth chart,
-  `↑` latest growth), cache (a gauge, `warm` and the minutes left, or `cold`; then `rewrote` and its tokens
+  `↑` latest growth), cache (`warm` and the minutes left, or `cold`; then `rewrote` and its tokens
   on a turn that rewrote the cache), 5-hour quota, weekly quota, `spend` (a gateway's spend limit, when
   reported). A dim ` | ` separates groups.
-- The terminal's cache gauge is one block glyph of the lifetime left, `█` fresh down to `▁` in its last
-  eighth, in `warm`'s color: the terminal's form of the desktop's ring.
+- `warm` and its minutes are one span in one color, a state rather than a scale: cyan (tier 3) while more
+  than a fifth of the lifetime is left, orange (tier 8) in the last fifth, when the next request should come
+  soon; `cold` is dim. The minutes already say how long, so no gauge repeats them.
 - The terminal draws the auto-compaction mark `│` between the two cells nearest the threshold, at least one
   cell in, so on a 1M window (threshold 967k) it closes the bar and on a 368k compaction window it stands a
   third of the way along.
@@ -48,10 +49,10 @@ One scale, one meaning: cool is safe, yellow is caution, warm to red is warning.
 
 The colors are defined once, in `plugin/hooks/format.ts`; this table follows it.
 
-The percentage column also colors three figures that are shares of something else: the auto-compaction
-mark (the context as a share of the threshold), `warm` and its gauge (the share of the cache lifetime gone) and the pane's
-hit rate (the share the cache did not serve). The growth column also colors token amounts: `rewrote`, and
-each category in the pane's breakdown, by their share of the window.
+The percentage column also colors figures that are shares of something else: the auto-compaction mark (the
+context as a share of the threshold), the pane's hit rate (the share the cache did not serve), and each category in the pane's breakdown (its share of the
+window, as the context bar colors the whole). The growth column also colors `rewrote`, a token amount, by its
+share of the window: a rewrite is a cost like a turn's growth, while a category's size is not an alarm.
 
 - **Why cool to warm.** Safe is cool rather than green: red-green color-blind readers cannot tell green from
   red, but they keep cool against warm. Under a protan/deutan simulation the safe tiers (0–4) and warning
@@ -78,8 +79,6 @@ There, and only there:
 - Each group is a `Box` row; items are spaced by `gap`, not by spaces, and text is trimmed.
 - The context bar is a 60×6 rounded `Svg`, filled to the exact percentage over a translucent track; with
   auto-compaction on, a 2×10 tick stands across it at the threshold, the Svg 10 px tall.
-- The cache's lifetime is a 12 px ring before `warm`, its arc draining clockwise from the top, in place of
-  the terminal's one-cell gauge.
 - The growth chart is an `Svg` of 4 px columns, 14 px at the tallest and 3 px at the least, so even a
   small bar shows its color.
 - Each `Svg` carries both palettes and picks the light one under `prefers-color-scheme: light`.

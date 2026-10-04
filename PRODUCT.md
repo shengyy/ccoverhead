@@ -86,10 +86,14 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
 
 - Only main-conversation requests count, not subagents. A request that read or wrote the cache makes it
   warm for the cache lifetime from that moment; anything else, or an expired lifetime, is cold.
-- The lifetime is one hour until a model switch reports the session's own (`5m` or `1h`). A switch to
-  another model leaves the cache cold: each model has its own.
-- `warm` takes its color from the share of the lifetime gone, on the percentage scale, so it warms as the
-  cache drains. A one-cell gauge before it (a ring on the desktop) shows the lifetime left.
+- The lifetime is one hour until a model switch reports the session's own (`5m` or `1h`), or a resume
+  shows it: the engine's verdict on a cache between five minutes and an hour old tells the two apart. A
+  switch to another model leaves the cache cold: each model has its own.
+- A resumed or forked conversation shows its cache warm or cold at once, aged from the transcript's last
+  response, and its first request counts as a rewrite when it writes the transcript again.
+- `warm` and its minutes share one state color: cool while more than a fifth of the lifetime is left,
+  orange in the last fifth, when a pause will soon cost a rewrite. The cache is a state, so it takes two
+  colors of the palette rather than the ten-step scale; the minutes say how long.
 - A rewrite shows `rewrote` and its tokens until a request of a later turn reads the cache again. The first
   request after a compaction is not counted as one: it writes a new conversation, not a lapsed cache.
 

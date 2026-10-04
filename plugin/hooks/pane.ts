@@ -3,7 +3,7 @@
 // the surfaces with a proportional font).
 import type { OverheadAgent, OverheadBreakdown, OverheadCacheStats, OverheadCompaction } from '../types'
 import type { BandInput, Span } from './format'
-import { FALLBACK_WINDOW, bar, compactMark, dur, gainTier, gains, kshort, ktok, modelFamily, pctTier, sparkline, weeklyWindow } from './format'
+import { FALLBACK_WINDOW, bar, cacheTier, compactMark, dur, gainTier, gains, kshort, ktok, modelFamily, pctTier, sparkline, weeklyWindow } from './format'
 import { AGENTS, hitRate } from './track'
 
 export type PaneInput = BandInput & {
@@ -83,7 +83,7 @@ function breakdown(p: PaneInput): PaneLine[] {
   const used = b.rows.reduce((n, r) => n + r.tokens, 0)
   const out: PaneLine[] = [{ head: 'In the window, as /context estimates it' }]
   for (const r of [...b.rows].sort((x, y) => y.tokens - x.tokens)) {
-    out.push(figure({ text: pad(kshort(r.tokens), LABEL - 2), tier: gainTier(r.tokens, window) }, dim(` ${pad(`${Math.round((r.tokens * 100) / Math.max(used, 1))}%`, 4)}`), { text: `  ${r.name}` }))
+    out.push(figure({ text: pad(kshort(r.tokens), LABEL - 2), tier: pctTier((r.tokens * 100) / window) }, dim(` ${pad(`${Math.round((r.tokens * 100) / Math.max(used, 1))}%`, 4)}`), { text: `  ${r.name}` }))
     if (r.name.startsWith('MCP tools')) {
       for (const s of [...b.mcp].sort((x, y) => y.tokens - x.tokens).slice(0, SERVERS)) {
         out.push({ ...figure(dim(pad(kshort(s.tokens), LABEL - 2)), dim(`         ${s.server}`)), nested: true })
@@ -91,7 +91,7 @@ function breakdown(p: PaneInput): PaneLine[] {
       if (b.mcp.length > SERVERS) out.push({ ...line('', dim(`         and ${b.mcp.length - SERVERS} more servers`)), nested: true })
     }
   }
-  if (b.deferred > 0) out.push(figure(dim(pad(kshort(b.deferred), LABEL - 2)), dim('       tool schemas loaded on demand, outside the window')))
+  if (b.deferred > 0) out.push(figure(dim(pad(kshort(b.deferred), LABEL - 2)), dim('       deferred tool schemas, not in the window')))
   return out
 }
 
@@ -122,7 +122,7 @@ function cache(p: PaneInput): PaneLine[] {
     const left = c.at + p.cacheTtl - p.now
     out.push(
       c.warm && left > 0
-        ? line('state', { text: ' warm', tier: pctTier(((p.cacheTtl - left) * 100) / p.cacheTtl) }, dim(` ${dur(left)} left of ${p.cacheTtl % 3_600_000 === 0 ? `${p.cacheTtl / 3_600_000}h` : dur(p.cacheTtl)}`))
+        ? line('state', { text: ` warm ${dur(left)}`, tier: cacheTier(left, p.cacheTtl) }, dim(` left of ${p.cacheTtl % 3_600_000 === 0 ? `${p.cacheTtl / 3_600_000}h` : dur(p.cacheTtl)}`))
         : line('state', dim(' cold')),
     )
   }
@@ -131,7 +131,7 @@ function cache(p: PaneInput): PaneLine[] {
   if (hit !== undefined) {
     out.push(line('hit rate', { text: ` ${Math.trunc(hit)}%`, tier: pctTier(100 - hit) }, dim(` · read ${kshort(s.read)} · written ${kshort(s.write)} · uncached ${kshort(s.input)}`)))
   }
-  if (p.rewrite) out.push(line('rewrote', { text: ` ${kshort(p.rewrite)}`, tier: gainTier(p.rewrite, p.ctx?.window ?? FALLBACK_WINDOW) }, dim(' the latest rewrite, shown until a later turn reads the cache')))
+  if (p.rewrite) out.push(line('rewrote', { text: ` ${kshort(p.rewrite)}`, tier: gainTier(p.rewrite, p.ctx?.window ?? FALLBACK_WINDOW) }, dim(' latest rewrite, until a later turn reads the cache')))
   return out
 }
 
