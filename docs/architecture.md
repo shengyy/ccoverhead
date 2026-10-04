@@ -7,21 +7,24 @@ the band from that state. External facts about the engine live in
 ## Data flow
 
 ```text
- session.start ─────────┐
- classic.SessionStart ──┼─▶ load / take ──▶ $.state: ctx, history, limits, limitsLive
- session.measure ───────┘        │                 ▲
-                                 └─▶ $.store "limits" (last quota reading, across sessions)
- turn.step (main thread) ─────────────▶ $.state: cache
- classic.PostModelSwitch, $.session.model() ─▶ $.state: model
+ session.start ─────────┐                     ┌─▶ $.state: ctx (with compactAt), history, timeline,
+ classic.SessionStart ──┼─▶ load / take ──────┤             limits, limitsLive, breakdown
+ session.measure ───────┤   ($.session.usage, └─▶ $.store "limits" (last quota reading, across sessions)
+ command.run ccoverhead ┘    breakdown 'summary')
+ turn.step, main thread ──────────▶ $.state: cache, cacheStats
+ turn.step, a subagent ($.agent.list once) ─▶ $.state: agents
+ classic.PostModelSwitch, $.session.model() ─▶ $.state: model, cacheTtl, cache (cold)
  clock, every 30 s ─▶ $.ui.invalidate("ui.render")
                                                    │
- ui.render { AbovePrompt } ◀── read $.state ───────┘ ──▶ format.ts: fit → groups → spans
-                                                          ├─ terminal: one Text line, glyphs
-                                                          └─ desktop:  Box rows, Text + Svg
+ ui.render { AbovePrompt } ◀── read $.state ───────┤ ──▶ format.ts: fit → groups → spans ──┐
+ ui.render { Pane, ccoverhead } ◀── read $.state ──┘ ──▶ pane.ts: paneLines → spans ───────┤
+                                                        draw.tsx ◀────────────────────────┘
+                                                          ├─ terminal: Text, block glyphs
+                                                          └─ desktop, VS Code, mobile: Box rows, Text + Svg
 ```
 
-The render hook only reads. Every write happens in an event hook, and a write to `$.state` redraws the
-band by itself; the clock invalidates only so the countdowns keep time between turns.
+The render hooks only read. Every write happens in an event hook, and a write to `$.state` redraws the
+band and the pane by itself; the clock invalidates only so the countdowns keep time between turns.
 
 ## Files (`plugin/`)
 
@@ -29,10 +32,15 @@ band by itself; the clock invalidates only so the countdowns keep time between t
 |---|---|
 | `.claude-plugin/plugin.json` | Manifest; the only version source |
 | `hooks/hooks.json` | Names the hooks module |
-| `hooks/register.tsx` | Event hooks: loading figures, recording growth and cache, resetting on a new conversation, drawing per surface |
-| `hooks/format.ts` | Pure formatting: groups and spans, narrowing (`fit`), the weekly window for the model (`weeklyWindow`, `modelFamily`), the color scale (`GAIN`, `pctTier`, `gainTier`), the desktop's Svg (`svgOf`, `items`) |
+| `hooks/register.tsx` | Event hooks: loading figures, recording growth, cache and subagents, resetting on a new conversation, the `/ccoverhead` command, choosing the tree per surface |
+| `hooks/track.ts` | Pure state updates: the growth history and timeline, the cache's running counts and rewrite mark (`addStep`), each subagent's totals (`addAgentStep`) |
+| `hooks/format.ts` | Pure formatting of the band: groups and spans, narrowing (`fit`), the weekly window for the model (`weeklyWindow`, `modelFamily`), the color scale (`GAIN`, `pctTier`, `gainTier`), the auto-compaction mark, multi-colored spans (`cells`), the desktop's Svg (`svgOf`, `items`) |
+| `hooks/pane.ts` | Pure formatting of the pane: its sections as lines of a label and spans (`paneLines`) |
+| `hooks/draw.tsx` | The band and the pane as element trees, for the terminal and for the surfaces with Svg |
 | `types/index.d.ts` | The `$.state` contract, `PluginState['ccoverhead']` |
-| `tests/ccoverhead.test.ts` | Behavior through the engine's test kit, on the terminal and desktop surfaces |
+| `tests/kit.ts` | Shared fictional figures and engine answers for the tests |
+| `tests/ccoverhead.test.ts` | The band's behavior through the engine's test kit, on the terminal and desktop surfaces |
+| `tests/pane.test.ts` | The pane's behavior, on the terminal, desktop, VS Code and mobile surfaces |
 
 `tsconfig.json` extends the declarations Claude Code writes into `.claude-plugin/types/` when it loads the
 plugin from a folder (ignored by Git).
@@ -41,19 +49,26 @@ plugin from a folder (ignored by Git).
 
 | Key | Type | Written by | Holds |
 |---|---|---|---|
-| `ctx` | `OverheadCtx \| null` | `session.start`, `session.measure`, `classic.SessionStart` | Window, tokens and percent of the last response, or the pre-response estimate |
+| `ctx` | `OverheadCtx \| null` | `session.start`, `session.measure`, `classic.SessionStart`, `command.run` | Window, tokens and percent of the last response, or the pre-response estimate; the auto-compaction threshold |
 | `history` | `number[]` | the same | Up to eight context totals; reset on a drop or a new conversation |
-| `limits` | `OverheadLimit[]` | the same | Every window reported; the band shows the 5-hour one and one weekly one |
+| `timeline` | `number[]` | the same | Up to 48 context totals for the pane, drops (compactions) kept; reset on a new conversation |
+| `breakdown` | `OverheadBreakdown \| null` | the same | `/context`'s local count by category and by MCP server, without paths or file names |
+| `limits` | `OverheadLimit[]` | the same | Every window reported; the band shows the 5-hour one, one weekly one and a spend limit |
 | `limitsLive` | `boolean` | the same | Whether `limits` is this session's own reading (drawn in color) or remembered (dim) |
-| `cache` | `OverheadCache \| null` | `turn.step`, cleared by `classic.SessionStart` | When the last main-thread request finished and whether it touched the cache |
+| `cache` | `OverheadCache \| null` | `turn.step`, `classic.PostModelSwitch`, cleared by `classic.SessionStart` | When the last main-thread request finished and whether it touched the cache |
+| `cacheStats` | `OverheadCacheStats` | `turn.step`, cleared by `classic.SessionStart` | The main conversation's input, cache-read and cache-written tokens, the last request's total, and a rewrite of this turn |
+| `cacheTtl` | `number` | `classic.PostModelSwitch` | The cache lifetime in ms; one hour until a switch reports it |
 | `model` | `string \| null` | load, `session.measure`, `classic.PostModelSwitch` | The main loop's model; picks its own weekly window (`weeklyWindow`) |
+| `agents` | `OverheadAgent[]` | `turn.step`, cleared by `classic.SessionStart` | Up to eight subagents: type, model and last eight input totals |
 
 `$.store` keeps one key, `limits`, written only when this session's own reading changes.
 
 ## Drawing
 
-`format.ts` builds the band once as groups of spans. A span's `text` is what the terminal draws and what
-widths are counted in; `tier` is its color on the scale; a span with `bar` or `spark` is a graphic. The
-terminal renders the spans as nested `Text`, the sparkline one glyph per bar. The desktop renders each
-group as a `Box` row spaced by `gap`, trims text to drop the spaces the terminal needs, and turns graphic
-spans into `Svg` with their own light-theme colors. The look is specified in [design.md](design.md).
+`format.ts` builds the band once as groups of spans, and `pane.ts` the pane as lines of a label and spans.
+A span's `text` is what the terminal draws and what widths are counted in; `tier` is its color on the
+scale; a span with `bar`, `spark` or `ring` is a graphic. `draw.tsx` renders spans as nested `Text` on the
+terminal, the sparkline and a marked bar piece by piece (`cells`), and a ring not at all. Elsewhere it
+renders each group or line as a `Box` row spaced by `gap`, trims text to drop the spaces the terminal
+needs, and turns graphic spans into `Svg` with their own light-theme colors. The look is specified in
+[design.md](design.md).

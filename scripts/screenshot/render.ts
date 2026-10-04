@@ -3,13 +3,15 @@
 //
 //   bun scripts/screenshot/render.ts
 //
-// Writes assets/screenshots/{terminal,desktop}.png at 2x, trimmed to the scene. Needs ImageMagick too.
+// Writes assets/screenshots/{terminal,desktop,pane}.png at 2x, trimmed to the scene. Needs ImageMagick too.
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
-import { SEP, colorOf, fit, items, sparkCells } from '../../plugin/hooks/format'
-import { band } from './fixture'
+import type { Span } from '../../plugin/hooks/format'
+import { SEP, cells, colorOf, fit, items } from '../../plugin/hooks/format'
+import { LABEL, paneLines } from '../../plugin/hooks/pane'
+import { band, pane } from './fixture'
 
 const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 const OUT = resolve(import.meta.dir, '../../assets/screenshots')
@@ -17,18 +19,22 @@ const DIM = '#8b8a85'
 const INK = '#e8e6dc'
 const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;')
 
-// The terminal draws one line of text: block glyphs, the sparkline one glyph per bar in its tier's colour.
+// Spans as the terminal draws them: block glyphs, a multi-coloured span (the sparkline, a marked bar) piece by piece.
+function spans(run: Span[]): string {
+  return run
+    .map(s => {
+      const parts = cells(s)
+      return parts
+        ? parts.map(c => `<span style="color:${c.dimColor ? DIM : (c.color ?? INK)}">${esc(c.text)}</span>`).join('')
+        : `<span style="color:${s.dimColor ? DIM : (colorOf(s) ?? INK)}">${esc(s.text)}</span>`
+    })
+    .join('')
+}
+
+// The terminal draws one line of text.
 function terminal(): string {
   const line = fit(band, 110)
-    .map(g =>
-      g
-        .map(s =>
-          s.spark
-            ? sparkCells(s).map(c => `<span style="color:${c.color}">${c.text}</span>`).join('')
-            : `<span style="color:${s.dimColor ? DIM : (colorOf(s) ?? INK)}">${esc(s.text)}</span>`,
-        )
-        .join(''),
-    )
+    .map(spans)
     .join(`<span style="color:${DIM}">${SEP}</span>`)
   return page(
     'terminal',
@@ -37,6 +43,22 @@ function terminal(): string {
       <div class="prompt"><span class="caret">&gt;</span><span class="cursor"></span></div>
       <div class="status">~/workspace/demo  main | Opus</div>
     </div>`,
+  )
+}
+
+// The /ccoverhead pane in a terminal: bold headings, a label column, the same spans as the band.
+function paneShot(): string {
+  const rows = paneLines(pane)
+    .map(l =>
+      'head' in l
+        ? `<div class="head">${esc(l.head)}</div>`
+        : `<div><span style="color:${l.label.dimColor ? DIM : (colorOf(l.label) ?? INK)}">${esc(l.label.text.padEnd(LABEL))}</span>${spans(l.spans)}</div>`,
+    )
+    .join('')
+  return page(
+    'terminal',
+    `<div class="term"><div class="pane"><div class="pane-title">ccOverhead</div>${rows}</div>
+      <div class="prompt"><span class="caret">&gt;</span><span class="cursor"></span></div></div>`,
   )
 }
 
@@ -72,6 +94,8 @@ function page(kind: string, body: string): string {
     .term .caret { color: ${INK} } .term .cursor { display: inline-block; width: 9px; height: 18px;
       background: #d97757; vertical-align: -3px; margin-left: 10px }
     .term .status { color: ${DIM} }
+    .term .pane { white-space: pre; border: 1px solid #4a4640; border-radius: 6px; padding: 8px 14px }
+    .term .pane .head { font-weight: 700; margin-top: 12px } .term .pane .pane-title { color: ${DIM} }
     .app { font: 15px -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; color: ${INK}; width: 820px }
     .card { background: #212121; border-radius: 16px; padding: 14px 18px }
     .row, .group { display: flex; align-items: center; gap: 7px } .row { gap: 9px }
@@ -84,6 +108,7 @@ const dir = mkdtempSync(join(tmpdir(), 'ccoverhead-shots-'))
 for (const [name, html, width, height] of [
   ['terminal', terminal(), 1100, 320],
   ['desktop', desktop(), 900, 320],
+  ['pane', paneShot(), 1000, 1100],
 ] as const) {
   const file = join(dir, `${name}.html`)
   writeFileSync(file, html)

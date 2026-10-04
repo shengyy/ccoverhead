@@ -1,12 +1,14 @@
 // Shared fictional figures for README previews and design sheets. Never read a live session here.
 import type { BandInput } from '../../plugin/hooks/format'
+import { CACHE_TTL_MS } from '../../plugin/hooks/format'
+import type { PaneInput } from '../../plugin/hooks/pane'
 
 const NOW = Date.parse('2026-10-04T09:00:00Z')
 const MIN = 60_000
 
 export const band: BandInput = {
   now: NOW,
-  ctx: { tokens: 271_400, window: 1_000_000, percent: 27 },
+  ctx: { tokens: 271_400, window: 1_000_000, percent: 27, compactAt: 967_000 },
   history: [180_000, 181_200, 186_000, 198_000, 232_000, 236_500, 268_000, 271_400],
   limits: [
     { kind: 'five_hour', percentUsed: 42, resetsAt: new Date(NOW + 154 * MIN).toISOString() },
@@ -14,5 +16,31 @@ export const band: BandInput = {
   ],
   limitsLive: true,
   cache: { at: NOW - 22 * MIN, warm: true },
+  cacheTtl: CACHE_TTL_MS,
   model: null,
+}
+
+// The pane over the same session: one compaction behind it, two MCP servers and one subagent.
+export const pane: PaneInput = {
+  ...band,
+  model: 'claude-opus-5-5',
+  timeline: [402_000, 455_000, 61_000, 92_000, 140_000, 180_000, 181_200, 186_000, 198_000, 232_000, 236_500, 268_000, 271_400],
+  cacheStats: { input: 2_100, read: 3_412_000, write: 296_000, last: 271_400 },
+  agents: [{ id: 'fictional', model: 'claude-haiku-4-5-20251001', totals: [9_100, 14_800, 22_300, 31_000], label: 'Explore' }],
+  breakdown: {
+    autoCompact: true,
+    rows: [
+      { name: 'System prompt', tokens: 7_100 },
+      { name: 'System tools', tokens: 17_500 },
+      { name: 'MCP tools', tokens: 5_900 },
+      { name: 'Memory files', tokens: 3_200 },
+      { name: 'Skills', tokens: 2_000 },
+      { name: 'Messages', tokens: 235_700 },
+    ],
+    deferred: 28_200,
+    mcp: [
+      { server: 'tracker', tokens: 4_100 },
+      { server: 'notes', tokens: 1_800 },
+    ],
+  },
 }

@@ -1,8 +1,10 @@
 # ccOverhead
 
-Your Claude Code overhead, right overhead. ccOverhead is a Claude Code mod that puts context usage,
-per-turn growth, 5-hour and weekly quota, and prompt-cache warmth in one quiet band above the prompt.
-One cool-to-warm color scale makes changes easy to notice while you work.
+Your Claude Code overhead, right overhead. ccOverhead is a Claude Code mod that puts context usage and
+where auto-compaction runs, per-turn growth, 5-hour and weekly quota, and prompt-cache warmth in one quiet
+band above the prompt. One cool-to-warm color scale makes changes easy to notice while you work. Type
+`/ccoverhead` for a pane with the detail: the window by category and MCP server, growth and compactions,
+cache hit rate, quota with how much of each window's time is gone, and subagents.
 
 The band uses text and glyphs in the terminal, and vector graphics in the Claude desktop app's Code tab.
 It reads only figures Claude Code already reports: no user files, network requests, model requests or
@@ -19,7 +21,7 @@ In Claude Code:
 ```
 
 The band appears above the prompt when figures are available. Quota appears only when the host reports
-it. See the [full English README](https://github.com/shengyy/ccoverhead#requirements) for requirements,
+it. `/ccoverhead` opens the pane on every surface, VS Code and mobile included. See the [full English README](https://github.com/shengyy/ccoverhead#requirements) for requirements,
 updates and the group-by-group explanation, and
 [verified behavior](https://github.com/shengyy/ccoverhead/blob/main/docs/status.md) for tested surfaces
 and remaining limitations.
@@ -37,9 +39,10 @@ illustrate the [design specification](https://github.com/shengyy/ccoverhead/blob
 ## Privacy and license
 
 On session start and after `/clear`, `/resume` or `/branch`, the lifecycle hook refreshes only
-ccOverhead's numeric state and clears its growth and cache history. It forwards the original event and
+ccOverhead's numeric state and clears its growth, cache and subagent history. It forwards the original event and
 the downstream result unchanged, preserving the first message, instructions and permission decisions.
-Other hooks observe usage and model changes; the render hook only draws the band.
+Other hooks observe usage and model changes; the render hooks only draw the band and the pane, and the
+`/ccoverhead` command adds nothing to the conversation.
 
 Session figures stay in memory. Only the last quota reading is kept in Claude Code's plugin store so a
 new session can show it until its own arrives. See the

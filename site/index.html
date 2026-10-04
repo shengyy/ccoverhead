@@ -104,7 +104,7 @@
         <div class="band-card">
           <div class="band-display">
             <span class="group-token label">ctx</span>
-            <span class="group-token bar-text">■■■□□□□□□□</span>
+            <span class="group-token bar-text">■■■□□□□□□□│</span>
             <span class="group-token tier-sky">27%</span>
             <span class="group-token dim">271k/1M</span>
             <span class="group-token sparkline">▁▂▄█▂▇▁</span>
@@ -119,7 +119,7 @@
             <span class="group-token dim">↻2d7h</span>
             <span class="sep">|</span>
             <span class="group-token label">cache</span>
-            <span class="group-token tier-teal">warm</span>
+            <span class="group-token tier-cyan">warm</span>
             <span class="group-token dim">38m</span>
           </div>
 
@@ -128,7 +128,7 @@
               <span class="dot tier-sky-dot"></span>
               <div>
                 <h4>Context Window</h4>
-                <p>Usage bar, percentage and <code>used/window</code> tokens. Pre-response estimate marked <code>~</code>.</p>
+                <p>Usage bar, percentage and <code>used/window</code> tokens; <code>│</code> marks where auto-compaction runs. Pre-response estimate marked <code>~</code>.</p>
               </div>
             </div>
             <div class="breakdown-item">
@@ -156,7 +156,7 @@
               <span class="dot tier-teal-dot"></span>
               <div>
                 <h4>Prompt Cache</h4>
-                <p><code>warm</code> with remaining minutes, or <code>cold</code>. Avoids costly 1.25× cache rewrites after pauses.</p>
+                <p><code>warm</code> with remaining minutes, warming in color as the lifetime drains, or <code>cold</code>. <code>rewrote</code> shows when a turn had to write the cache again.</p>
               </div>
             </div>
           </div>
@@ -195,6 +195,21 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3L4 7v6c0 5 3.5 9.5 8 10.5 4.5-1 8-5.5 8-10.5V7l-8-4z" /><path d="M9 12l2 2 4-4" /></svg>
             <h3>Zero telemetry, pure privacy</h3>
             <p>Only reads numbers Claude Code already exposes. No network requests, no model requests, no background processes.</p>
+          </article>
+          <article>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="9" width="18" height="6" rx="3" /><path d="M16 5v14" /></svg>
+            <h3>Where auto-compaction runs</h3>
+            <p>A mark on the context bar at Claude Code's own threshold, warming as you approach it. Compaction stops being a surprise.</p>
+          </article>
+          <article>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3" /><path d="M7 8h10M7 12h6M7 16h8" /></svg>
+            <h3>The <code>/ccoverhead</code> pane</h3>
+            <p>What fills the window by category and MCP server, growth and compactions, cache hit rate, quota pace. Opens in VS Code and mobile too.</p>
+          </article>
+          <article>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="7" r="3" /><circle cx="17" cy="7" r="3" /><path d="M7 10v4a3 3 0 0 0 3 3h4a3 3 0 0 0 3-3v-4" /></svg>
+            <h3>Subagents too</h3>
+            <p>Open a subagent's transcript and the band follows its context and growth; the pane lists every subagent of the conversation.</p>
           </article>
         </div>
       </section>
@@ -349,16 +364,26 @@
         <details>
           <summary>How does the prompt cache warmth indicator work?</summary>
           <p>
-            ccOverhead monitors request events. When a request reads or writes the cache, it tracks warmth over
-            its 1-hour lifetime (the <code>ephemeral_1h</code> cache window). If no subsequent query occurs before the window
-            runs out, the status turns <code>cold</code>.
+            ccOverhead monitors request events. When a main-conversation request reads or writes the cache, it tracks warmth
+            over the cache lifetime (one hour, the <code>ephemeral_1h</code> window, until a model switch reports the session's own),
+            its color warming as the lifetime drains. A pause past the lifetime, or a switch to another model, turns it
+            <code>cold</code>; a turn that wrote the cache again instead of reading it shows <code>rewrote</code> and how much.
+          </p>
+        </details>
+        <details>
+          <summary>Does it work in VS Code or the mobile app?</summary>
+          <p>
+            Claude Code draws the band above the prompt in the terminal and the desktop app's Code tab only. The
+            <code>/ccoverhead</code> pane is raised on every surface, so type <code>/ccoverhead</code> there for the same
+            figures in more detail.
           </p>
         </details>
         <details>
           <summary>What happens on narrow terminal windows?</summary>
           <p>
-            The band gracefully narrows in six discrete stages: it first drops the growth sparkline, then the cache group,
-            then token counts, followed by weekly and 5-hour countdown timers, preserving the essential context indicator longest.
+            The band gracefully narrows in seven discrete stages: it first drops the growth sparkline, then a cache rewrite,
+            then the cache group, then token counts, followed by weekly (and spend) and 5-hour countdown timers, preserving the
+            essential context indicator longest.
           </p>
         </details>
       </section>

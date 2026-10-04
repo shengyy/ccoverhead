@@ -6,21 +6,25 @@ reads, what it keeps, and what it sends.
 ## What is read
 
 Only figures Claude Code reports to plugins: the context window and its fill, the rate-limit windows, the
-token usage of each main-conversation request, the session's local `/context` estimate, and the main loop's
-model id. ccOverhead does
-not read the conversation, your prompts, files or the environment.
+token usage of each request (the main conversation's and each subagent's), the session's local `/context`
+count (tokens by category, the auto-compaction threshold, and the names of MCP servers with their tool
+schemas' tokens), the main loop's model id, and each subagent's type. ccOverhead does not read the
+conversation, your prompts, a subagent's task, files or the environment.
 
-`claude plugin validate plugin` lists every engine call the module makes; today they are `$.session.usage`,
-`$.session.model`, `$.clock`, `$.state`, `$.store` and `$.ui`.
+`claude plugin validate plugin` lists every engine call the module makes; today they are `$.session.usage`
+(plain, and with the local `summary` breakdown, never `full`, which would send token-count requests),
+`$.session.model`, `$.agent.list`, `$.command.register` (the `/ccoverhead` command), `$.clock`, `$.state`,
+`$.store` and `$.ui` (drawing, redrawing and opening the pane).
 
 ## What is stored
 
 | Data | Location |
 |---|---|
-| The session's figures: context, growth history, quota, cache time | Claude Code's per-session plugin state (`$.state`), in memory |
+| The session's figures: context and auto-compaction threshold, growth history, quota, cache time and token counts, subagents' types, models and token totals, `/context`'s tokens by category and by MCP server name | Claude Code's per-session plugin state (`$.state`), in memory |
 | The last quota reading: each window's kind, share used and reset time | Claude Code's per-plugin store (`$.store`, key `limits`) |
 
-Nothing else is written. No tokens, prompts or identifiers are stored.
+Nothing else is written. No credentials, prompts or file paths are stored, and the `/ccoverhead` command
+adds nothing to the conversation.
 
 ## What is sent, and to whom
 
