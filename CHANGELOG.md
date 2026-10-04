@@ -13,7 +13,8 @@ All notable changes to ccOverhead are documented here. The format follows
 - The website presents the detail pane, cache rewrites, resume behavior and subagent view alongside the
   band, with current fictional previews, a revised layout and keyboard-accessible surface tabs.
 - The website uses a warm dark palette and a fluid layout that gives wide screens more room while
-  keeping paragraphs at a readable measure.
+  keeping paragraphs at a readable measure. Product previews are rendered at 4x for wide and
+  high-density displays.
 
 ### Added
 

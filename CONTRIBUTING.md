@@ -48,7 +48,8 @@ plugin's own formatting code and shared fictional figures in `scripts/screenshot
 them when the band's look changes; never commit screenshots of a real session. The design sheets are
 embedded in the matching README.
 
-The same renderer also writes `cache-rewrite.png` and `agent.png` for the website's state previews.
+The same renderer also writes `cache-rewrite.png` and `agent.png` for the website's state previews. These
+product previews are rendered at 4x for wide and high-density displays; design sheets stay at 2x.
 
 ### Website
 

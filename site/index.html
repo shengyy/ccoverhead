@@ -59,7 +59,7 @@
             <span class="figure-note">Rendered from the mod · Fictional figures</span>
           </div>
           <div id="band-preview" class="band-preview" role="tabpanel" aria-labelledby="desktop-tab" tabindex="0">
-            <img id="band-image" src="assets/screenshots/desktop.png?v={{assetRevision}}" width="1704" height="278" alt="The desktop band: context 27%, recent growth, cache warm 38m, 5-hour quota 42%, weekly quota 63%" fetchpriority="high" />
+            <img id="band-image" src="assets/screenshots/desktop.png?v={{assetRevision}}" width="3408" height="558" alt="The desktop band: context 27%, recent growth, cache warm 38m, 5-hour quota 42%, weekly quota 63%" fetchpriority="high" />
           </div>
           <div class="figure-caption"><span id="band-caption">Desktop · vector graphics in the Code tab</span><span class="scroll-hint">Scroll the preview to read the full line</span></div>
           <div class="band-notes">
@@ -72,9 +72,11 @@
 
         <section class="detail-section section-rule" id="details" aria-labelledby="details-heading">
           <div class="detail-copy">
-            <p class="eyebrow">Behind the band</p>
-            <h2 id="details-heading">A closer look,<br /><em>one command away.</em></h2>
-            <p class="section-lede">Type <code>/ccoverhead</code> for the figures the band has no room for. The pane opens without adding a message to your conversation.</p>
+            <div class="detail-intro">
+              <p class="eyebrow">Behind the band</p>
+              <h2 id="details-heading">A closer look,<br /><em>one command away.</em></h2>
+              <p class="section-lede">Type <code>/ccoverhead</code> for the figures the band has no room for. The pane opens without adding a message to your conversation.</p>
+            </div>
             <dl class="detail-list">
               <div><dt>What fills the window</dt><dd>Local token counts by category, with the largest MCP tool schemas broken out by server.</dd></div>
               <div><dt>Room before compaction</dt><dd>The auto-compaction threshold, tokens to go, growth since the last compaction and the last three before-and-after sizes.</dd></div>
@@ -85,7 +87,7 @@
           </div>
           <figure class="pane-figure">
             <a class="pane-preview" href="assets/screenshots/pane.png?v={{assetRevision}}" target="_blank" rel="noopener" aria-label="Open the full-size detail pane preview">
-              <img src="assets/screenshots/pane.png?v={{assetRevision}}" width="1278" height="1724" alt="The detail pane with context, tokens to auto-compaction, category and MCP breakdown, growth and compactions, cache hit rate, quota timing and an Explore subagent" loading="lazy" />
+              <img src="assets/screenshots/pane.png?v={{assetRevision}}" width="2555" height="3448" alt="The detail pane with context, tokens to auto-compaction, category and MCP breakdown, growth and compactions, cache hit rate, quota timing and an Explore subagent" loading="lazy" />
             </a>
             <figcaption>Terminal pane · Fictional figures · <span>Open image to inspect</span></figcaption>
           </figure>
@@ -99,13 +101,13 @@
           <div class="session-stories">
             <article>
               <p class="small-label">A cache rewrite</p>
-              <div class="state-preview"><img src="assets/screenshots/cache-rewrite.png?v={{assetRevision}}" width="944" height="278" alt="A close-up of the cache group: cache warm 38m and rewrote 41k" loading="lazy" /></div>
+              <div class="state-preview"><img src="assets/screenshots/cache-rewrite.png?v={{assetRevision}}" width="1888" height="558" alt="A close-up of the cache group: cache warm 38m and rewrote 41k" loading="lazy" /></div>
               <h3>See the rewrite, not just the warmth.</h3>
               <p>When a turn reads less than half of the previous input from cache, <code>rewrote</code> shows the tokens written again. The first request after compaction builds a fresh prefix and does not count as a rewrite.</p>
             </article>
             <article>
               <p class="small-label">A subagent’s transcript</p>
-              <div class="state-preview"><img src="assets/screenshots/agent.png?v={{assetRevision}}" width="944" height="278" alt="A close-up of the agent group: a subagent's 124k context, recent growth and 12% usage" loading="lazy" /></div>
+              <div class="state-preview"><img src="assets/screenshots/agent.png?v={{assetRevision}}" width="1888" height="558" alt="A close-up of the agent group: a subagent's 124k context, recent growth and 12% usage" loading="lazy" /></div>
               <h3>The context follows the agent.</h3>
               <p>Open a subagent’s transcript and <code>ctx</code> becomes <code>agent</code>. Its context and growth take the first group; cache and quota keep their main-conversation and account meanings.</p>
             </article>

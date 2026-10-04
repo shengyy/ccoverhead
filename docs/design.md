@@ -114,15 +114,17 @@ bun scripts/screenshot/render.ts   # needs Google Chrome and ImageMagick
 ```
 
 It stages the band in a terminal frame and in a desktop frame, and the pane in a terminal frame,
-screenshots them at 2x with headless Chrome and trims them into
+screenshots them at 4x with headless Chrome for wide and high-density displays, and trims them into
 `assets/screenshots/{terminal,desktop,pane}.png`. It also writes `cache-rewrite.png` and `agent.png`
 as close-ups of those groups from the shared state fixtures for the website. Never commit screenshots of a
 real session.
 
 The website uses a warm charcoal background, off-white text, a sand-colored action and serif headings,
 with the dark product previews as the main visual material. Its fluid shell grows up to a 3840px viewport;
-paragraphs keep a readable line length while previews and columns use the extra width. It introduces the band before the pane and the state examples,
-then the shared scale, design sheets, installation and verification notes. Version and palette are read
+paragraphs keep a readable line length while previews and columns use the extra width. Wide screens show
+the pane introduction, feature list and preview in three columns; installation and FAQ use extra columns
+on the widest screens. It introduces the band before the pane and the state examples, then the shared
+scale, design sheets, installation and verification notes. Version and palette are read
 from their code owners by `scripts/site/build.ts`; the website does not fetch release metadata at runtime.
 
 ### Design rationale sheets
