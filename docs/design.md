@@ -115,7 +115,14 @@ bun scripts/screenshot/render.ts   # needs Google Chrome and ImageMagick
 
 It stages the band in a terminal frame and in a desktop frame, and the pane in a terminal frame,
 screenshots them at 2x with headless Chrome and trims them into
-`assets/screenshots/{terminal,desktop,pane}.png`. Never commit screenshots of a real session.
+`assets/screenshots/{terminal,desktop,pane}.png`. It also writes `cache-rewrite.png` and `agent.png`
+as close-ups of those groups from the shared state fixtures for the website. Never commit screenshots of a
+real session.
+
+The website uses a light paper background, serif headings and compact body text, with the dark product
+previews as the main visual material. It introduces the band before the pane and the state examples,
+then the shared scale, design sheets, installation and verification notes. Version and palette are read
+from their code owners by `scripts/site/build.ts`; the website does not fetch release metadata at runtime.
 
 ### Design rationale sheets
 

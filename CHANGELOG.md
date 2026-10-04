@@ -10,6 +10,12 @@ All notable changes to ccOverhead are documented here. The format follows
 
 - The website build takes its version and color scale from the plugin, keeping the public introduction
   aligned with the code it illustrates.
+- The website presents the detail pane, cache rewrites, resume behavior and subagent view alongside the
+  band, with current fictional previews, a revised layout and keyboard-accessible surface tabs.
+
+### Added
+
+- Website previews for a cache rewrite and the band while viewing a subagent's transcript.
 
 ## [1.4.0] - 2026-10-04
 
