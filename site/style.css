@@ -136,20 +136,6 @@ summary { cursor: pointer; }
 .footer-links { display: flex; flex-wrap: wrap; align-items: center; gap: 13px 22px; font-size: clamp(12px, .75vw, 20px); margin-top: 24px; }
 .footer-links > span { margin-left: auto; color: var(--muted); }
 .independent-note { font-size: clamp(10px, .6vw, 14px); color: var(--muted); margin-top: 20px; max-width: 100ch; }
-@media (min-width: 1800px) {
-  .detail-section { grid-template-columns: 2fr 1fr; gap: clamp(60px, 3vw, 120px); }
-  .detail-copy { display: grid; grid-template-columns: .9fr 1.1fr; gap: 24px clamp(35px, 3vw, 100px); align-items: start; }
-  .detail-intro { grid-column: 1; grid-row: 1; }
-  .detail-intro h2 { font-size: clamp(40px, 2.4vw, 72px); }
-  .detail-list { grid-column: 2; grid-row: 1 / span 2; margin: 0; }
-  .detail-copy > .text-link { grid-column: 1; grid-row: 2; justify-self: start; }
-}
-@media (min-width: 2200px) {
-  .install-section, .faq-section { grid-template-columns: 1fr 2fr; gap: 100px; }
-  .install-commands ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
-  .faq-answers { display: grid; grid-template-columns: 1fr 1fr; align-items: start; column-gap: 64px; }
-  .faq-answers details:first-child { padding-top: 19px; }
-}
 @media (max-width: 1000px) {
   .hero { gap: 34px; }
   .hero-description { font-size: 16px; }
