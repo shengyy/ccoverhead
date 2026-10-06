@@ -78,7 +78,7 @@ describe('the /ccoverhead pane', () => {
 
       const ui = await $.ui.mount(pane(surface))
       const text = async (re: RegExp) => (await ui.find({ type: 'Text', text: re }))?.text
-      for (const head of ['Context', 'In the window, as /context estimates it', 'Growth', 'Cache, main conversation', 'Quota']) {
+      for (const head of ['Context', 'In the window, as /context estimates it', 'Growth', 'Cache, main conversation', 'Quota, shaded = window-average projection']) {
         expect(await text(new RegExp(`^${head.replace(/[/,]/g, '.')}$`))).toBeDefined()
       }
       // 72k used of a 967k threshold.
@@ -98,7 +98,7 @@ describe('the /ccoverhead pane', () => {
       expect(await text(/left of/)).toBeUndefined()
       // 400k of 431k read from the cache.
       expect(await text(/^ ?92%$/)).toBeDefined()
-      // Quota with the share of each window's time gone: 2.5h of 5h left, 3d of 7d left.
+      // Quota keeps reset countdowns, without a separate elapsed-time progress bar.
       expect(await text(/of the window gone/)).toBeUndefined()
       if (surface !== 'terminal') {
         expect(await ui.find({ type: 'Text', text: /[■□▁▂▃▄▅▆▇█]/ })).toBeUndefined()

@@ -18,6 +18,8 @@ export const band: BandInput = {
   cache: { at: NOW - 22 * MIN, warm: true },
   cacheTtl: CACHE_TTL_MS,
   model: null,
+  cost: 1.84,
+  turnCost: 0.12,
 }
 
 export const rewriting: BandInput = { ...band, rewrite: 41_000 }
@@ -39,6 +41,7 @@ export const agentView: BandInput = {
 export const pane: PaneInput = {
   ...band,
   model: 'claude-opus-5-5',
+  limitsAt: NOW,
   timeline: [61_000, 92_000, 140_000, 180_000, 181_200, 186_000, 198_000, 232_000, 236_500, 268_000, 271_400],
   compactions: [{ before: 455_000, after: 61_000 }],
   cacheStats: { input: 2_100, read: 3_412_000, write: 296_000, last: 271_400 },

@@ -1,8 +1,7 @@
 // Pure formatting for the band: its groups, their widths and colours, and the desktop's Svg graphics.
 import type { OverheadAgent, OverheadCache, OverheadCtx, OverheadLimit, OverheadTheme } from '../types'
 
-// The prompt cache's lifetime until a model switch or a resume reports it: every main-conversation write seen
-// on a Claude Pro account was ephemeral_1h. The other lifetime is five minutes.
+// The two cache lifetimes the engine can report. Neither is assumed before evidence arrives.
 export const CACHE_TTL_MS = 60 * 60 * 1000
 export const SHORT_TTL_MS = 5 * 60 * 1000
 // The warm cache's colour for `left` of a `ttl` lifetime: the share of it gone, on the percentage scale, as a
@@ -28,6 +27,8 @@ export type Span = {
   tier?: number
   dimColor?: boolean
   bar?: number
+  forecast?: number
+  barLabel?: string
   spark?: number[]
   tiers?: number[]
   money?: boolean
@@ -36,7 +37,7 @@ export type Span = {
 type Ink = { dark: string; light: string }
 
 // An Svg is drawn as an image, with no theme: each colour has a dark-card and a light-card value, picked by
-// the image's own media query. Text takes the dark-card value (the terminal's Claude Dark, the desktop's card).
+// the image's own media query. Text uses the host's configured theme.
 const DIM: Ink = { dark: '#898781', light: '#6f6d68' }
 const MONEY: Ink = { dark: '#dfbc70', light: '#8a6215' }
 export const MONEY_BG: Ink = { dark: '#302a1e', light: '#f4eddf' }
@@ -50,13 +51,13 @@ const TRACK = 'rgba(137,135,129,0.3)'
 const GAIN: Ink[] = [
   { dark: '#5965cd', light: '#4c55bc' },
   { dark: '#4087de', light: '#266ec3' },
-  { dark: '#37aae3', light: '#0481b3' },
-  { dark: '#35c5db', light: '#0c8d9e' },
-  { dark: '#49d6cc', light: '#17938b' },
-  { dark: '#b8e45c', light: '#74980d' },
-  { dark: '#f9e149', light: '#b39b00' },
-  { dark: '#fea92f', light: '#b77610' },
-  { dark: '#fd7933', light: '#bd4d00' },
+  { dark: '#37aae3', light: '#0076a8' },
+  { dark: '#35c5db', light: '#007a8b' },
+  { dark: '#49d6cc', light: '#007c74' },
+  { dark: '#b8e45c', light: '#567a00' },
+  { dark: '#f9e149', light: '#856d00' },
+  { dark: '#fea92f', light: '#a05f00' },
+  { dark: '#fd7933', light: '#bc4c00' },
   { dark: '#ed4b43', light: '#bb0916' },
 ]
 
@@ -90,6 +91,7 @@ export type Cell = { text: string; color?: string; dimColor?: boolean }
 // tier's colour. Undefined for a span of one colour.
 export function cells(s: Span, theme: OverheadTheme = 'dark'): Cell[] | undefined {
   const glyphs = [...s.text]
+  if (s.forecast !== undefined) return glyphs.map(text => text === '■' ? { text, color: colorOf(s, theme) } : { text, dimColor: true })
   if (s.spark) return s.spark.map((_, i) => ({ text: glyphs[i] ?? '', color: colorOf({ text: '', tier: s.tiers?.[i] ?? 0 }, theme) }))
   return undefined
 }
@@ -115,7 +117,13 @@ export function svgOf(s: Span): Graphic | undefined {
     const w = Math.round((Math.min(Math.max(s.bar, 0), 100) * 60) / 100)
     const track = `<rect x="0" y="0" width="60" height="6" rx="3" fill="${TRACK}"/>`
     const done = w > 0 ? `<rect class="k" x="0" y="0" width="${w}" height="6" rx="3"/>` : ''
-    return { source: svg(60, 6, inks([['k', ink]]), track + done), alt: `context ${s.bar}% used`, width: 60, height: 6 }
+    const projected = s.forecast === undefined ? w : Math.round(Math.min(Math.max(s.forecast, s.bar), 100) * 0.6)
+    const future = projected > w ? `<rect class="f" x="${w}" y="0" width="${projected - w}" height="6" opacity="0.4"/>` : ''
+    return {
+      source: svg(60, 6, inks([['k', ink], ['f', DIM]]), track + future + done),
+      alt: `${s.barLabel ?? 'context'} ${s.bar}% used${s.forecast === undefined ? '' : `; approximately ${Math.round(s.forecast)}% by reset`}`,
+      width: 60, height: 6,
+    }
   }
   if (s.spark && s.spark.length > 0) {
     const top = Math.max(...s.spark, 1)
@@ -169,6 +177,13 @@ export function kshort(t: number): string {
 export function bar(p: number): string {
   const filled = Math.max(Math.min(Math.floor((p + 5) / 10), 10), 0)
   return '■'.repeat(filled) + '□'.repeat(10 - filled)
+}
+
+// Same quota scale: solid is used, shaded is projected additional use, hollow is unfilled.
+export function forecastBar(p: number, projected: number): string {
+  const used = Math.max(0, Math.min(10, Math.round(p / 10)))
+  const end = Math.max(used, Math.min(10, Math.round(projected / 10)))
+  return '■'.repeat(used) + '▧'.repeat(end - used) + '□'.repeat(10 - end)
 }
 
 export function gains(history: number[]): number[] {

@@ -104,7 +104,7 @@ describe('ccoverhead', () => {
         // drain
       }
       // A freshly warm cache, its minutes in the same colour: none of the lifetime gone, the scale's sky.
-      expect((await ui.find({ type: 'Text', text: /^ ?TTL unknown$/ }))?.props.color).toBe(TIER_HEX[2])
+      expect((await ui.find({ type: 'Text', text: /^ ?TTL unknown$/ }))?.props.dimColor).toBe(true)
       // The conversation's state first (context, then cache), then the account's quota.
       const order = (await ui.findAll({ type: 'Text' })).map(t => t.text.trim())
       expect(order.indexOf('ctx') < order.indexOf('cache') && order.indexOf('cache') < order.indexOf('5h') && order.indexOf('5h') < order.indexOf('7d')).toBe(true)
@@ -156,7 +156,7 @@ describe('ccoverhead', () => {
     test(`a new session shows the last saved quota dimmed (${surface})`, async ($, on) => {
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
-      mock.store(on, {
+      mockHost(on, {
         limits: [
           { kind: 'five_hour', percentUsed: 30, resetsAt: iso(90 * MIN) },
           // Already reset: dropped.
@@ -332,6 +332,7 @@ describe('ccoverhead', () => {
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
       mockHost(on)
+      on('classic.PostModelSwitch', () => ({}))
       on('session.usage', () => ({ value: usage(40_000, [], false) }))
       on('turn.step', async function* () {
         const [turnId, read, write] = steps[at++]!
@@ -339,6 +340,7 @@ describe('ccoverhead', () => {
       })
       const clock = mock.clock(on, { now: NOW })
       await $.session.start(session(surface))
+      await $.classic.PostModelSwitch({ from_model: STEP.model, to_model: STEP.model, requested_model: null, source: 'command', context_tokens: 40_000, prompt_cache_warm: false, cache_ttl: '1h', estimated_cache_write_usd: 0, pricing: 'catalog' })
       await $.session.measure(measured(fill(40_000, 4)))
       const ui = await $.ui.mount(band(surface))
       const step = async (turnId: string) => {
@@ -377,8 +379,9 @@ describe('ccoverhead', () => {
       mockHost(on)
       on('session.usage', () => ({ value: usage(40_000, [], false) }))
       on('classic.PostModelSwitch', () => ({}))
-      on('turn.step', async function* () {
-        return cached(30_000, 1_000)
+      on('turn.step', async function* ($, e) {
+        const r = cached(30_000, 1_000)
+        return { ...r, usage: { ...r.usage!, model: e.model } }
       })
       mock.clock(on, { now: NOW })
       await $.session.start(session(surface))
@@ -400,7 +403,7 @@ describe('ccoverhead', () => {
         pricing: 'catalog',
       })
       expect(await ui.find({ type: 'Text', text: /^ ?cold$/ })).toBeDefined()
-      for await (const _ of $.turn.step(STEP)) {
+      for await (const _ of $.turn.step({ ...STEP, model: 'claude-haiku-4-5-20251001' })) {
         // drain
       }
       expect(await ui.find({ type: 'Text', text: /^ ?warm 5m$/ })).toBeDefined()

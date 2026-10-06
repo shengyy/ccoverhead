@@ -7,7 +7,7 @@ export type OverheadCompaction = { before?: number; after?: number }
 export type OverheadLimit = { kind: string; percentUsed: number; resetsAt?: string }
 // Native theme names that cannot use the custom palette keep Claude Code's semantic colors.
 export type OverheadTheme = 'dark' | 'light' | 'native'
-// The main conversation's last request: when it finished, and whether it touched the cache.
+// The main conversation's last request: when it started, and whether it touched the cache.
 export type OverheadCache = { at: number; warm: boolean }
 // The main conversation's requests since it started: input tokens neither read from nor written to the cache,
 // read from it and written to it; the last request's input total; and the last request that rewrote the cache
@@ -38,7 +38,7 @@ declare module 'claude-code' {
       limitsLive: boolean
       cache: OverheadCache | null
       cacheStats: OverheadCacheStats
-      // The prompt cache's lifetime in ms, as the last model switch reported it; one hour until then.
+      // The prompt cache's lifetime in ms, reported by a switch or inferred from a resume; otherwise unknown.
       cacheTtl: number | null
       cost: number | null
       turnCostBase: number | null

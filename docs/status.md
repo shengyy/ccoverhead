@@ -35,13 +35,13 @@ Claude Code raises the band's site (`AbovePrompt`) on the terminal and desktop s
   request sent).
 - With a command hook on `SessionStart` (Claude Code 2.1.289, Haiku 4.5, Claude Pro): a resume or fork
   reports the transcript's last context, its age and whether the cache likely lapsed; resumed after 343
-  seconds the cache was still read, the hour's lifetime ccOverhead assumes.
+  seconds the cache was still read, evidence for an hour's lifetime in that session.
 - Installing from this repository: `claude plugin marketplace add shengyy/ccoverhead` then
   `claude plugin install ccoverhead@ccoverhead` (and `update` from 1.0.0) installs the released version
   enabled, the installed copy matches `plugin/` file for file, and it loads and records its state in a
   headless session.
 
-Not verified: light themes (the text colors are tuned for dark ones), `/clear` resetting Claude Code's own
+Not verified live: light themes (matching text palettes are covered offline), `/clear` resetting Claude Code's own
 plugin state (ccOverhead resets its values itself, covered by tests), plans other than Claude Pro, the
 weekly group following a model's own window and a gateway's `spend_limit` (neither has reached a plugin;
 covered by tests with fictional ones), the band following a subagent's transcript on screen and a model
@@ -50,6 +50,14 @@ mobile.
 
 Each Claude Code behavior these rely on, and the version it was checked against, is listed in
 [claude-code-integration.md](claude-code-integration.md).
+
+## Current offline validation
+
+On Claude Code 2.1.291, the validator and test kit cover native cost, turn increments, running-agent
+counts, theme colors, downstream band preservation, mid-turn context refresh, and conversation changes
+without classic events. Type checking uses the saved 2.1.289 declarations. Fictional previews cover dark
+and light cost styling. The window-average quota estimate is arithmetic-tested and pane-only. These
+changes are **not verified in a live session**; no model requests were made for this validation.
 
 ## Known limitations
 

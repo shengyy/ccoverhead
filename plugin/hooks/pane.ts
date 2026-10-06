@@ -3,7 +3,7 @@
 // the surfaces with a proportional font).
 import type { OverheadAgent, OverheadBreakdown, OverheadCacheStats, OverheadCompaction } from '../types'
 import type { BandInput, Span } from './format'
-import { FALLBACK_WINDOW, bar, cacheStatus, dur, gainTier, gains, kshort, ktok, modelFamily, pctTier, sparkline, usd, validCost, weeklyWindow } from './format'
+import { FALLBACK_WINDOW, bar, cacheStatus, dur, forecastBar, gainTier, gains, kshort, ktok, modelFamily, pctTier, sparkline, usd, validCost, weeklyWindow } from './format'
 import { AGENTS, hitRate, quotaForecast } from './track'
 
 export type PaneInput = BandInput & {
@@ -124,7 +124,7 @@ function cache(p: PaneInput): PaneLine[] {
   return out
 }
 
-// Every window reported, with the share of its time gone beside the share used: a fact, not a forecast.
+// Every reported window, with a labeled window-average projection only for fresh live readings.
 function quota(p: PaneInput): PaneLine[] {
   const out: PaneLine[] = [{ head: p.limitsLive ? 'Quota' : 'Quota, as an earlier session last saw it' }]
   const weekly = weeklyWindow(p.limits, p.model)
@@ -136,20 +136,22 @@ function quota(p: PaneInput): PaneLine[] {
       l.kind === 'five_hour' ? '5h' : l === weekly.limit ? weekly.label : l.kind === 'seven_day' ? '7d' : l.kind === 'spend_limit' ? 'spend' : l.kind,
     )
     const resets = l.resetsAt === undefined ? undefined : Date.parse(l.resetsAt)
+    const forecast = p.limitsLive ? quotaForecast(l, p.limitsAt, p.now) : undefined
     const ink = (s: Span): Span => (p.limitsLive ? s : { text: s.text, bar: s.bar, dimColor: true })
     out.push(
       line(
         label,
         { text: ' ' },
-        ink({ text: bar(pc), tier: pctTier(pc), bar: Math.min(pc, 100) }),
+        ink({ text: forecast ? forecastBar(pc, forecast.percentAtReset) : bar(pc), tier: pctTier(pc), bar: Math.min(pc, 100), barLabel: 'quota', forecast: forecast?.percentAtReset }),
         ink({ text: ` ${pc}%`, tier: pctTier(pc) }),
         ...(resets === undefined ? [] : [dim(` ↻${dur(resets - p.now)}`)]),
       ),
     )
-    const forecast = p.limitsLive ? quotaForecast(l, p.limitsAt, p.now) : undefined
-    if (forecast !== undefined && resets !== undefined) out.push(line('', dim(
-      forecast < resets ? ` ≈${dur(forecast - p.now)} to limit at window-average pace` : ' At window-average pace, reset comes first',
-    )))
+    if (forecast !== undefined && resets !== undefined) {
+      out[0] = { head: 'Quota, shaded = window-average projection' }
+      const runway = forecast.exhaustsAt < resets ? `limit in ≈${dur(forecast.exhaustsAt - p.now)}` : 'reset comes first'
+      out.push(line('', dim(` ≈${Math.round(forecast.percentAtReset)}% by reset · ${runway}`)))
+    }
   }
   return out
 }
@@ -160,7 +162,7 @@ function cost(p: PaneInput): PaneLine[] {
     { head: 'Cost, API-price reference' },
     line('session', { text: ` ≈${usd(p.cost)}`, money: true }),
     ...(validCost(p.turnCost) ? [line('last turn', dim(` +${usd(p.turnCost)}`))] : []),
-    line('', dim(' Subscription reference, not an extra charge')),
+    line('', dim(' API-price reference, not a billing receipt')),
   ]
 }
 

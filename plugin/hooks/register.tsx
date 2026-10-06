@@ -121,12 +121,10 @@ export const register: Register = on => {
   })
 
   on('turn.start', async ($, e, next) => {
-    {
-      await syncSession($)
-      const reading = await $.session.usage().catch(() => undefined)
-      await update($, turnCostBase, () => (validCost(reading?.cost?.usd) ? reading.cost.usd : null))
-      await update($, turnCost, () => null)
-    }
+    await syncSession($)
+    const reading = await $.session.usage().catch(() => undefined)
+    await update($, turnCostBase, () => (validCost(reading?.cost?.usd) ? reading.cost.usd : null))
+    await update($, turnCost, () => null)
     return next(e)
   })
 
@@ -141,7 +139,7 @@ export const register: Register = on => {
     return result
   })
 
-  // Each request: on the main conversation, when it finished, whether it touched the cache and the running
+  // Each request: on the main conversation, when it started, whether it touched the cache and the running
   // counts; on a subagent, its context total.
   on('turn.step', async function* ($, e, next) {
     // Cache age starts with the request, not after a potentially long streamed response.
@@ -335,11 +333,16 @@ async function setModel($: EngineInterface, id: string) {
 }
 
 async function takeCost($: EngineInterface, value: number | undefined, measured = false) {
+  const previous = await read($, cost)
   await update($, cost, () => (validCost(value) ? value : null))
+  if (!validCost(value) || (previous !== null && value < previous)) {
+    await update($, turnCost, () => null)
+    return
+  }
   if (measured) {
     const base = await read($, turnCostBase)
-    if (base !== null || !validCost(value)) await update($, turnCost, () => (validCost(value) && base !== null && value >= base ? value - base : null))
-  } else if (!validCost(value)) await update($, turnCost, () => null)
+    if (base !== null) await update($, turnCost, () => (value >= base ? value - base : null))
+  }
 }
 
 function themeOf(value: unknown): OverheadTheme {

@@ -24,7 +24,7 @@ row when you rely on it in a new version, and add the version you checked.
 | The main context total `session.measure` reports equals the last main-thread request's `input_tokens + cache_read_input_tokens + cache_creation_input_tokens`; ccOverhead counts a subagent's context the same way | 2.1.289 (requests without a server-side tool loop) |
 | Under a server-side tool loop a step's `usage` sums several responses, so it may exceed the loop's last context | not verified (declarations of 2.1.289) |
 | `$.agent.list()` lists a running subagent with its `id` (the `agentId` of its steps) and its `type` (`Explore`) | 2.1.289 |
-| Main-conversation cache writes are `ephemeral_1h`; ccOverhead counts warmth over one hour | 2.1.288 (Claude Pro only; other plans not verified) |
+| Observed main-conversation cache writes were `ephemeral_1h`; this does not establish a default for other sessions | 2.1.288 (Claude Pro only; other plans not verified) |
 | The API's usage carries `cache_creation.ephemeral_5m_input_tokens` and `ephemeral_1h_input_tokens` (seen in `claude -p --output-format json`), but the `usage` a plugin's `turn.step` receives is declared with five numbers only; whether the breakdown reaches plugins is unknown: a probe plugin run under `claude -p` left no record to read. ccOverhead reads only the declared fields | not verified (declarations of 2.1.289) |
 | On a Claude Pro account without Fable access, `rateLimits` holds only `five_hour` and `seven_day` (all models); a Fable request is refused with "Fable 5.1 requires usage credits" and reports no windows | 2.1.288 |
 | `$.session.model()` returns the main loop's resolved model id (`claude-haiku-4-5-20251001`, `claude-fable-5-1`, `claude-opus-5-5`); `classic.PostModelSwitch` carries `from_model` and `to_model` | 2.1.288, 2.1.289 |
@@ -78,3 +78,23 @@ row when you rely on it in a new version, and add the version you checked.
 | `ui.find({ key })` matches an element's `props.key`; a JSX `key` is not in props | 2.1.288 |
 | `$.classic.<Event>` needs a test-side `on('classic.<Event>', …)` at the bottom of the chain | 2.1.288 |
 | `$.ui.mount` validates the tree against the named surface's element table, so a tree the surface would refuse fails the test | 2.1.288 |
+
+## Native observation paths (not verified live)
+
+The saved 2.1.289 declarations and the 2.1.291 test kit cover these paths; this is not live acceptance.
+
+- `session.measure.cost.usd` / `session.usage().cost.usd` provide the session ledger. The plugin
+  snapshots it at main `turn.start`, subtracts at measurement/completion, and ignores subagent completion
+  for that baseline. `turn.complete` is passed on unchanged.
+- `config.list` exposes the theme; allowed `config.set` results update colors. Unknown theme names use
+  native semantic colors. No configuration is written.
+- `session.id`, `session.model` and `session.usage` allow local refreshes when `classic.*` is unavailable.
+  The upstream [sec-default guard](https://github.com/anthropics/claude-code/blob/main/mods/sec-default/hooks/register.ts)
+  skips user classic hooks for managed/Team/Enterprise contexts. ccOverhead still respects refused reads;
+  it does not bypass policy. Native command events schedule a refresh, and the existing 30-second tick
+  catches delayed picker changes.
+- Main `turn.step` schedules a coalesced 100 ms local usage read. Its summed usage is not treated as
+  context size. End-of-turn measurements alone add growth samples.
+- `agent.list` provides running status. Only running agents count in the band; zero is hidden.
+- `AbovePrompt` preserves the tree returned by `next(e)` below its own row. The host test fixture
+  supplies a downstream renderer, making composition regressions visible on both surfaces.

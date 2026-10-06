@@ -39,7 +39,7 @@ const featureDescriptions = [
   ['缓存冷热', 'warm / cold / 剩余分钟', '仅跟踪主对话请求的缓存读写。', 'cache'],
   ['使用额度', '5 小时 / 每周 / 重置倒计时', '显示已用比例，额度读数来自宿主。', 'quota'],
 ]
-const steps = ['完整信息', '隐藏增长图与 ↑', '再隐藏缓存改写', '再隐藏缓存', '再隐藏 token 数', '再隐藏每周倒计时', '再隐藏 5 小时倒计时']
+const steps = ['完整信息', '隐藏本轮费用', '隐藏增长图与 ↑', '再隐藏缓存改写', '再隐藏缓存', '再隐藏 token 数', '再隐藏会话费用', '再隐藏每周倒计时', '再隐藏 5 小时倒计时']
 // A turn that rewrote the cache, so the narrowing table shows that step too.
 const responsive = DEGRADE.map((detail, i) => {
   const gs = groups(rewriting, detail)
@@ -193,7 +193,7 @@ const layout = `
   <div class="section-heading"><span class="index">03</span><h2>一套十档色阶，始终从安全走向警告</h2><span class="aside">标签保持普通文字，数值承担状态</span></div>
   <div class="palette-label"><span>深色主题 · Text 与 Svg</span><span>每列依次：颜色 / 上下文与额度已用比例 / 单次增长占窗口比例</span></div>
   <div class="scale">${scale}</div><div class="scale-meanings"><span>安全 · 冷色</span><span>注意 · 黄绿到黄</span><span>警告 · 暖色到红</span></div>
-  <div class="light-palette"><div class="palette-label"><span>浅色主题 · 仅 Svg 自动切换</span><span>Text 仍用深色列；浅色主题尚未实测</span></div><div class="scale">${lightScale}</div></div>
+  <div class="light-palette"><div class="palette-label"><span>浅色主题 · Text 与 Svg</span><span>浅色 Text 使用浅色列；尚未实测</span></div><div class="scale">${lightScale}</div></div>
   <div class="mapping"><p><b>图形尺寸</b>　桌面进度条 60 × 6 px；增长柱宽 4 px，柱间距 2 px，柱高 3–14 px。终端进度条为 10 格，按最接近的 10% 绘制。</p><p><b>增长与缓存</b>　保留 ${HISTORY} 个不同总量，形成最多 ${HISTORY - 1} 根柱。柱高相对比较，颜色按绝对占比；warm 与剩余分钟同色，按缓存寿命已过的比例取色，cold 为暗色。</p></div>
   <footer>${stamp}</footer>
 </section>`
@@ -207,7 +207,7 @@ const states = `
     <div class="state"><h3>首个回复前的本地估算</h3><code class="context-code">${terminal(groupByLabel(estimate, 'ctx'))}</code><p>使用宿主 /context 估算，带 ~；进度条和数值变暗，不发送模型请求。</p></div>
     <div class="state"><h3>没有估算值</h3><code class="context-code">${terminal(groupByLabel(placeholder, 'ctx'))}</code><p>保留窗口大小，用 -- 占位；不沿用上个窗口的数字。</p></div>
     <div class="state quota-state"><h3>额度：本会话读数 / 跨会话记忆</h3><div class="state-pair"><span class="state-tag">当前</span><code>${terminal(groups(band, DEGRADE[0]!).filter(g => ['5h', '7d'].includes(g[0]!.text)))}</code></div><div class="state-pair"><span class="state-tag">记忆</span><code>${terminal(groups(remembered, DEGRADE[0]!).filter(g => ['5h', '7d'].includes(g[0]!.text)))}</code></div><p>新会话拿到自己的读数前，显示最近一次额度，数值与倒计时变暗。重置时间已过的窗口直接隐藏。</p></div>
-    <div class="state"><h3>缓存：warm → cold</h3><div class="state-pair"><code>${terminal(groupByLabel(band, 'cache'))}</code><span class="state-tag">→</span><code>${terminal(groupByLabel(expiredCache, 'cache'))}</code></div><p>主对话读 / 写缓存后变热，颜色随寿命流逝由冷转暖；未触及、到期或切换模型变冷，没有读数时隐藏。寿命默认 ${CACHE_TTL_MS / 3_600_000} 小时（Claude Pro 实测），切换模型或恢复会话时取宿主给出的寿命。</p></div>
+    <div class="state"><h3>缓存：warm → cold</h3><div class="state-pair"><code>${terminal(groupByLabel(band, 'cache'))}</code><span class="state-tag">→</span><code>${terminal(groupByLabel(expiredCache, 'cache'))}</code></div><p>主对话读 / 写缓存后变热，颜色随寿命流逝由冷转暖；未触及、到期或切换模型变冷，没有读数时隐藏。寿命由切换模型或恢复会话的证据确定，否则显示 TTL unknown。</p></div>
   </div>
   <div class="section-heading"><span class="index">02</span><h2>会话变化时，重置该重置的状态</h2></div>
   <table class="lifecycle"><thead><tr><th>触发</th><th>状态变化</th><th>画面规则</th></tr></thead><tbody>
@@ -262,6 +262,8 @@ const english: Record<string, string> = {
   '等宽字体 · 字符进度条 · 字符增长图': 'Monospace · glyph bar · glyph growth chart',
   '空间不足时，按顺序删细节': 'When space runs out, shed details in order',
   'cell 数为横条内容宽度，不是窗口断点': 'Cells measure content, not viewport breakpoints',
+  '隐藏本轮费用': 'Hide turn cost',
+  '再隐藏会话费用': 'Then session cost',
   '完整信息': 'Full detail',
   '隐藏增长图与 ↑': 'Hide growth and ↑',
   '再隐藏缓存改写': 'Then hide cache rewrite',
@@ -277,8 +279,8 @@ const english: Record<string, string> = {
   '安全 · 冷色': 'Safe · cool',
   '注意 · 黄绿到黄': 'Caution · lime to yellow',
   '警告 · 暖色到红': 'Warning · warm to red',
-  '浅色主题 · 仅 Svg 自动切换': 'Light theme · Svg switches automatically',
-  'Text 仍用深色列；浅色主题尚未实测': 'Text keeps dark colors; light themes are not verified',
+  '浅色主题 · Text 与 Svg': 'Light theme · Svg switches automatically',
+  '浅色 Text 使用浅色列；尚未实测': 'Light Text uses light colors; not verified live',
   '图形尺寸': 'Graphic dimensions',
   '桌面进度条 60 × 6 px；增长柱宽 4 px，柱间距 2 px，柱高 3–14 px。终端进度条为 10 格，按最接近的 10% 绘制。': 'Desktop bar: 60 × 6 px. Growth columns: 4 px wide, 2 px apart, 3–14 px tall. The terminal bar has 10 cells, rounded to the nearest 10%.',
   '增长与缓存': 'Growth and cache',
@@ -297,7 +299,7 @@ const english: Record<string, string> = {
   '记忆': 'Saved',
   '新会话拿到自己的读数前，显示最近一次额度，数值与倒计时变暗。重置时间已过的窗口直接隐藏。': 'Show the last quota reading until this session gets its own; figures and countdowns are dim. Hide any window whose reset time has passed.',
   '缓存：warm → cold': 'Cache: warm → cold',
-  [`主对话读 / 写缓存后变热，颜色随寿命流逝由冷转暖；未触及、到期或切换模型变冷，没有读数时隐藏。寿命默认 ${CACHE_TTL_MS / 3_600_000} 小时（Claude Pro 实测），切换模型或恢复会话时取宿主给出的寿命。`]: `A main-conversation cache read/write makes it warm, its color warming as the lifetime drains. No touch, expiry or a model switch makes it cold; no reading hides it. Lifetime: ${CACHE_TTL_MS / 3_600_000} hour by default (verified on Claude Pro), or what a model switch or a resume reports.`,
+  [`主对话读 / 写缓存后变热，颜色随寿命流逝由冷转暖；未触及、到期或切换模型变冷，没有读数时隐藏。寿命由切换模型或恢复会话的证据确定，否则显示 TTL unknown。`]: `A main-conversation cache read/write makes it warm, its color warming as the lifetime drains. No touch, expiry or a model switch makes it cold; no reading hides it. Lifetime comes from a model switch or resume evidence; otherwise TTL unknown.`,
   '会话变化时，重置该重置的状态': 'Conversation changes reset the relevant state',
   '触发': 'Trigger',
   '状态变化': 'State change',
