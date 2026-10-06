@@ -1,8 +1,8 @@
 {
   "name": "ccoverhead",
   "displayName": "ccOverhead",
-  "version": "1.4.0",
-  "description": "ccOverhead: the context window, each turn's growth, the 5-hour and weekly quota and prompt-cache warmth, in one band above the Claude Code prompt on one safe-to-warning colour scale.",
+  "version": "1.5.0",
+  "description": "ccOverhead: context, per-turn growth, quota, cache warmth, native cost and agent activity above the Claude Code prompt, with session and agent details.",
   "author": { "name": "shengyy", "url": "https://github.com/shengyy" },
   "homepage": "https://github.com/shengyy/ccoverhead",
   "repository": "https://github.com/shengyy/ccoverhead",

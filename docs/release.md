@@ -8,6 +8,15 @@ users should receive needs a new version; `/plugin update` does nothing for an u
 
 ## How users get it
 
+The official Anthropic Directory tracks this repository's `main` branch and the `plugin/` folder.
+Each detected commit is validated and scanned; the listing keeps serving its last published version
+until a new one is published. This plugin requires an Anthropic reviewer to publish each version.
+After merging a release, open the existing submission in the
+[developer portal](https://claude.ai/directory/manage) and select **Check for new commits** to check
+immediately. Resolve blocking findings on **Review**, then request **Publish update** when available.
+A passing scan or a GitHub Release alone does not confirm that the directory update is live.
+See the [official publication guide](https://claude.com/docs/plugins/submit#update-a-published-plugin).
+
 The repository is its own marketplace (`.claude-plugin/marketplace.json`, plugin source `./plugin`).
 `/plugin marketplace add shengyy/ccoverhead` reads the default branch, so a merged version bump is what
 users receive on their next `/plugin marketplace update ccoverhead` and `/plugin update
@@ -38,3 +47,7 @@ The maintainer decides *when*; the agent does the rest.
    ```
 
    Publishing creates the tag on `main`'s current commit.
+
+4. **Request the directory update.** Complete the existing submission's scan and publish request above.
+   Confirm the version and commit under **Live now** before reporting a directory release as published;
+   if Anthropic review is pending, report it as submitted for review instead.

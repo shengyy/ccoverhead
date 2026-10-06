@@ -22,7 +22,7 @@ Claude Code raises the band's site (`AbovePrompt`) on the terminal and desktop s
 
 - The Claude desktop app's **Settings → Plugins → Discover** lists ccOverhead from **Anthropic
   Directory**; its detail page shows the installed release enabled. This confirms directory listing
-  and discovery, not a fresh-install test or live acceptance of the unreleased changes. Installation
+  and discovery, not a fresh-install test or live acceptance of the new behavior described below. Installation
   instructions for both sources are in the [README](../README.md#install).
 - In a live session (Claude Code 2.1.288, macOS 27): the band and its layout on the terminal, the desktop's
   Svg bar and growth chart, dark theme. The color scale and group order introduced in 1.0.0, and the
