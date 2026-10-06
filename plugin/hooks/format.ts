@@ -1,5 +1,5 @@
 // Pure formatting for the band: its groups, their widths and colours, and the desktop's Svg graphics.
-import type { OverheadAgent, OverheadCache, OverheadCtx, OverheadLimit } from '../types'
+import type { OverheadAgent, OverheadCache, OverheadCtx, OverheadLimit, OverheadTheme } from '../types'
 
 // The prompt cache's lifetime until a model switch or a resume reports it: every main-conversation write seen
 // on a Claude Pro account was ephemeral_1h. The other lifetime is five minutes.
@@ -30,6 +30,7 @@ export type Span = {
   bar?: number
   spark?: number[]
   tiers?: number[]
+  money?: boolean
 }
 
 type Ink = { dark: string; light: string }
@@ -37,6 +38,8 @@ type Ink = { dark: string; light: string }
 // An Svg is drawn as an image, with no theme: each colour has a dark-card and a light-card value, picked by
 // the image's own media query. Text takes the dark-card value (the terminal's Claude Dark, the desktop's card).
 const DIM: Ink = { dark: '#898781', light: '#6f6d68' }
+const MONEY: Ink = { dark: '#dfbc70', light: '#8a6215' }
+export const MONEY_BG: Ink = { dark: '#302a1e', light: '#f4eddf' }
 const TRACK = 'rgba(137,135,129,0.3)'
 
 // The band's one colour scale, safe to warning: cool for safe (indigo, blue, sky, cyan, teal), caution
@@ -74,17 +77,20 @@ export function pctTier(p: number): number {
 }
 
 // A span's text colour: its tier's dark-card value, none for plain text.
-export function colorOf(s: Span): string | undefined {
-  return s.tier === undefined ? undefined : GAIN[s.tier]?.dark
+export function colorOf(s: Span, theme: OverheadTheme = 'dark'): string | undefined {
+  if (s.money) return theme === 'native' ? 'warning' : MONEY[theme]
+  if (s.tier === undefined) return undefined
+  if (theme === 'native') return s.tier < 5 ? 'permission' : s.tier < 8 ? 'warning' : 'error'
+  return GAIN[s.tier]?.[theme]
 }
 
 export type Cell = { text: string; color?: string; dimColor?: boolean }
 
 // A span the terminal draws in more than one colour, piece by piece: the sparkline, one glyph per gain in its
 // tier's colour. Undefined for a span of one colour.
-export function cells(s: Span): Cell[] | undefined {
+export function cells(s: Span, theme: OverheadTheme = 'dark'): Cell[] | undefined {
   const glyphs = [...s.text]
-  if (s.spark) return s.spark.map((_, i) => ({ text: glyphs[i] ?? '', color: GAIN[s.tiers?.[i] ?? 0]?.dark ?? DIM.dark }))
+  if (s.spark) return s.spark.map((_, i) => ({ text: glyphs[i] ?? '', color: colorOf({ text: '', tier: s.tiers?.[i] ?? 0 }, theme) }))
   return undefined
 }
 
@@ -207,7 +213,10 @@ export type BandInput = {
   limits: OverheadLimit[]
   limitsLive: boolean
   cache: OverheadCache | null
-  cacheTtl: number
+  cacheTtl: number | null
+  cost?: number | null
+  turnCost?: number | null
+  activeAgents?: number
   // Tokens the main conversation's latest rewrite wrote to the cache instead of reading them, until a later
   // turn reads the cache.
   rewrite?: number
@@ -216,12 +225,14 @@ export type BandInput = {
 }
 
 // What to leave out, from least to most important, when the band is too narrow.
-export type Detail = { spark: boolean; rewrite: boolean; cache: boolean; tokens: boolean; reset7: boolean; reset5: boolean }
+export type Detail = { cost?: boolean; turnCost?: boolean; spark: boolean; rewrite: boolean; cache: boolean; tokens: boolean; reset7: boolean; reset5: boolean }
 export const DEGRADE: Detail[] = [
-  { spark: true, rewrite: true, cache: true, tokens: true, reset7: true, reset5: true },
-  { spark: false, rewrite: true, cache: true, tokens: true, reset7: true, reset5: true },
-  { spark: false, rewrite: false, cache: true, tokens: true, reset7: true, reset5: true },
-  { spark: false, rewrite: false, cache: false, tokens: true, reset7: true, reset5: true },
+  { cost: true, turnCost: true, spark: true, rewrite: true, cache: true, tokens: true, reset7: true, reset5: true },
+  { cost: true, spark: true, rewrite: true, cache: true, tokens: true, reset7: true, reset5: true },
+  { cost: true, spark: false, rewrite: true, cache: true, tokens: true, reset7: true, reset5: true },
+  { cost: true, spark: false, rewrite: false, cache: true, tokens: true, reset7: true, reset5: true },
+  { cost: true, spark: false, rewrite: false, cache: false, tokens: true, reset7: true, reset5: true },
+  { cost: true, spark: false, rewrite: false, cache: false, tokens: false, reset7: true, reset5: true },
   { spark: false, rewrite: false, cache: false, tokens: false, reset7: true, reset5: true },
   { spark: false, rewrite: false, cache: false, tokens: false, reset7: false, reset5: true },
   { spark: false, rewrite: false, cache: false, tokens: false, reset7: false, reset5: false },
@@ -290,9 +301,8 @@ function agentGroup(b: BandInput, view: AgentView, d: Detail): Span[] {
 // the cache instead of reading it, kept until a later turn reads the cache, tiered like a growth bar by its
 // share of the window.
 function cacheGroup(b: BandInput, cache: OverheadCache, d: Detail): Span[] {
-  const left = cache.at + b.cacheTtl - b.now
   const g: Span[] = [{ text: 'cache' }]
-  g.push(cache.warm && left > 0 ? { text: ` warm ${dur(left)}`, tier: cacheTier(left, b.cacheTtl) } : { text: ' cold', dimColor: true })
+  g.push(cacheStatus(cache, b.cacheTtl, b.now))
   if (d.rewrite && b.rewrite) {
     const text = ` rewrote ${kshort(b.rewrite)}`
     g.push(b.ctx?.window ? { text, tier: gainTier(b.rewrite, b.ctx.window) } : { text, dimColor: true })
@@ -332,7 +342,29 @@ export function groups(b: BandInput, d: Detail): Span[][] {
     )
   }
 
+  if (d.cost && validCost(b.cost)) out.push([
+    { text: 'cost', dimColor: true }, { text: ` ≈${usd(b.cost)}`, money: true },
+    ...(d.turnCost && validCost(b.turnCost) ? [{ text: ` (+${usd(b.turnCost)})`, dimColor: true }] : []),
+  ])
+  if ((b.activeAgents ?? 0) > 0) out.push([{ text: `${b.activeAgents} agent${b.activeAgents === 1 ? '' : 's'}`, dimColor: true }])
+
   return out
+}
+
+export function validCost(cost: number | null | undefined): cost is number {
+  return cost !== null && cost !== undefined && Number.isFinite(cost) && cost >= 0
+}
+
+export function usd(cost: number): string {
+  return `$${cost.toFixed(2)}`
+}
+
+// A cache lifetime the engine has not reported is unknown, never an assumed hour.
+export function cacheStatus(cache: OverheadCache, ttl: number | null, now: number): Span {
+  if (!cache.warm) return { text: ' cold', dimColor: true }
+  if (ttl === null) return { text: ' TTL unknown', dimColor: true }
+  const left = cache.at + ttl - now
+  return left > 0 ? { text: ` warm ${dur(left)}`, tier: cacheTier(left, ttl) } : { text: ' cold', dimColor: true }
 }
 
 export const SEP = ' | '

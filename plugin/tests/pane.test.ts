@@ -2,7 +2,7 @@ import { describe, expect, mock, test } from 'claude-code/testing'
 import type { MountTarget } from 'claude-code/testing'
 import type { PaneOpenArgs, RenderSurface, SessionStartInput } from 'claude-code'
 
-import { BREAKDOWN, MIN, NOW, STEP, TIER_HEX, cached, fill, iso, measured, usage } from './kit'
+import { mockHost, BREAKDOWN, MIN, NOW, STEP, TIER_HEX, cached, fill, iso, measured, usage } from './kit'
 
 // The pane is raised on every surface, unlike the band.
 const SURFACES = ['terminal', 'desktop', 'vscode', 'mobile'] as const
@@ -51,7 +51,7 @@ describe('the /ccoverhead pane', () => {
         return { value: { isPlaced: true } }
       })
       on('session.model', () => ({ value: 'claude-opus-5-5' }))
-      mock.store(on)
+      mockHost(on)
       const limits = [
         { kind: 'five_hour', percentUsed: 42, resetsAt: iso(150 * MIN) },
         { kind: 'seven_day', percentUsed: 63, resetsAt: iso(3 * 24 * 60 * MIN) },
@@ -94,13 +94,12 @@ describe('the /ccoverhead pane', () => {
       // Growth since the compaction, and the compaction itself.
       expect(await text(/^ ?↑12k$/)).toBeDefined()
       expect(await text(/^ ?431k → 60k$/)).toBeDefined()
-      expect(await text(/^ ?warm 1h0m$/)).toBeDefined()
-      expect(await text(/^ ?left of 1h$/)).toBeDefined()
+      expect(await text(/^ ?TTL unknown$/)).toBeDefined()
+      expect(await text(/left of/)).toBeUndefined()
       // 400k of 431k read from the cache.
       expect(await text(/^ ?92%$/)).toBeDefined()
       // Quota with the share of each window's time gone: 2.5h of 5h left, 3d of 7d left.
-      expect(await text(/^ ?· 50% of the window gone$/)).toBeDefined()
-      expect(await text(/^ ?· 57% of the window gone$/)).toBeDefined()
+      expect(await text(/of the window gone/)).toBeUndefined()
       if (surface !== 'terminal') {
         expect(await ui.find({ type: 'Text', text: /[■□▁▂▃▄▅▆▇█]/ })).toBeUndefined()
         expect((await ui.findAll({ type: 'Svg' })).length).toBeGreaterThan(0)
@@ -115,7 +114,7 @@ describe('the /ccoverhead pane', () => {
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
       on('agent.list', () => ({ value: [{ id: 'a1', type: 'Explore', description: 'fictional', status: 'running' }] }))
-      mock.store(on)
+      mockHost(on)
       on('session.usage', () => ({ value: usage(40_000, [], false) }))
       on('turn.step', async function* () {
         return { ...cached(0, 11_000), usage: { ...cached(0, 11_000).usage!, model: 'claude-haiku-4-5-20251001' } }
@@ -140,7 +139,7 @@ describe('the /ccoverhead pane', () => {
       on('session.measure', ($, e) => ({ changed: e.changed }))
       // The list does not have the agent at its first request.
       on('agent.list', () => ({ value: listed ? [{ id: 'a1', type: 'Explore', description: 'fictional', status: 'running' as const }] : [] }))
-      mock.store(on)
+      mockHost(on)
       on('session.usage', () => ({ value: usage(40_000, [], false) }))
       let read = 0
       on('turn.step', async function* () {
@@ -163,7 +162,7 @@ describe('the /ccoverhead pane', () => {
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
       on('session.model', () => ({ value: 'claude-opus-5-5' }))
-      mock.store(on)
+      mockHost(on)
       // Fictional: a window kind ccOverhead has no name for, a reset time that does not parse, and an
       // auto-compaction threshold past the window's end.
       const limits = [
@@ -185,7 +184,7 @@ describe('the /ccoverhead pane', () => {
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('command.register', ($, e) => ({ value: { command: e.name } }))
       on('ui.open', () => ({ value: { isPlaced: false, reason: 'fictional: no surface places panes' } }))
-      mock.store(on)
+      mockHost(on)
       on('session.usage', () => ({ value: usage(40_000, [], false) }))
       mock.clock(on, { now: NOW })
       await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
@@ -198,7 +197,7 @@ describe('the /ccoverhead pane', () => {
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
       on('classic.SessionStart', () => ({}))
-      mock.store(on)
+      mockHost(on)
       on('session.usage', ($, e) => (e.breakdown && refuse ? { deny: 'fictional refusal' } : { value: usage(431_000, [], e.breakdown !== undefined && DETAILED) }))
       mock.clock(on, { now: NOW })
       await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
@@ -221,7 +220,7 @@ describe('the /ccoverhead pane', () => {
       on('session.model', () => ({ value: current }))
       on('classic.PostModelSwitch', () => ({}))
       on('session.compact', () => ({ messages: SUMMARY, tokensBefore: 431_000, tokensAfter: 30_000 }))
-      mock.store(on)
+      mockHost(on)
       on('session.usage', ($, e) => (e.breakdown && refuse ? { deny: 'fictional refusal' } : { value: usage(tokens, [], e.breakdown !== undefined && DETAILED) }))
       mock.clock(on, { now: NOW })
       await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
@@ -261,7 +260,7 @@ describe('the /ccoverhead pane', () => {
       let refuse = false
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
-      mock.store(on)
+      mockHost(on)
       on('session.usage', ($, e) => (e.breakdown && refuse ? { deny: 'fictional refusal' } : { value: usage(80_000, [], e.breakdown !== undefined && DETAILED) }))
       mock.clock(on, { now: NOW })
       await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })

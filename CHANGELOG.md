@@ -6,6 +6,13 @@ All notable changes to ccOverhead are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- The band preserves content drawn by later mods and Claude Code. Main-context readings refresh between
+  requests, and native session/command observations recover changes when `classic.*` is unavailable.
+- Cache warmth no longer assumes an hour before the engine reports a lifetime; a long response does not
+  extend the countdown. Light-theme text uses the light palette.
+
 ### Changed
 
 - The website build takes its version and color scale from the plugin, keeping the public introduction
@@ -18,6 +25,10 @@ All notable changes to ccOverhead are documented here. The format follows
 
 ### Added
 
+- Session cost and the latest turn's increase from Claude Code's own cost ledger: a gold total with a
+  secondary delta, hidden when unavailable. Running agents appear only while the count is nonzero.
+- A pane-only quota exhaustion estimate at the current window's average pace; early, expired or stale
+  readings have no forecast. No time progress bars or persistent history are added.
 - Website previews for a cache rewrite and the band while viewing a subagent's transcript.
 
 ## [1.4.0] - 2026-10-04

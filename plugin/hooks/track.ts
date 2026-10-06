@@ -1,6 +1,6 @@
 // Pure updates of the plugin's recorded figures: the context totals, the cache's running counts and each
 // subagent's context. The event hooks in register.tsx apply them to `$.state`.
-import type { OverheadAgent, OverheadCacheStats, OverheadCompaction } from '../types'
+import type { OverheadAgent, OverheadCacheStats, OverheadCompaction, OverheadLimit } from '../types'
 import { HISTORY } from './format'
 
 // Totals kept for the pane's growth chart.
@@ -79,4 +79,17 @@ export function addAgentStep(agents: OverheadAgent[], id: string, model: string,
 // A model id without the window suffix /model may add (`claude-opus-5-5[1m]`).
 export function baseModel(id: string | null | undefined): string {
   return (id ?? '').replace(/\[[^\]]*\]$/, '')
+}
+
+// The window-average forecast used by WeekToken: used / elapsed is the pace.
+// No history or price table. An old reading or a window just opened has no useful forecast.
+export function quotaForecast(limit: OverheadLimit, observedAt: number | null | undefined, now: number): number | undefined {
+  const window = limit.kind === 'five_hour' ? 5 * 3_600_000
+    : limit.kind === 'seven_day' || limit.kind.startsWith('seven_day_') || limit.kind.includes('weekly') ? 7 * 86_400_000 : undefined
+  if (!window || !limit.resetsAt || observedAt == null || observedAt > now || now - observedAt > Math.max(15 * 60_000, window * 0.05)) return undefined
+  const reset = Date.parse(limit.resetsAt)
+  const elapsed = window - (reset - now)
+  const used = limit.percentUsed / 100
+  if (!Number.isFinite(reset) || elapsed <= Math.max(300_000, window * 0.001) || elapsed >= window || !Number.isFinite(used) || used <= 0 || used >= 1) return undefined
+  return now + elapsed * (1 - used) / used
 }

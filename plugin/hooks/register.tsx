@@ -4,9 +4,9 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, SessionContextBreakdown, SessionContextUsage, SessionRateLimit, Timer } from 'claude-code'
 
-import type { OverheadAgent, OverheadBreakdown, OverheadCache, OverheadCacheStats, OverheadCompaction, OverheadCtx, OverheadLimit } from '../types'
+import type { OverheadAgent, OverheadBreakdown, OverheadCache, OverheadCacheStats, OverheadCompaction, OverheadCtx, OverheadLimit, OverheadTheme } from '../types'
 import { bandRich, bandTerminal, paneRich, paneTerminal } from './draw'
-import { CACHE_TTL_MS, SHORT_TTL_MS, fit } from './format'
+import { CACHE_TTL_MS, SHORT_TTL_MS, fit, validCost } from './format'
 import type { AgentView, BandInput } from './format'
 import { paneLines } from './pane'
 import { NO_CACHE_STATS, TIMELINE, addAgentStep, addCompaction, addSample, addStep, baseModel, clearRewrite, compacted } from './track'
@@ -20,7 +20,14 @@ const limits = atom({ plugin: 'ccoverhead', key: 'limits' } as const, [] as Over
 const limitsLive = atom({ plugin: 'ccoverhead', key: 'limitsLive' } as const, false)
 const cache = atom({ plugin: 'ccoverhead', key: 'cache' } as const, null as OverheadCache | null)
 const cacheStats = atom({ plugin: 'ccoverhead', key: 'cacheStats' } as const, NO_CACHE_STATS as OverheadCacheStats)
-const cacheTtl = atom({ plugin: 'ccoverhead', key: 'cacheTtl' } as const, CACHE_TTL_MS)
+const cacheTtl = atom({ plugin: 'ccoverhead', key: 'cacheTtl' } as const, null as number | null)
+const cost = atom({ plugin: 'ccoverhead', key: 'cost' } as const, null as number | null)
+const turnCostBase = atom({ plugin: 'ccoverhead', key: 'turnCostBase' } as const, null as number | null)
+const turnCost = atom({ plugin: 'ccoverhead', key: 'turnCost' } as const, null as number | null)
+const theme = atom({ plugin: 'ccoverhead', key: 'theme' } as const, 'native' as OverheadTheme)
+const sessionId = atom({ plugin: 'ccoverhead', key: 'sessionId' } as const, null as string | null)
+const limitsAt = atom({ plugin: 'ccoverhead', key: 'limitsAt' } as const, null as number | null)
+const activeAgents = atom({ plugin: 'ccoverhead', key: 'activeAgents' } as const, 0)
 const model = atom({ plugin: 'ccoverhead', key: 'model' } as const, null as string | null)
 const agents = atom({ plugin: 'ccoverhead', key: 'agents' } as const, [] as OverheadAgent[])
 const breakdown = atom({ plugin: 'ccoverhead', key: 'breakdown' } as const, null as OverheadBreakdown | null)
@@ -34,12 +41,18 @@ const PANE = 'ccoverhead'
 
 export const register: Register = on => {
   let tick: Timer | undefined
+  let settling: Timer | undefined
 
   on('session.start', async ($, e, next) => {
     const result = await next(e)
-    await load($)
     tick?.cancel()
-    tick = $.clock.every(TICK_MS, () => $.ui.invalidate('ui.render'))
+    tick = $.clock.every(TICK_MS, async () => {
+      await poll($).catch(() => undefined)
+      $.ui.invalidate('ui.render')
+    })
+    await readTheme($)
+    await readActiveAgents($)
+    await load($).catch(() => undefined)
     // A host that registers no commands still draws the band.
     try {
       await $.command.register({ name: PANE, description: 'Show the context, growth, cache and quota in detail' })
@@ -56,14 +69,7 @@ export const register: Register = on => {
     try {
       return await next(e)
     } finally {
-      await update($, ctx, () => null)
-      await update($, breakdown, () => null)
-      await update($, history, () => [])
-      await update($, timeline, () => [])
-      await update($, compactions, () => [])
-      await update($, cache, () => null)
-      await update($, cacheStats, () => NO_CACHE_STATS)
-      await update($, agents, () => [])
+      await resetConversation($)
       await load($)
       if (e.source !== 'clear') await resumed($, e)
     }
@@ -73,7 +79,13 @@ export const register: Register = on => {
   // taken even when it is empty: a window withdrawn (a spend limit has no reset to expire it) goes too.
   on('session.measure', async ($, e, next) => {
     const result = await next(e)
+    await syncSession($)
     await readModel($)
+    await takeCost($, e.cost?.usd, true)
+    if (e.changed.includes('rateLimits')) {
+      const at = await $.clock.now()
+      await update($, limitsAt, () => at)
+    }
     await take($, e.context, e.rateLimits, e.changed.includes('rateLimits'))
     return result
   })
@@ -89,8 +101,10 @@ export const register: Register = on => {
       await update($, history, () => [])
       await update($, timeline, () => [])
       await update($, cacheStats, s => compacted(s ?? NO_CACHE_STATS))
+      await update($, cache, () => null)
       await update($, breakdown, () => null)
       await update($, ctx, c => (c ? withoutReading(c) : c))
+      settling = refreshSoon($, settling)
     }
     return result
   })
@@ -100,13 +114,29 @@ export const register: Register = on => {
   // model's threshold and breakdown no longer apply.
   on('classic.PostModelSwitch', async ($, e, next) => {
     const result = await next(e)
-    await update($, model, () => e.to_model)
+    await setModel($, e.to_model)
     await update($, cacheTtl, () => (e.cache_ttl === '5m' ? SHORT_TTL_MS : CACHE_TTL_MS))
-    if (baseModel(e.from_model) !== baseModel(e.to_model)) {
-      const at = await $.clock.now()
-      await update($, cache, c => (c ? { at, warm: false } : c))
-      await update($, breakdown, () => null)
-      await update($, ctx, c => (c ? withoutThreshold(c) : c))
+    settling = refreshSoon($, settling)
+    return result
+  })
+
+  on('turn.start', async ($, e, next) => {
+    {
+      await syncSession($)
+      const reading = await $.session.usage().catch(() => undefined)
+      await update($, turnCostBase, () => (validCost(reading?.cost?.usd) ? reading.cost.usd : null))
+      await update($, turnCost, () => null)
+    }
+    return next(e)
+  })
+
+  on('turn.complete', async ($, e, next) => {
+    const result = await next(e)
+    await readActiveAgents($)
+    if (e.agentId === undefined) {
+      const ledger = await $.session.usage().catch(() => undefined)
+      await takeCost($, ledger?.cost?.usd, true)
+      await update($, turnCostBase, () => null)
     }
     return result
   })
@@ -114,20 +144,43 @@ export const register: Register = on => {
   // Each request: on the main conversation, when it finished, whether it touched the cache and the running
   // counts; on a subagent, its context total.
   on('turn.step', async function* ($, e, next) {
+    // Cache age starts with the request, not after a potentially long streamed response.
+    const started = await $.clock.now()
     const result = yield* next(e)
     const u = result.usage
     if (!u) return result
     if (e.agentId === undefined) {
       const touched = (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0)
-      const at = await $.clock.now()
-      await update($, cache, () => ({ at, warm: touched > 0 }))
+      await syncSession($)
+      await setModel($, u.model)
+      await update($, cache, () => ({ at: started, warm: touched > 0 }))
       await update($, cacheStats, s => addStep(s ?? NO_CACHE_STATS, u, e.turnId))
+      // Read the host's last context; step usage may sum several server-side responses.
+      settling = refreshSoon($, settling)
     } else {
       const id = e.agentId
       // Its type, asked again on each request until the agent list has it.
       const labelled = (await read($, agents)).some(a => a.id === id && a.label !== undefined)
       const label = labelled ? undefined : await agentType($, id)
       await update($, agents, list => addAgentStep(list ?? [], id, u.model, u, label))
+    }
+    await readActiveAgents($)
+    return result
+  })
+
+  // Native events remain useful where the organization's guard skips classic.*.
+  on('command.run', { command: ['clear', 'resume', 'branch', 'model', 'autocompact', 'theme'] }, async ($, e, next) => {
+    const result = await next(e)
+    if (e.command === 'theme') await readTheme($)
+    settling = refreshSoon($, settling)
+    return result
+  })
+
+  on('config.set', { key: ['theme', 'autoCompact'] }, async ($, e, next) => {
+    const result = await next(e)
+    if (result.deny === undefined) {
+      if (e.key === 'theme') await update($, theme, () => themeOf(result.value))
+      else settling = refreshSoon($, settling)
     }
     return result
   })
@@ -145,9 +198,12 @@ export const register: Register = on => {
     const band = await bandInput($, e.props.view.agentId)
     const gs = fit(band, e.props.bodyColumns - 2)
     if (gs.length === 0) return next(e)
+    const els = $.ui.resolve(e)
+    const palette = await read($, theme)
+    const below = await next(e)
     // Branch on the surface, not on the table: the terminal's table answers `'Svg' in` with a placeholder.
-    if (e.surface === 'terminal') return bandTerminal($.ui.resolve(e), gs)
-    return bandRich($.ui.resolve(e), gs)
+    const own = e.surface === 'terminal' ? bandTerminal(els, gs, palette) : bandRich($.ui.resolve(e), gs, palette)
+    return <els.Box flexDirection="column">{own}{below}</els.Box>
   })
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
@@ -160,9 +216,12 @@ export const register: Register = on => {
       agents: await read($, agents),
       breakdown: await read($, breakdown),
       viewing: e.props.view.agentId,
+      limitsAt: await read($, limitsAt),
+      turnCost: await read($, turnCost),
     })
-    if (e.surface === 'terminal') return paneTerminal($.ui.resolve(e), lines)
-    return paneRich($.ui.resolve(e), lines)
+    const palette = await read($, theme)
+    if (e.surface === 'terminal') return paneTerminal($.ui.resolve(e), lines, palette)
+    return paneRich($.ui.resolve(e), lines, palette)
   })
 }
 
@@ -187,6 +246,9 @@ async function bandInput($: EngineInterface, viewing: string | undefined): Promi
     limitsLive: await read($, limitsLive),
     cache: await read($, cache),
     cacheTtl: await read($, cacheTtl),
+    cost: await read($, cost),
+    turnCost: await read($, turnCost),
+    activeAgents: await read($, activeAgents),
     rewrite: stats.rewrite?.tokens,
     model: m,
     view,
@@ -195,9 +257,11 @@ async function bandInput($: EngineInterface, viewing: string | undefined): Promi
 
 // Start of session, a reload or the pane: the engine's figures, else the last live quota from the store.
 async function load($: EngineInterface) {
-  const { context, rateLimits } = await $.session.usage()
+  await syncSession($)
+  const { context, rateLimits, cost: ledger } = await $.session.usage()
   await readModel($)
-  await take($, context, rateLimits, false)
+  await takeCost($, ledger?.usd)
+  await take($, context, rateLimits, false, false)
   if (pick(rateLimits).length === 0) {
     const saved = await $.store.get(STORE_LIMITS)
     if (Array.isArray(saved) && !(await read($, limitsLive))) {
@@ -207,7 +271,7 @@ async function load($: EngineInterface) {
 }
 
 // `withdrawn`: an empty reading means the windows went away, not that there is no reading yet.
-async function take($: EngineInterface, context: SessionContextUsage | undefined, rateLimits: SessionRateLimit[] | undefined, withdrawn: boolean) {
+async function take($: EngineInterface, context: SessionContextUsage | undefined, rateLimits: SessionRateLimit[] | undefined, withdrawn: boolean, recordGrowth = true) {
   // Each reading's own breakdown, or none: one the engine refused this time is unknown, never the last one,
   // which may describe a conversation since compacted or another model.
   const b = await localBreakdown($)
@@ -220,7 +284,7 @@ async function take($: EngineInterface, context: SessionContextUsage | undefined
     const kept = last?.model !== undefined && baseModel(last.model) === baseModel(m) ? last.compactAt : undefined
     const compactAt = b ? (b.isAutoCompactEnabled ? (b.autoCompactThreshold ?? undefined) : undefined) : kept
     if (compactAt) next.compactAt = compactAt
-    if (context.tokens !== undefined && context.tokens > 0) {
+    if (context.tokens !== undefined && context.tokens > 0 && recordGrowth) {
       const t = context.tokens
       const before = (await read($, timeline)).at(-1)
       await update($, history, samples => addSample(samples, t))
@@ -231,7 +295,7 @@ async function take($: EngineInterface, context: SessionContextUsage | undefined
         await update($, compactions, list => addCompaction(list ?? [], { before, after: t }))
         await update($, cacheStats, s => clearRewrite(s ?? NO_CACHE_STATS))
       }
-    } else {
+    } else if (context.tokens === undefined || context.tokens <= 0) {
       // No response in this window yet (new, cleared or just compacted): /context's local estimate.
       next.estimate = b?.totalTokens
     }
@@ -255,7 +319,82 @@ async function readModel($: EngineInterface) {
   } catch {
     // keep the all-models window
   }
+  if (id !== null) await setModel($, id)
+}
+
+async function setModel($: EngineInterface, id: string) {
+  const previous = await read($, model)
+  if (previous && baseModel(previous) !== baseModel(id)) {
+    const at = await $.clock.now()
+    await update($, cache, c => (c ? { at, warm: false } : c))
+    await update($, cacheTtl, () => null)
+    await update($, breakdown, () => null)
+    await update($, ctx, () => null)
+  }
   await update($, model, () => id)
+}
+
+async function takeCost($: EngineInterface, value: number | undefined, measured = false) {
+  await update($, cost, () => (validCost(value) ? value : null))
+  if (measured) {
+    const base = await read($, turnCostBase)
+    if (base !== null || !validCost(value)) await update($, turnCost, () => (validCost(value) && base !== null && value >= base ? value - base : null))
+  } else if (!validCost(value)) await update($, turnCost, () => null)
+}
+
+function themeOf(value: unknown): OverheadTheme {
+  return value === 'light' || value === 'dark' ? value : 'native'
+}
+
+async function readTheme($: EngineInterface) {
+  const rows = await $.config.list().catch(() => [])
+  await update($, theme, () => themeOf(rows.find(row => row.key === 'theme')?.value))
+}
+
+async function resetConversation($: EngineInterface) {
+  await update($, ctx, () => null)
+  await update($, breakdown, () => null)
+  await update($, history, () => [])
+  await update($, timeline, () => [])
+  await update($, compactions, () => [])
+  await update($, cache, () => null)
+  await update($, cacheTtl, () => null)
+  await update($, cacheStats, () => NO_CACHE_STATS)
+  await update($, agents, () => [])
+  await update($, cost, () => null)
+  await update($, turnCostBase, () => null)
+  await update($, turnCost, () => null)
+  await update($, limitsAt, () => null)
+  await update($, activeAgents, () => 0)
+  await update($, limitsLive, () => false)
+}
+
+async function syncSession($: EngineInterface): Promise<boolean> {
+  const id = await $.session.id().catch(() => null)
+  if (id === null) return false
+  const previous = await read($, sessionId)
+  await update($, sessionId, () => id)
+  const changed = previous !== null && previous !== id
+  if (changed) await resetConversation($)
+  return changed
+}
+
+// A cheap local read on the existing countdown tick catches changes no event delivered.
+async function poll($: EngineInterface) {
+  await readActiveAgents($)
+  const changed = await syncSession($)
+  const beforeModel = await read($, model)
+  await readModel($)
+  const reading = await $.session.usage()
+  const last = await read($, ctx)
+  const next = reading.context
+  if (changed || beforeModel !== (await read($, model)) || !last || last.window !== next.window || last.tokens !== next.tokens || last.percent !== next.percent) await load($)
+}
+
+async function readActiveAgents($: EngineInterface) {
+  const list = await $.agent.list().catch(() => [])
+  const count = list.filter(agent => agent.status === 'running').length
+  if (count !== await read($, activeAgents)) await update($, activeAgents, () => count)
 }
 
 // /context's breakdown counted locally (`summary`, which sends no request; `full` would send one per tool).
@@ -295,11 +434,6 @@ function withoutReading({ window, compactAt, model }: OverheadCtx): OverheadCtx 
   return { window, ...(compactAt !== undefined && { compactAt }), ...(model !== undefined && { model }) }
 }
 
-// The context without the old model's auto-compaction threshold.
-function withoutThreshold({ compactAt: _, ...rest }: OverheadCtx): OverheadCtx {
-  return rest
-}
-
 // A resumed or forked conversation, before its first request. That request re-sends what the transcript last
 // sent, so a lapsed cache makes it a rewrite (`last`). The engine's age of the cache shows it warm or cold
 // already, and an age between the two lifetimes tells which one the account gets.
@@ -320,4 +454,10 @@ function pick(rateLimits: SessionRateLimit[] | undefined): OverheadLimit[] {
     percentUsed,
     ...(resetsAt !== undefined && !Number.isNaN(Date.parse(resetsAt)) && { resetsAt }),
   }))
+}
+
+// The host installs readings after the hook returns; one coalesced refresh reads its figures.
+function refreshSoon($: EngineInterface, previous: Timer | undefined): Timer {
+  previous?.cancel()
+  return $.clock.after(100, () => load($).catch(() => undefined))
 }

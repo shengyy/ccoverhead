@@ -1,6 +1,6 @@
 // Shared fixtures for the plugin's tests: fictional figures, the engine's answers, and helpers that read the
 // band on each surface. Not a test file itself.
-import { expect } from 'claude-code/testing'
+import { expect, mock } from 'claude-code/testing'
 import type { MountTarget, Mounted } from 'claude-code/testing'
 import type {
   SessionContextBreakdown,
@@ -115,4 +115,11 @@ export async function tiers(ui: Mounted<Surface, 'AbovePrompt'>, surface: Surfac
   const source = String(svgs.find(one => /^context added/.test(String(one.props.alt)))?.props.source)
   expect([...source.matchAll(/<rect class="t(\d)"/g)].map(m => Number(m[1]))).toEqual(want)
   for (const t of want) expect(source).toContain(`.t${t}{fill:${TIER_HEX[t]}}`)
+}
+
+// Explicit dark theme for fixtures; production falls back to native semantic colors if unavailable.
+export function mockHost(on: Parameters<typeof mock.store>[0]) {
+  mock.store(on)
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => $.ui.resolve(e).Box({ children: [] }))
+  on('config.list', () => ({ value: [{ key: 'theme', value: 'dark', label: 'Theme', kind: 'choice', provider: { plugin: 'engine', tier: 'core' }, isLocked: false }] }))
 }

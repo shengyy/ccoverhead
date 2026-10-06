@@ -3,8 +3,8 @@
 // the surfaces with a proportional font).
 import type { OverheadAgent, OverheadBreakdown, OverheadCacheStats, OverheadCompaction } from '../types'
 import type { BandInput, Span } from './format'
-import { FALLBACK_WINDOW, bar, cacheTier, dur, gainTier, gains, kshort, ktok, modelFamily, pctTier, sparkline, weeklyWindow } from './format'
-import { AGENTS, hitRate } from './track'
+import { FALLBACK_WINDOW, bar, cacheStatus, dur, gainTier, gains, kshort, ktok, modelFamily, pctTier, sparkline, usd, validCost, weeklyWindow } from './format'
+import { AGENTS, hitRate, quotaForecast } from './track'
 
 export type PaneInput = BandInput & {
   timeline: number[]
@@ -14,6 +14,7 @@ export type PaneInput = BandInput & {
   breakdown: OverheadBreakdown | null
   // The agent whose transcript is on screen, if any.
   viewing?: string
+  limitsAt?: number | null
 }
 
 // `end`: the label is a figure, right-aligned in its column; `nested`: the line belongs to the one above.
@@ -25,19 +26,13 @@ export const LABEL = 12
 const clip = (name: string) => (name.length > LABEL - 1 ? `${name.slice(0, LABEL - 2)}…` : name)
 // MCP servers listed under the breakdown, the costliest first.
 const SERVERS = 5
-// How long each known quota window runs, for the share of it gone.
-const SPANS: [test: (kind: string) => boolean, ms: number][] = [
-  [kind => kind === 'five_hour', 5 * 3_600_000],
-  [kind => kind.startsWith('seven_day') || kind.includes('weekly'), 7 * 86_400_000],
-]
-
 const line = (label: string | Span, ...spans: Span[]): PaneLine => ({ label: typeof label === 'string' ? { text: label } : label, spans })
 const figure = (label: Span, ...spans: Span[]): PaneLine => ({ label, spans, end: true })
 const dim = (text: string): Span => ({ text, dimColor: true })
 const pad = (text: string, n: number) => text.padStart(n)
 
 export function paneLines(p: PaneInput): PaneLine[] {
-  return [...context(p), ...breakdown(p), ...growth(p), ...cache(p), ...quota(p), ...agents(p)]
+  return [...context(p), ...breakdown(p), ...growth(p), ...cache(p), ...quota(p), ...cost(p), ...agents(p)]
 }
 
 function context(p: PaneInput): PaneLine[] {
@@ -117,12 +112,8 @@ function cache(p: PaneInput): PaneLine[] {
   const c = p.cache
   if (!c) out.push(line('state', dim(' no request yet')))
   else {
-    const left = c.at + p.cacheTtl - p.now
-    out.push(
-      c.warm && left > 0
-        ? line('state', { text: ` warm ${dur(left)}`, tier: cacheTier(left, p.cacheTtl) }, dim(` left of ${p.cacheTtl % 3_600_000 === 0 ? `${p.cacheTtl / 3_600_000}h` : dur(p.cacheTtl)}`))
-        : line('state', dim(' cold')),
-    )
+    const status = cacheStatus(c, p.cacheTtl, p.now)
+    out.push(line('state', status, ...(status.text.startsWith(' warm') && p.cacheTtl !== null ? [dim(` left of ${dur(p.cacheTtl)}`)] : [])))
   }
   const s = p.cacheStats
   const hit = hitRate(s)
@@ -145,8 +136,6 @@ function quota(p: PaneInput): PaneLine[] {
       l.kind === 'five_hour' ? '5h' : l === weekly.limit ? weekly.label : l.kind === 'seven_day' ? '7d' : l.kind === 'spend_limit' ? 'spend' : l.kind,
     )
     const resets = l.resetsAt === undefined ? undefined : Date.parse(l.resetsAt)
-    const span = SPANS.find(([test]) => test(l.kind))?.[1]
-    const gone = span && resets !== undefined ? Math.min(Math.max(Math.round(((span - (resets - p.now)) * 100) / span), 0), 100) : undefined
     const ink = (s: Span): Span => (p.limitsLive ? s : { text: s.text, bar: s.bar, dimColor: true })
     out.push(
       line(
@@ -155,11 +144,24 @@ function quota(p: PaneInput): PaneLine[] {
         ink({ text: bar(pc), tier: pctTier(pc), bar: Math.min(pc, 100) }),
         ink({ text: ` ${pc}%`, tier: pctTier(pc) }),
         ...(resets === undefined ? [] : [dim(` ↻${dur(resets - p.now)}`)]),
-        ...(gone === undefined ? [] : [dim(` · ${gone}% of the window gone`)]),
       ),
     )
+    const forecast = p.limitsLive ? quotaForecast(l, p.limitsAt, p.now) : undefined
+    if (forecast !== undefined && resets !== undefined) out.push(line('', dim(
+      forecast < resets ? ` ≈${dur(forecast - p.now)} to limit at window-average pace` : ' At window-average pace, reset comes first',
+    )))
   }
   return out
+}
+
+function cost(p: PaneInput): PaneLine[] {
+  if (!validCost(p.cost)) return []
+  return [
+    { head: 'Cost, API-price reference' },
+    line('session', { text: ` ≈${usd(p.cost)}`, money: true }),
+    ...(validCost(p.turnCost) ? [line('last turn', dim(` +${usd(p.turnCost)}`))] : []),
+    line('', dim(' Subscription reference, not an extra charge')),
+  ]
 }
 
 // The conversation's most recently active subagents: type, model family, last context total, growth, and which
