@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
 import type { BandInput, Span } from '../../plugin/hooks/format'
-import { MONEY_BG, SEP, cells, colorOf, fit, items } from '../../plugin/hooks/format'
+import { SEP, cells, colorOf, fit, items } from '../../plugin/hooks/format'
 import { LABEL, paneLines } from '../../plugin/hooks/pane'
 import { agentView, band, pane, rewriting } from './fixture'
 
@@ -71,7 +71,7 @@ function desktop(input: BandInput = band, width = 160, detail?: string, theme: T
   const { DIM, INK } = palette(theme)
   const groups = fit(input, width).filter(group => !detail || group[0]?.text === detail).map(
     g =>
-      `<span class="group"${g.some(s => s.money) ? ` style="background:${MONEY_BG[theme]};padding:0 7px"` : ''}>${items(g)
+      `<span class="group">${items(g)
         .map(it =>
           it.kind === 'graphic'
             ? `<img src="data:image/svg+xml;base64,${btoa(it.graphic.source)}" width="${it.graphic.width}" height="${it.graphic.height}" alt="${esc(it.graphic.alt)}">`

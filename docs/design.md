@@ -14,9 +14,9 @@ ctx ■■■□□□□□□□ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | 
   `↑` latest growth), cache (`warm` and the minutes left, or `cold`; then `rewrote` and its tokens
   on a turn that rewrote the cache), 5-hour quota, weekly quota, `spend` (a gateway's spend limit, when
   reported), then cost and a nonzero running-agent count. A dim ` | ` separates groups.
-- Cost stays gold (`#dfbc70` dark, `#8a6215` light). Its increment uses native secondary text. On the
-  desktop it has a subtle background (`#302a1e` dark, `#f4eddf` light); the terminal keeps plain text.
-  No amount changes its color, and no progress bar is added.
+- Cost stays gold (`#dfbc70` dark, `#8a6215` light). Its increment uses native secondary text. Both
+  surfaces use the same spacing and separators as other groups, without a separate background, border
+  or padding. No amount changes its color, and no progress bar is added.
 - `warm` and its minutes are one span in one color, the share of the lifetime gone on the percentage
   scale: sky while fresh, up through the tiers to red in the last tenth; `cold` and `TTL unknown` are dim. The minutes already
   say how long, so no gauge repeats them.

@@ -40,7 +40,6 @@ type Ink = { dark: string; light: string }
 // the image's own media query. Text uses the host's configured theme.
 const DIM: Ink = { dark: '#898781', light: '#6f6d68' }
 const MONEY: Ink = { dark: '#dfbc70', light: '#8a6215' }
-export const MONEY_BG: Ink = { dark: '#302a1e', light: '#f4eddf' }
 const TRACK = 'rgba(137,135,129,0.3)'
 
 // The band's one colour scale, safe to warning: cool for safe (indigo, blue, sky, cyan, teal), caution

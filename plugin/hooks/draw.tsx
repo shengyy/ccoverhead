@@ -5,7 +5,7 @@ import type { Elements } from 'claude-code'
 import type { OverheadTheme } from '../types'
 
 import type { Span } from './format'
-import { MONEY_BG, SEP, cells, colorOf, items } from './format'
+import { SEP, cells, colorOf, items } from './format'
 import type { PaneLine } from './pane'
 import { LABEL } from './pane'
 
@@ -69,9 +69,7 @@ export function bandRich(els: Rich, gs: Span[][], theme: OverheadTheme = 'dark')
     <Box flexDirection="row" alignItems="center" paddingX={1} gap={1}>
       {gs.flatMap((g, i) => [
         ...(i > 0 ? [<Text key={`sep-${i}`} dimColor>|</Text>] : []),
-        <Box key={`group-${i}`} flexDirection="row" alignItems="center" gap={1}
-          paddingX={g.some(s => s.money) ? 1 : 0}
-          backgroundColor={g.some(s => s.money) && theme !== 'native' ? MONEY_BG[theme] : undefined}>
+        <Box key={`group-${i}`} flexDirection="row" alignItems="center" gap={1}>
           {itemRun(els, g, String(i), theme)}
         </Box>,
       ])}
