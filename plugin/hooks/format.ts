@@ -346,7 +346,8 @@ export function groups(b: BandInput): Span[][] {
     { text: 'cost', dimColor: true }, { text: ` ≈${usd(b.cost)}`, money: true },
     ...(validCost(b.turnCost) ? [{ text: ` (+${usd(b.turnCost)})`, dimColor: true, fold: 'turn-cost' as const }] : []),
   ])
-  if ((b.activeAgents ?? 0) > 0) out.push([{ text: `agent·${b.activeAgents}`, tier: 5 }])
+  // Text presentation keeps the gear a theme-colored glyph rather than an emoji.
+  if ((b.activeAgents ?? 0) > 0) out.push([{ text: `⚙︎ ${b.activeAgents}`, tier: 5 }])
 
   return out
 }
@@ -370,7 +371,7 @@ export function cacheStatus(cache: OverheadCache, ttl: number | null, now: numbe
 export const SEP = ' | '
 
 export function width(gs: Span[][]): number {
-  const cells = gs.reduce((n, g) => n + g.reduce((m, s) => m + [...s.text].length, 0), 0)
+  const cells = gs.reduce((n, g) => n + g.reduce((m, s) => m + [...s.text.replace(/\uFE0E/g, '')].length, 0), 0)
   return cells + SEP.length * Math.max(gs.length - 1, 0)
 }
 
