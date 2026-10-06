@@ -10,6 +10,7 @@ import type { PaneLine } from './pane'
 import { LABEL } from './pane'
 
 type Term = Pick<Elements['terminal'], 'Box' | 'Text'>
+type AnimatedTerm = Term & Pick<Elements['terminal'], 'Client'>
 type Rich = Pick<Elements['desktop'], 'Box' | 'Text' | 'Svg'>
 
 // Spans as nested Text; one with no text draws nothing.
@@ -48,16 +49,25 @@ function itemRun({ Text, Svg }: Rich, spans: Span[], key: string, theme: Overhea
 }
 
 // The terminal's band: one line of text, cut at its end if it still does not fit.
-export function bandTerminal(els: Term, gs: Span[][], theme: OverheadTheme = 'dark') {
-  const { Box, Text } = els
+export function bandTerminal(els: AnimatedTerm, gs: Span[][], theme: OverheadTheme = 'dark') {
+  const { Box, Text, Client } = els
+  // Activity is the final group. Keep its tiny Client outside Text, as the host requires.
+  const activity = gs.at(-1)?.find(s => s.agentCount !== undefined)
+  const textGroups = activity ? gs.slice(0, -1) : gs
   return (
     <Box flexDirection="row" paddingX={1}>
       <Text wrap="truncate-end">
-        {gs.flatMap((g, i) => [
+        {textGroups.flatMap((g, i) => [
           ...(i > 0 ? [<Text key={`sep-${i}`} dimColor>{SEP}</Text>] : []),
           ...textRun(els, g, String(i), theme),
         ])}
       </Text>
+      {activity && <Box flexDirection="row">
+        {textGroups.length > 0 && <Text dimColor>{SEP}</Text>}
+        <Client key="agent-activity" module="./activity-client.ts" width={1} height={1}
+          props={{ color: colorOf(activity, theme) }} />
+        <Text color={colorOf(activity, theme)}>{` ${activity.agentCount}`}</Text>
+      </Box>}
     </Box>
   )
 }

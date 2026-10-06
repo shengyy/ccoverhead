@@ -18,6 +18,9 @@ environment; its compaction hook passes the compaction on unchanged and reads on
 `$.session.model`, `$.session.id`, `$.config.list` (theme only), `$.agent.list`, `$.command.register` (the `/ccoverhead` command), `$.clock`, `$.state`,
 `$.store` and `$.ui` (drawing, redrawing and opening the pane).
 
+The terminal activity icon runs in a one-cell surface module with no mods API. Its local clock changes
+only a braille glyph while mounted; it sends no messages. The desktop icon is a script-free SVG animation.
+
 ## What is stored
 
 | Data | Location |

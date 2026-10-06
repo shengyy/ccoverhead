@@ -200,7 +200,7 @@ export const register: Register = on => {
     const palette = await read($, theme)
     const below = await next(e)
     // Branch on the surface, not on the table: the terminal's table answers `'Svg' in` with a placeholder.
-    const own = e.surface === 'terminal' ? bandTerminal(els, gs, palette) : bandRich($.ui.resolve(e), gs, palette)
+    const own = e.surface === 'terminal' ? bandTerminal($.ui.resolve(e), gs, palette) : bandRich($.ui.resolve(e), gs, palette)
     return <els.Box flexDirection="column">{own}{below}</els.Box>
   })
 

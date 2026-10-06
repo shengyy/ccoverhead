@@ -42,6 +42,8 @@ classic events are unavailable. No additional polling loop or persistent history
 | `hooks/format.ts` | Pure formatting of the band: groups and spans, narrowing (`fit`), the weekly window for the model (`weeklyWindow`, `modelFamily`), the color scale (`GAIN`, `pctTier`, `gainTier`), the cache state (`cacheTier`), multi-colored spans (`cells`), the desktop's Svg (`svgOf`, `items`) |
 | `hooks/pane.ts` | Pure formatting of the pane: its sections as lines of a label and spans (`paneLines`) |
 | `hooks/draw.tsx` | The band and the pane as element trees, for the terminal and for the surfaces with Svg |
+| `hooks/activity.ts` | Shared clockwise dot masks and timing; terminal glyphs and matching desktop vectors |
+| `hooks/activity-client.ts` | One visible terminal glyph and its local frame clock; automatically unmounted when hidden |
 | `types/index.d.ts` | The `$.state` contract, `PluginState['ccoverhead']` |
 | `tests/kit.ts` | Shared fictional figures and engine answers for the tests |
 | `tests/ccoverhead.test.ts` | The band's behavior through the engine's test kit, on the terminal and desktop surfaces |
@@ -84,3 +86,7 @@ terminal, the sparkline piece by piece (`cells`). Elsewhere it
 renders each group or line as a `Box` row spaced by `gap`, trims text to drop the spaces the terminal
 needs, and turns graphic spans into `Svg` with their own light-theme colors. The look is specified in
 [design.md](design.md).
+
+The running-agent icon is separate from its stationary count. On the terminal it is a one-cell `Client`
+outside the text run; its frame clock and phase belong only to that mounted instance, not `$.state`.
+No animation tick reads usage or invalidates the band. The desktop's dots animate inside their SVG.

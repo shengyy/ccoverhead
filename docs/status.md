@@ -57,6 +57,9 @@ On Claude Code 2.1.291, the validator and test kit cover native cost, turn incre
 counts, theme colors, downstream band preservation, mid-turn context refresh, and conversation changes
 without classic events. Type checking uses the saved 2.1.289 declarations. Fictional previews cover dark
 and light cost styling, lime agent counts, and right-to-left narrowing that preserves the growth chart.
+Activity uses a local terminal Client and an animated desktop SVG. The test kit checks mounting and
+removal, and its frame clock checks progression across redraws without duplicating timers; native playback
+is not verified live. Browser previews demonstrate the intended animation only.
 The window-average quota estimate is arithmetic-tested and pane-only. These
 changes are **not verified in a live session**; no model requests were made for this validation.
 

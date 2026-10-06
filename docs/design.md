@@ -17,10 +17,14 @@ ctx ■■■□□□□□□□ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | 
 - Cost stays gold (`#dfbc70` dark, `#8a6215` light). Its increment uses native secondary text. Both
   surfaces use the same spacing and separators as other groups, without a separate background, border
   or padding. No amount changes its color, and no progress bar is added.
-- The running-agent count is a small gear followed by the number (`⚙︎ N`), in fixed lime (tier 5:
-  `#b8e45c` dark, `#567a00` light). Text presentation keeps the symbol monochrome and the variation
-  selector takes no terminal cell. It has no frame or background, is hidden at zero, and is the same
-  on both surfaces. The gear denotes running agents, not a settings button.
+- The running-agent count is an activity icon, a gap, and a stationary number, in fixed lime (tier 5:
+  `#b8e45c` dark, `#567a00` light). It has no frame or background and is hidden at zero. The terminal
+  uses one cell of eight-dot braille (two columns, four rows), with four lit dots moving clockwise
+  every 140 ms; no emoji or image protocol. The desktop uses an 8 × 14 px vector dot grid driven by
+  exactly the same frame masks and timing (1.12 s per cycle). Its SVG respects
+  reduced motion. The terminal uses a local Client frame clock; narrowing removes its icon from the
+  tree. Neither surface moves the count or refreshes usage to animate. Native animation has
+  not yet been observed in a live Claude Code session.
 - `warm` and its minutes are one span in one color, the share of the lifetime gone on the percentage
   scale: sky while fresh, up through the tiers to red in the last tenth; `cold` and `TTL unknown` are dim. The minutes already
   say how long, so no gauge repeats them.

@@ -100,7 +100,7 @@ ctx ■■■□□□□□□□ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | 
 | `cache` | `warm` and its minutes, warming in color as the lifetime drains, or `cold`; `TTL unknown` until the host provides lifetime evidence; `rewrote` and its tokens on a turn that wrote the cache again instead of reading it |
 | `5h`, `7d` | Quota used in each window, and `↻` the time until it resets. Dim when remembered from an earlier session. `7d` follows the main model's own weekly window when Claude Code reports one, such as `7d fable` (not verified) |
 | `cost` | Gold session USD total and secondary latest-turn increment; native API-price reference, hidden when absent |
-| `⚙︎ N` | Currently running agents, highlighted in lime; zero is hidden |
+| Activity icon + count | Currently running agents in lime: a four-row dot animation rotating clockwise, terminal glyphs and matching desktop vectors; zero is hidden |
 | `spend` | A Claude gateway's spend limit, when reported; it can pass 100% (not verified) |
 
 Colors follow one ten-step scale from cool to warm. Percentages (context and quota) move one step per 10%

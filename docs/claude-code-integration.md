@@ -96,5 +96,9 @@ The saved 2.1.289 declarations and the 2.1.291 test kit cover these paths; this 
 - Main `turn.step` schedules a coalesced 100 ms local usage read. Its summed usage is not treated as
   context size. End-of-turn measurements alone add growth samples.
 - `agent.list` provides running status. Only running agents count in the band; zero is hidden.
+- The saved declarations expose a terminal `Client` with `surface.every`, automatically canceled on
+  unmount, and desktop `Svg.isInteractive` for sandboxed SMIL playback. The activity indicator uses
+  these without model or network calls. Mounting is test-kit covered; native playback and unmount
+  cleanup are not verified live.
 - `AbovePrompt` preserves the tree returned by `next(e)` below its own row. The host test fixture
   supplies a downstream renderer, making composition regressions visible on both surfaces.

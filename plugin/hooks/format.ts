@@ -1,5 +1,6 @@
 // Pure formatting for the band: its groups, their widths and colours, and the desktop's Svg graphics.
 import type { OverheadAgent, OverheadCache, OverheadCtx, OverheadLimit, OverheadTheme } from '../types'
+import { ACTIVITY_FRAMES, activityBody } from './activity'
 
 // The two cache lifetimes the engine can report. Neither is assumed before evidence arrives.
 export const CACHE_TTL_MS = 60 * 60 * 1000
@@ -32,6 +33,7 @@ export type Span = {
   spark?: number[]
   tiers?: number[]
   money?: boolean
+  agentCount?: number
   fold?: 'growth' | 'tokens' | 'reset' | 'rewrite' | 'turn-cost'
 }
 
@@ -96,7 +98,7 @@ export function cells(s: Span, theme: OverheadTheme = 'dark'): Cell[] | undefine
   return undefined
 }
 
-export type Graphic = { source: string; alt: string; width: number; height: number }
+export type Graphic = { source: string; alt: string; width: number; height: number; isInteractive?: boolean }
 
 // The Svg's colours as classes: each its dark-card fill, and its light-card one under the media query.
 function inks(classes: [name: string, ink: Ink][]): string {
@@ -112,6 +114,10 @@ function svg(width: number, height: number, style: string, body: string): string
 // 14 px at the largest and 3 px at the least so the smallest still shows its colour, each in its tier's
 // colour.
 export function svgOf(s: Span): Graphic | undefined {
+  if (s.agentCount !== undefined) return {
+    source: svg(8, 14, inks([['k', GAIN[5]!]]), activityBody()),
+    alt: `${s.agentCount} running agents`, width: 8, height: 14, isInteractive: true,
+  }
   if (s.bar !== undefined) {
     const ink = s.dimColor ? DIM : (GAIN[s.tier ?? -1] ?? DIM)
     const w = Math.round((Math.min(Math.max(s.bar, 0), 100) * 60) / 100)
@@ -346,8 +352,7 @@ export function groups(b: BandInput): Span[][] {
     { text: 'cost', dimColor: true }, { text: ` ≈${usd(b.cost)}`, money: true },
     ...(validCost(b.turnCost) ? [{ text: ` (+${usd(b.turnCost)})`, dimColor: true, fold: 'turn-cost' as const }] : []),
   ])
-  // Text presentation keeps the gear a theme-colored glyph rather than an emoji.
-  if ((b.activeAgents ?? 0) > 0) out.push([{ text: `⚙︎ ${b.activeAgents}`, tier: 5 }])
+  if ((b.activeAgents ?? 0) > 0) out.push([{ text: `${ACTIVITY_FRAMES[0]} ${b.activeAgents}`, tier: 5, agentCount: b.activeAgents }])
 
   return out
 }
@@ -371,7 +376,7 @@ export function cacheStatus(cache: OverheadCache, ttl: number | null, now: numbe
 export const SEP = ' | '
 
 export function width(gs: Span[][]): number {
-  const cells = gs.reduce((n, g) => n + g.reduce((m, s) => m + [...s.text.replace(/\uFE0E/g, '')].length, 0), 0)
+  const cells = gs.reduce((n, g) => n + g.reduce((m, s) => m + [...s.text].length, 0), 0)
   return cells + SEP.length * Math.max(gs.length - 1, 0)
 }
 
@@ -404,7 +409,10 @@ export type Item = { kind: 'text'; span: Span } | { kind: 'graphic'; graphic: Gr
 export function items(g: Span[]): Item[] {
   return g.flatMap((s): Item[] => {
     const graphic = svgOf(s)
-    if (graphic) return [{ kind: 'graphic', graphic }]
+    if (graphic) return [
+      { kind: 'graphic', graphic },
+      ...(s.agentCount === undefined ? [] : [{ kind: 'text' as const, span: { text: String(s.agentCount), tier: s.tier } }]),
+    ]
     const text = s.text.trim()
     return text ? [{ kind: 'text', span: { ...s, text } }] : []
   })

@@ -1,5 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
 import type { SessionUsage, TurnCompleteInput } from 'claude-code'
+import { ACTIVITY_FRAME_MS, ACTIVITY_FRAMES } from '../hooks/activity'
 import { colorOf, fit, forecastBar, svgOf, width } from '../hooks/format'
 import { quotaForecast } from '../hooks/track'
 import { paneLines } from '../hooks/pane'
@@ -81,13 +82,38 @@ for (const surface of SURFACES) {
     await $.session.measure({ ...measured(fill(40_000)), cost: { usd: 2 } })
     for await (const _ of $.turn.step(STEP)) { /* drain */ }
     const ui = await $.ui.mount(band(surface))
-    expect((await ui.findAll({ type: 'Text', text: '⚙︎ 1' })).some(n => n.props.color === '#b8e45c')).toBe(true)
+    if (surface === 'terminal') {
+      expect(await ui.find({ type: 'Client', key: 'agent-activity' })).toBeDefined()
+      expect((await ui.find({ type: 'Text', text: ' 1' }))?.props.color).toBe('#b8e45c')
+      const bandBeforeAnimation = await ui.drawn()
+      expect(await ui.find({ type: 'Text', text: ACTIVITY_FRAMES[0], in: 'agent-activity' })).toBeDefined()
+      await ui.advance(ACTIVITY_FRAME_MS)
+      expect(await ui.find({ type: 'Text', text: ACTIVITY_FRAMES[1], in: 'agent-activity' })).toBeDefined()
+      expect(await ui.drawn()).toEqual(bandBeforeAnimation)
+      await ui.redraw()
+      await ui.advance(ACTIVITY_FRAME_MS)
+      const afterRedraw = await ui.find({ type: 'Text', in: 'agent-activity' })
+      expect(afterRedraw?.text).toBe(ACTIVITY_FRAMES[2])
+      await ui.redraw(band(surface, 40).props)
+      await ui.advance(10 * ACTIVITY_FRAME_MS)
+      expect(await ui.find({ type: 'Client' })).toBeUndefined()
+      await ui.redraw(band(surface).props)
+      expect(await ui.find({ type: 'Client', key: 'agent-activity' })).toBeDefined()
+    } else {
+      expect((await ui.findAll({ type: 'Svg' })).some(n => n.props.alt === '1 running agents' && n.props.isInteractive === true)).toBe(true)
+      expect((await ui.find({ type: 'Text', text: /^1$/ }))?.props.color).toBe('#b8e45c')
+    }
+    const narrow = await $.ui.mount(band(surface, 40))
+    expect(await narrow.find({ type: 'Client' })).toBeUndefined()
+    expect((await narrow.findAll({ type: 'Svg' })).some(n => n.props.alt === '1 running agents')).toBe(false)
     expect(await ui.find({ type: 'Text', text: /^ ?TTL unknown$/ })).toBeDefined()
     id = 'fictional-b'
     ledger = usage(undefined, [], true)
     list = []
     await clock.advance(30_000)
-    expect(await ui.find({ type: 'Text', text: /40k|\$|TTL|⚙|↑/ })).toBeUndefined()
+    expect(await ui.find({ type: 'Text', text: /40k|\$|TTL|↑/ })).toBeUndefined()
+    expect(await ui.find({ type: 'Client' })).toBeUndefined()
+    expect((await ui.findAll({ type: 'Svg' })).some(n => n.props.alt === '1 running agents')).toBe(false)
     expect(await ui.find({ type: 'Text', text: /^ ?~13k\/1M$/ })).toBeDefined()
   })
 }
@@ -132,10 +158,11 @@ test('growth survives cost, agents and countdowns at constrained widths', () => 
     expect(gs.flat().some(s => s.text.includes('↑3.4k'))).toBe(true)
   }
   const narrowText = fit(input, 60).flat().map(s => s.text).join('')
-  expect(narrowText).not.toMatch(/⚙|\$/)
+  expect(narrowText).not.toContain(ACTIVITY_FRAMES[0])
+  expect(narrowText).not.toContain('$')
   const fullWidth = width(fit(input, 160))
   const withoutAgent = fit(input, fullWidth - 1).flat().map(s => s.text).join('')
-  expect(withoutAgent).not.toContain('⚙')
+  expect(withoutAgent).not.toContain(ACTIVITY_FRAMES[0])
   expect(withoutAgent).toContain('+$0.12')
   // A gateway window between weekly quota and cost follows the same right-to-left rule.
   const withSpend = { ...input, limits: [...input.limits, { kind: 'spend_limit', percentUsed: 12, resetsAt: iso(60 * MIN) }] }
@@ -146,9 +173,9 @@ test('growth survives cost, agents and countdowns at constrained widths', () => 
     expect(gs.slice(0, -1)).toEqual(prior.slice(0, gs.length - 1))
     prior = gs
   }
-  const agent = fit(input, 160).flat().find(s => s.text === '⚙︎ 1')!
+  const agent = fit(input, 160).flat().find(s => s.agentCount === 1)!
   expect(colorOf(agent, 'light')).toBe('#567a00')
-  expect(fit({ ...input, activeAgents: 0 }, 160).flat().some(s => s.text.includes('⚙'))).toBe(false)
+  expect(fit({ ...input, activeAgents: 0 }, 160).flat().some(s => s.agentCount !== undefined)).toBe(false)
 })
 
 for (const surface of ['terminal', 'desktop', 'vscode', 'mobile'] as const) {

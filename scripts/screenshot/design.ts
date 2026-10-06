@@ -26,7 +26,7 @@ function terminal(value: Span[][]) {
 }
 function desktop(value: Span[][]) {
   return value.map(g => `<span class="band-group">${items(g).map(it => it.kind === 'graphic'
-    ? `<img src="data:image/svg+xml;base64,${Buffer.from(it.graphic.source).toString('base64')}" width="${it.graphic.width}" height="${it.graphic.height}" alt="${escape(it.graphic.alt)}">`
+    ? `<img src="data:image/svg+xml;base64,${Buffer.from(it.graphic.source.replace(/<animate\b[^>]*\/>/g, '')).toString('base64')}" width="${it.graphic.width}" height="${it.graphic.height}" alt="${escape(it.graphic.alt)}">`
     : textSpan(it.span)).join('')}</span>`).join('<span class="dim separator">|</span>')
 }
 function groupByLabel(input: BandInput, label: string) {
