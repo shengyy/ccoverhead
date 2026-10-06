@@ -6,8 +6,12 @@ All notable changes to ccOverhead are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-07
+
 ### Fixed
 
+- The terminal activity module uses a literal path on the element table's Client, avoiding the
+  directory scanner's computed-path finding on a destructured Client binding.
 - Late native accounting now updates the turn increment and quota even when context stays unchanged.
   Native reads that outlive a conversation clear cannot restore the old session's figures.
 - The band preserves content drawn by later mods and Claude Code. Main-context readings refresh between

@@ -1,7 +1,7 @@
 # ccOverhead
 
 Your Claude Code overhead, right overhead. ccOverhead is a Claude Code mod that puts context usage,
-per-turn growth, 5-hour and weekly quota, and prompt-cache warmth in one quiet
+per-turn growth, 5-hour and weekly quota, prompt-cache warmth, native cost and running-agent activity in one quiet
 band above the prompt. One cool-to-warm color scale makes changes easy to notice while you work. Type
 `/ccoverhead` for a pane with the detail: where auto-compaction runs, the window by category and MCP server, growth and compactions,
 cache hit rate, quota with a shaded projection at the window-average pace, native cost, and subagents.
@@ -53,6 +53,10 @@ Other hooks observe usage and model changes; the render hooks only draw the band
 Session figures stay in memory. Only the last quota reading is kept in Claude Code's plugin store so a
 new session can show it until its own arrives. See the
 [privacy details](https://github.com/shengyy/ccoverhead/blob/main/SECURITY.md).
+
+The `tests/` files are offline fixtures for `claude plugin test`; they are not registered hook modules.
+They simulate engine operations, including agent spawns and slash commands, without model or network
+requests. The manifest's `types` field points to declaration-only plugin state types, not executable code.
 
 Released under the [MIT license](https://github.com/shengyy/ccoverhead/blob/main/LICENSE).
 ccOverhead is an independent project, not affiliated with or endorsed by Anthropic.

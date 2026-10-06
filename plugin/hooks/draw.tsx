@@ -54,7 +54,7 @@ function itemRun({ Box, Text, Svg }: Rich, spans: Span[], key: string, theme: Ov
 
 // The terminal's band: one line of text, cut at its end if it still does not fit.
 export function bandTerminal(els: AnimatedTerm, gs: Span[][], theme: OverheadTheme = 'dark') {
-  const { Box, Text, Client } = els
+  const { Box, Text } = els
   return (
     <Box flexDirection="row" paddingX={1}>
       {gs.map((g, i) => {
@@ -68,7 +68,7 @@ export function bandTerminal(els: AnimatedTerm, gs: Span[][], theme: OverheadThe
         const count = activity.agentCount!
         return <Box key="activity" flexDirection="row">
           {label}
-          <Client key="agent-activity" module="./activity-client.ts" width={activityCount(count)} height={1}
+          <els.Client key="agent-activity" module="./activity-client.ts" width={activityCount(count)} height={1}
             props={{ color: colorOf(activity, theme), count }} />
           {activityOverflow(count) && <Text color={colorOf(activity, theme)}>{activityOverflow(count)}</Text>}
         </Box>
