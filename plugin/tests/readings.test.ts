@@ -81,7 +81,7 @@ for (const surface of SURFACES) {
     await $.session.measure({ ...measured(fill(40_000)), cost: { usd: 2 } })
     for await (const _ of $.turn.step(STEP)) { /* drain */ }
     const ui = await $.ui.mount(band(surface))
-    expect((await ui.findAll({ type: 'Text', text: 'agent∗1' })).some(n => n.props.color === '#b8e45c')).toBe(true)
+    expect((await ui.findAll({ type: 'Text', text: 'agent·1' })).some(n => n.props.color === '#b8e45c')).toBe(true)
     expect(await ui.find({ type: 'Text', text: /^ ?TTL unknown$/ })).toBeDefined()
     id = 'fictional-b'
     ledger = usage(undefined, [], true)
@@ -146,7 +146,7 @@ test('growth survives cost, agents and countdowns at constrained widths', () => 
     expect(gs.slice(0, -1)).toEqual(prior.slice(0, gs.length - 1))
     prior = gs
   }
-  const agent = fit(input, 160).flat().find(s => s.text === 'agent∗1')!
+  const agent = fit(input, 160).flat().find(s => s.text === 'agent·1')!
   expect(colorOf(agent, 'light')).toBe('#567a00')
   expect(fit({ ...input, activeAgents: 0 }, 160).flat().some(s => s.text.includes('agent'))).toBe(false)
 })

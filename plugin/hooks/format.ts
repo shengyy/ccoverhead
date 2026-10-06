@@ -346,7 +346,7 @@ export function groups(b: BandInput): Span[][] {
     { text: 'cost', dimColor: true }, { text: ` ≈${usd(b.cost)}`, money: true },
     ...(validCost(b.turnCost) ? [{ text: ` (+${usd(b.turnCost)})`, dimColor: true, fold: 'turn-cost' as const }] : []),
   ])
-  if ((b.activeAgents ?? 0) > 0) out.push([{ text: `agent∗${b.activeAgents}`, tier: 5 }])
+  if ((b.activeAgents ?? 0) > 0) out.push([{ text: `agent·${b.activeAgents}`, tier: 5 }])
 
   return out
 }

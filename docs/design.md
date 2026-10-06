@@ -17,7 +17,7 @@ ctx ■■■□□□□□□□ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | 
 - Cost stays gold (`#dfbc70` dark, `#8a6215` light). Its increment uses native secondary text. Both
   surfaces use the same spacing and separators as other groups, without a separate background, border
   or padding. No amount changes its color, and no progress bar is added.
-- The running-agent count reads `agent∗N` in fixed lime (tier 5: `#b8e45c` dark, `#567a00` light).
+- The running-agent count reads `agent·N` in fixed lime (tier 5: `#b8e45c` dark, `#567a00` light).
   It has no frame or background and is hidden at zero. Both surfaces use the same plain text.
 - `warm` and its minutes are one span in one color, the share of the lifetime gone on the percentage
   scale: sky while fresh, up through the tiers to red in the last tenth; `cold` and `TTL unknown` are dim. The minutes already
