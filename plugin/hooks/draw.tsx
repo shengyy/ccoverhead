@@ -103,13 +103,13 @@ export function paneTerminal(els: Term, lines: PaneLine[], theme: OverheadTheme 
             <Text bold>{l.head}</Text>
           </Box>
         ) : (
-          <Box key={`l-${i}`} flexDirection="row">
+          <Box key={`l-${i}`} flexDirection="row" marginTop={l.gapBefore ? 1 : 0}>
             <Box width={LABEL} flexShrink={0}>
               <Text color={colorOf(l.label, theme)} dimColor={l.label.dimColor}>
                 {l.label.text}
               </Text>
             </Box>
-            <Text wrap="truncate-end">{textRun(els, l.spans, String(i), theme)}</Text>
+            <Text wrap={l.wrap ? 'wrap' : 'truncate-end'}>{textRun(els, l.spans, String(i), theme)}</Text>
           </Box>
         ),
       )}
@@ -130,13 +130,13 @@ export function paneRich(els: Rich, lines: PaneLine[], theme: OverheadTheme = 'd
         ) : (
           // Spaces do not align in a proportional font: a figure label is right-aligned by its Box, and a line
           // that belongs to the one above is indented by padding.
-          <Box key={`l-${i}`} flexDirection="row" alignItems="center" gap={1}>
+          <Box key={`l-${i}`} flexDirection="row" alignItems="flex-start" gap={1} marginTop={l.gapBefore ? 1 : 0}>
             <Box width={LABEL} flexShrink={0} justifyContent={l.end ? 'flex-end' : 'flex-start'}>
               <Text color={colorOf(l.label, theme)} dimColor={l.label.dimColor}>
                 {l.label.text.trim()}
               </Text>
             </Box>
-            <Box flexDirection="row" alignItems="center" gap={1} paddingLeft={l.nested ? 2 : 0}>
+            <Box flexDirection="row" alignItems="center" flexWrap="wrap" gap={1} paddingLeft={l.nested ? 2 : 0} flexShrink={1} minWidth={0}>
               {itemRun(els, l.spans, String(i), theme)}
             </Box>
           </Box>

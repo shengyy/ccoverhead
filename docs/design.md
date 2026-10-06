@@ -112,6 +112,14 @@ category's tokens, right-aligned, colored by its share of the window; MCP server
 `MCP tools` row and dim. The engine places the pane (docked beside a fullscreen transcript, else above the
 prompt) and scrolls it; it opens asking for 24 rows.
 
+The main context section includes its full `session ID`, model and optional requested effort. Its
+tokens/cache section reuses the cache totals and adds observed output. Each observed subagent uses a
+compact block: type and short description, full `agent ID`, model and
+optional requested effort, last input with its growth chart, then input/output tokens and cache reads.
+Description and ID wrap rather than truncate. A shared note states that the counts cover observed
+requests and input includes cache. A blank line separates agents, without cards or additional borders.
+These details do not add groups to the band.
+
 ## Logo
 
 A gauge of the ten tiers arched overhead a prompt, `>_`: the band above the input, safe to warning. The

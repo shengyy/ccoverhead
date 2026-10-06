@@ -4,7 +4,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, SessionContextBreakdown, SessionContextUsage, SessionRateLimit, Timer } from 'claude-code'
 
-import type { OverheadAgent, OverheadBreakdown, OverheadCache, OverheadCacheStats, OverheadCompaction, OverheadCtx, OverheadLimit, OverheadTheme } from '../types'
+import type { OverheadAgent, OverheadBreakdown, OverheadCache, OverheadCacheStats, OverheadCompaction, OverheadCtx, OverheadEffort, OverheadLimit, OverheadTheme } from '../types'
 import { bandRich, bandTerminal, paneRich, paneTerminal } from './draw'
 import { CACHE_TTL_MS, SHORT_TTL_MS, fit, validCost } from './format'
 import type { AgentView, BandInput } from './format'
@@ -29,6 +29,7 @@ const sessionId = atom({ plugin: 'ccoverhead', key: 'sessionId' } as const, null
 const limitsAt = atom({ plugin: 'ccoverhead', key: 'limitsAt' } as const, null as number | null)
 const activeAgents = atom({ plugin: 'ccoverhead', key: 'activeAgents' } as const, 0)
 const model = atom({ plugin: 'ccoverhead', key: 'model' } as const, null as string | null)
+const effort = atom({ plugin: 'ccoverhead', key: 'effort' } as const, null as OverheadEffort | null)
 const agents = atom({ plugin: 'ccoverhead', key: 'agents' } as const, [] as OverheadAgent[])
 const breakdown = atom({ plugin: 'ccoverhead', key: 'breakdown' } as const, null as OverheadBreakdown | null)
 
@@ -149,27 +150,27 @@ export const register: Register = on => {
   })
 
   // Each request: on the main conversation, when it started, whether it touched the cache and the running
-  // counts; on a subagent, its context total.
+  // counts; on a subagent, its input history, cumulative usage and observed requested effort.
   on('turn.step', async function* ($, e, next) {
     // Cache age starts with the request, not after a potentially long streamed response.
     const started = await $.clock.now()
     const result = yield* next(e)
     const u = result.usage
     if (!u) return result
+    // A downstream model rewrite/fallback cannot establish the effort of the model that answered.
+    const requestedEffort = baseModel(e.model) === baseModel(u.model) ? e.effort : undefined
     if (e.agentId === undefined) {
       const touched = (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0)
       await syncSession($)
       await setModel($, u.model)
+      await update($, effort, () => requestedEffort ?? null)
       await update($, cache, () => ({ at: started, warm: touched > 0 }))
       await update($, cacheStats, s => addStep(s ?? NO_CACHE_STATS, u, e.turnId))
       // Read the host's last context; step usage may sum several server-side responses.
       settling = refreshSoon($, settling)
     } else {
       const id = e.agentId
-      // Its type, asked again on each request until the agent list has it.
-      const labelled = (await read($, agents)).some(a => a.id === id && a.label !== undefined)
-      const label = labelled ? undefined : await agentType($, id)
-      await update($, agents, list => addAgentStep(list ?? [], id, u.model, u, label))
+      await update($, agents, list => addAgentStep(list ?? [], id, u.model, u, requestedEffort))
     }
     await readActiveAgents($)
     return result
@@ -220,6 +221,8 @@ export const register: Register = on => {
       timeline: await read($, timeline),
       compactions: await read($, compactions),
       cacheStats: await read($, cacheStats),
+      sessionId: await read($, sessionId),
+      effort: await read($, effort),
       agents: await read($, agents),
       breakdown: await read($, breakdown),
       viewing: e.props.view.agentId,
@@ -332,6 +335,7 @@ async function readModel($: EngineInterface) {
 async function setModel($: EngineInterface, id: string) {
   const previous = await read($, model)
   if (previous && baseModel(previous) !== baseModel(id)) {
+    await update($, effort, () => null)
     const at = await $.clock.now()
     await update($, cache, c => (c ? { at, warm: false } : c))
     await update($, cacheTtl, () => null)
@@ -364,6 +368,7 @@ async function readTheme($: EngineInterface) {
 }
 
 async function resetConversation($: EngineInterface) {
+  await update($, effort, () => null)
   await update($, ctx, () => null)
   await update($, breakdown, () => null)
   await update($, history, () => [])
@@ -407,6 +412,19 @@ async function readActiveAgents($: EngineInterface) {
   const list = await $.agent.list().catch(() => [])
   const count = list.filter(agent => agent.status === 'running').length
   if (count !== await read($, activeAgents)) await update($, activeAgents, () => count)
+  // Reuse this one list read for the pane's identity labels, including delayed or updated descriptions.
+  const before = await read($, agents)
+  const changed = before.some(agent => {
+    const info = list.find(a => a.id === agent.id)
+    return info && (agent.label !== info.type || agent.description !== info.description)
+  })
+  if (changed) {
+    // The update runs on the latest state so another agent's response is never lost while this read waits.
+    await update($, agents, current => current.map(agent => {
+      const info = list.find(a => a.id === agent.id)
+      return info ? { ...agent, label: info.type, description: info.description } : agent
+    }))
+  }
 }
 
 // /context's breakdown counted locally (`summary`, which sends no request; `full` would send one per tool).
@@ -429,15 +447,6 @@ function slim(b: SessionContextBreakdown): OverheadBreakdown {
     rows: (b.categories ?? []).filter(c => c.kind === 'used' && c.tokens > 0).map(c => ({ name: c.name, tokens: c.tokens })),
     deferred: (b.categories ?? []).filter(c => c.kind === 'deferred').reduce((n, c) => n + c.tokens, 0),
     mcp: [...servers].map(([server, tokens]) => ({ server, tokens })),
-  }
-}
-
-// A subagent's type (`Explore`, `general-purpose`), not its task's description, which the model wrote.
-async function agentType($: EngineInterface, id: string): Promise<string | undefined> {
-  try {
-    return (await $.agent.list()).find(a => a.id === id)?.type
-  } catch {
-    return undefined
   }
 }
 

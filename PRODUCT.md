@@ -112,8 +112,22 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
 - Sections: the context with the threshold and the tokens left to it; `/context`'s local estimate by
   category with the five costliest MCP servers' loaded tool schemas (and how many more there are); the
   growth since the last compaction and the last three compactions' sizes before and after; the cache's
-  state, hit rate and token counts; quota and a compact exhaustion estimate; native cost and turn increment;
-  the eight most recently active subagents with type, model family, last context total and growth.
+  state, hit rate and observed input/output token counts; main model, optional requested effort and full
+  session ID; quota and a compact exhaustion estimate; native cost and turn increment;
+  the eight most recently observed subagents with type, native short task description, full agent ID,
+  latest responding model, optional requested effort, last input and growth, and cumulative input/output
+  tokens with cache reads shown separately as a subset of input.
+- Subagent usage covers only requests observed while each entry is retained, not pre-load history or
+  requests lost after eviction. Repeated input and smaller contexts still add to usage. A step with no
+  usage adds nothing; unknown effort stays hidden, including when a different model answered. Effort is
+  the request setting observed by this hook, not measured reasoning tokens. Input already includes cache
+  reads and writes; it is neither billable tokens at one price nor a subscription quota percentage.
+- Agent IDs identify agents within the session; they are not task-list numbers or cross-session handles.
+  Only the native short description is displayed, never the full spawn prompt. The pane has no send,
+  resume or stop controls.
+- Main input/output totals reuse the cache counters and exclude subagent requests; compaction preserves
+  them and a conversation change clears them. Requested effort follows the latest observed request and
+  clears on a model or conversation change. No main-session description is generated.
 - The estimate uses the window-average formula also used by
   [WeekToken](https://github.com/3dnow/claude-mods/blob/main/weektoken/hooks/pace.ts): remaining duration = elapsed duration × (1 − used share)
   / used share. It is marked `≈`, appears only in the pane, and says when reset comes first. Missing,

@@ -30,6 +30,11 @@ All notable changes to ccOverhead are documented here. The format follows
 
 ### Added
 
+- Main-session ID, requested effort and observed output tokens in the pane, using the existing native
+  readings and input/cache counters; main and subagent usage stay separate. No model-generated summaries.
+- Per-agent details in the pane: native short task description, full agent ID, latest responding model,
+  requested effort when available, and observed input/output/cache-read totals alongside the last-input
+  growth chart. The existing agent-list refresh supplies metadata; no new engine calls or history store.
 - Session cost and the latest turn's increase from Claude Code's own cost ledger: a gold total with a
   secondary delta, hidden when unavailable and styled like other groups without a separate frame or
   background. Running agents appear only while the count is nonzero.

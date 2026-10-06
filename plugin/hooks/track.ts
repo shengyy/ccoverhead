@@ -24,9 +24,9 @@ export function addCompaction(list: OverheadCompaction[], c: OverheadCompaction)
   return [...list, c].slice(-COMPACTIONS)
 }
 
-export type StepUsage = { input_tokens: number; cache_read_input_tokens: number; cache_creation_input_tokens: number }
+export type StepUsage = { input_tokens: number; output_tokens: number; cache_read_input_tokens: number; cache_creation_input_tokens: number }
 
-export const NO_CACHE_STATS: OverheadCacheStats = { input: 0, read: 0, write: 0, last: 0 }
+export const NO_CACHE_STATS: OverheadCacheStats = { input: 0, output: 0, read: 0, write: 0, last: 0 }
 
 // One main-conversation request added to the running counts. It rewrote the cache when it read back less than
 // half of what the request before it sent (the cache had lapsed, the model changed, the prefix changed); a
@@ -38,6 +38,7 @@ export function addStep(stats: OverheadCacheStats, u: StepUsage, turnId: string)
   const write = u.cache_creation_input_tokens ?? 0
   const next: OverheadCacheStats = {
     input: stats.input + input,
+    output: (stats.output ?? 0) + u.output_tokens,
     read: stats.read + read,
     write: stats.write + write,
     last: input + read + write,
@@ -65,14 +66,22 @@ export function hitRate(stats: OverheadCacheStats): number | undefined {
   return all > 0 ? (stats.read * 100) / all : undefined
 }
 
-// A subagent's request: its input total (uncached, read and written together) added to that agent's totals
-// as the main context's are (`addSample`), the agent moved to the end as the most recently active, the oldest
-// dropped past AGENTS.
-export function addAgentStep(agents: OverheadAgent[], id: string, model: string, u: StepUsage, label?: string): OverheadAgent[] {
+// A subagent's observed request. Usage adds every response, including repeated input and drops in context;
+// only the growth history deduplicates/restarts. Move the agent to the end, dropping the oldest past AGENTS.
+export function addAgentStep(agents: OverheadAgent[], id: string, model: string, u: StepUsage, effort?: OverheadAgent['effort']): OverheadAgent[] {
   const total = (u.input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0)
   const before = agents.find(a => a.id === id)
-  const type = label ?? before?.label
-  const agent: OverheadAgent = { id, model, totals: addSample(before?.totals ?? [], total), ...(type !== undefined && { label: type }) }
+  const agent: OverheadAgent = {
+    id, model, totals: addSample(before?.totals ?? [], total),
+    usage: {
+      input: (before?.usage?.input ?? 0) + total,
+      output: (before?.usage?.output ?? 0) + u.output_tokens,
+      read: (before?.usage?.read ?? 0) + u.cache_read_input_tokens,
+    },
+    ...(before?.label !== undefined && { label: before.label }),
+    ...(before?.description !== undefined && { description: before.description }),
+    ...(effort !== undefined && { effort }),
+  }
   return [...agents.filter(a => a.id !== id), agent].slice(-AGENTS)
 }
 

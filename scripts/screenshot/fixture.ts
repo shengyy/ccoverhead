@@ -33,6 +33,7 @@ export const agentView: BandInput = {
       label: 'Explore',
       model: 'claude-opus-5-5',
       totals: [58_000, 62_100, 72_200, 98_000, 111_400, 124_000],
+      usage: { input: 525_700, output: 8_400, read: 390_000 },
     },
     window: band.ctx!.window,
   },
@@ -42,11 +43,13 @@ export const agentView: BandInput = {
 export const pane: PaneInput = {
   ...band,
   model: 'claude-opus-5-5',
+  effort: 'high',
+  sessionId: '00000000-0000-4000-8000-000000000001',
   limitsAt: NOW,
   timeline: [61_000, 92_000, 140_000, 180_000, 181_200, 186_000, 198_000, 232_000, 236_500, 268_000, 271_400],
   compactions: [{ before: 455_000, after: 61_000 }],
-  cacheStats: { input: 2_100, read: 3_412_000, write: 296_000, last: 271_400 },
-  agents: [{ id: 'fictional', model: 'claude-haiku-4-5-20251001', totals: [9_100, 14_800, 22_300, 31_000], label: 'Explore' }],
+  cacheStats: { input: 2_100, output: 18_600, read: 3_412_000, write: 296_000, last: 271_400 },
+  agents: [{ id: 'fictional-agent-01', description: 'Trace cache refresh behavior', model: 'claude-opus-5-5', effort: 'high', totals: [9_100, 14_800, 22_300, 31_000], usage: { input: 77_200, output: 4_800, read: 45_900 }, label: 'Explore' }],
   breakdown: {
     autoCompact: true,
     rows: [

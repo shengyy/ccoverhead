@@ -52,7 +52,13 @@ and opens the detail behind them in a pane when you ask.
 - **Subagents too.** `agent` shows one spinner per running agent, up to three with `+N` for the rest; hidden at zero. Open a subagent's transcript and the band follows that agent's context and growth.
 - **The `/ccoverhead` pane.** What is in the window by category (which MCP server costs what), growth since
   the last compaction and each compaction, the cache's hit rate, every quota window with how much of its
-  window-average exhaustion estimate (when useful), and the eight most recently active subagents. It also works in VS Code and the mobile app, where the band is not drawn.
+  window-average exhaustion estimate (when useful), and the eight most recently observed subagents:
+  short task description, full agent ID, model, requested effort when reported, input/output tokens and
+  cache reads. Counts cover observed requests; input includes cache. It also works in VS Code and the
+  mobile app, where the band is not drawn.
+- **Main-session detail.** Its full session ID, model, requested effort when reported, and observed
+  input/output tokens, kept separate from subagent usage. Short agent descriptions come from the host;
+  displaying them does not ask a model to summarize anything.
 - **One color language.** Cool means safe, yellow means caution, warm to red means warning, the same for
   every usage number in the band. Cost keeps a fixed gold accent. The scale stays readable for red-green color-blind users.
 - **Terminal and desktop.** One line of text in the terminal; crisp vector bars in the Claude desktop app,

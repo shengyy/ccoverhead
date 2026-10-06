@@ -26,14 +26,26 @@ test('the weekly window follows the main model when one is named after it (not v
   expect(weeklyWindow(scoped, 'claude-opus-5-5')).toEqual({ limit: scoped[1], label: '7d' })
 })
 
-test('a subagent keeps its totals as the main context does: changed ones only, restarting on a drop', () => {
-  const u = (t: number) => ({ input_tokens: 0, cache_read_input_tokens: t, cache_creation_input_tokens: 0 })
-  let list = addAgentStep([], 'a1', 'm', u(10_000), 'Explore')
+test('subagent usage counts repeated and smaller requests while its growth history deduplicates and restarts', () => {
+  const u = (t: number) => ({ input_tokens: 0, output_tokens: 500, cache_read_input_tokens: t, cache_creation_input_tokens: 0 })
+  let list = addAgentStep([], 'a1', 'm', u(10_000), 'high')
+  expect(list[0]?.effort).toBe('high')
   for (const t of [10_000, 10_000, 12_000]) list = addAgentStep(list, 'a1', 'm', u(t))
   expect(list[0]?.totals).toEqual([10_000, 12_000])
-  expect(list[0]?.label).toBe('Explore')
+  expect(list[0]?.usage).toEqual({ input: 42_000, output: 2_000, read: 42_000 })
+  expect(list[0]?.effort).toBeUndefined()
   list = addAgentStep(list, 'a1', 'm', u(4_000))
   expect(list[0]?.totals).toEqual([4_000])
+  expect(list[0]?.usage).toEqual({ input: 46_000, output: 2_500, read: 46_000 })
+  list = addAgentStep(list, 'a2', 'other', { ...u(1_000), input_tokens: 200, cache_creation_input_tokens: 3_000 }, 0)
+  expect(list[1]?.usage).toEqual({ input: 4_200, output: 500, read: 1_000 })
+  expect(list[1]?.effort).toBe(0)
+  // Eviction bounds memory; a returning agent starts another observed period rather than inventing history.
+  for (let i = 3; i <= 9; i++) list = addAgentStep(list, `a${i}`, 'm', u(1_000))
+  expect(list.length).toBe(8)
+  expect(list.some(a => a.id === 'a1')).toBe(false)
+  list = addAgentStep(list, 'a1', 'm', u(2_000))
+  expect(list.at(-1)?.usage).toEqual({ input: 2_000, output: 500, read: 2_000 })
 })
 
 test('percent tiers step every 10% from tier 2', () => {

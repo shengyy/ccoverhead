@@ -1,9 +1,9 @@
 // Pure formatting for the /ccoverhead pane: the detail the band has no room for, as headed sections of lines.
 // Each line is a label column and a run of spans, drawn like the band's (block glyphs on the terminal, Svg on
 // the surfaces with a proportional font).
-import type { OverheadAgent, OverheadBreakdown, OverheadCacheStats, OverheadCompaction } from '../types'
+import type { OverheadAgent, OverheadBreakdown, OverheadCacheStats, OverheadCompaction, OverheadEffort } from '../types'
 import type { BandInput, Span } from './format'
-import { FALLBACK_WINDOW, bar, cacheStatus, dur, forecastBar, gainTier, gains, kshort, ktok, modelFamily, pctTier, sparkline, usd, validCost, weeklyWindow } from './format'
+import { FALLBACK_WINDOW, bar, cacheStatus, dur, forecastBar, gainTier, gains, kshort, ktok, pctTier, sparkline, usd, validCost, weeklyWindow } from './format'
 import { AGENTS, hitRate, quotaForecast } from './track'
 
 export type PaneInput = BandInput & {
@@ -15,10 +15,12 @@ export type PaneInput = BandInput & {
   // The agent whose transcript is on screen, if any.
   viewing?: string
   limitsAt?: number | null
+  sessionId?: string | null
+  effort?: OverheadEffort | null
 }
 
 // `end`: the label is a figure, right-aligned in its column; `nested`: the line belongs to the one above.
-export type PaneLine = { head: string } | { label: Span; spans: Span[]; end?: boolean; nested?: boolean }
+export type PaneLine = { head: string } | { label: Span; spans: Span[]; end?: boolean; nested?: boolean; wrap?: boolean; gapBefore?: boolean }
 
 // Cells the label column takes on the terminal.
 export const LABEL = 12
@@ -64,7 +66,8 @@ function context(p: PaneInput): PaneLine[] {
   } else if (p.breakdown && !p.breakdown.autoCompact) {
     out.push(line('compacts', dim(' never: auto-compaction is off')))
   }
-  if (p.model) out.push(line('model', dim(` ${p.model}`)))
+  if (p.model) out.push(line('model', dim(` ${p.model}`), ...(p.effort != null ? [dim(` · effort ${p.effort} (requested)`)] : [])))
+  if (p.sessionId) out.push({ ...line('session ID', dim(` ${p.sessionId}`)), wrap: true })
   return out
 }
 
@@ -108,7 +111,7 @@ function growth(p: PaneInput): PaneLine[] {
 }
 
 function cache(p: PaneInput): PaneLine[] {
-  const out: PaneLine[] = [{ head: 'Cache, main conversation' }]
+  const out: PaneLine[] = [{ head: 'Tokens & cache, main conversation' }]
   const c = p.cache
   if (!c) out.push(line('state', dim(' no request yet')))
   else {
@@ -116,6 +119,11 @@ function cache(p: PaneInput): PaneLine[] {
     out.push(line('state', status, ...(status.text.startsWith(' warm') && p.cacheTtl !== null ? [dim(` left of ${dur(p.cacheTtl)}`)] : [])))
   }
   const s = p.cacheStats
+  const input = s.input + s.read + s.write
+  if (s.output !== undefined && (input > 0 || s.output > 0)) {
+    out.push(line('tokens', { text: ` ${kshort(input)} in · ${kshort(s.output)} out` }))
+    out.push(line('', dim(' Observed requests only; input includes cache')))
+  }
   const hit = hitRate(s)
   if (hit !== undefined) {
     out.push(line('hit rate', { text: ` ${Math.trunc(hit)}%`, tier: pctTier(100 - hit) }, dim(` · read ${kshort(s.read)} · written ${kshort(s.write)} · uncached ${kshort(s.input)}`)))
@@ -166,24 +174,32 @@ function cost(p: PaneInput): PaneLine[] {
   ]
 }
 
-// The conversation's most recently active subagents: type, model family, last context total, growth, and which
-// one is on screen.
+// Latest model/effort and last input are separate from cumulative usage. Input includes cache reads/writes;
+// the cache-read figure is a subset, not another amount to add. No missing effort is inferred.
 function agents(p: PaneInput): PaneLine[] {
   if (p.agents.length === 0) return []
   const window = p.ctx?.window ?? FALLBACK_WINDOW
   const out: PaneLine[] = [{ head: p.agents.length < AGENTS ? 'Subagents' : `Subagents, the last ${AGENTS} active` }]
-  for (const a of p.agents) {
+  for (const [index, a] of p.agents.entries()) {
     const gs = gains(a.totals)
     const name = a.label ?? 'agent'
     out.push(
+      { ...line(clip(name), ...(a.description?.trim() ? [{ text: ` ${a.description.replace(/\s+/g, ' ').trim()}` }] : [])), wrap: true, gapBefore: index > 0 },
+      { ...line('agent ID', dim(` ${a.id}`)), wrap: true },
       line(
-        clip(name),
+        'model',
+        { text: ` ${a.model}` },
+        ...(a.effort !== undefined ? [dim(` · effort ${a.effort} (requested)`)] : []),
+      ),
+      line(
+        'last input',
         { text: ` ${ktok(a.totals.at(-1) ?? 0)}` },
         ...(gs.length > 0 ? [{ text: ' ' }, { text: sparkline(gs), spark: gs, tiers: gs.map(v => gainTier(v, window)) }] : []),
-        dim(` ${modelFamily(a.model) ?? a.model}`),
         ...(a.id === p.viewing ? [dim(' · on screen')] : []),
       ),
+      ...(a.usage ? [line('tokens', { text: ` ${kshort(a.usage.input)} in · ${kshort(a.usage.output)} out` }, dim(` · ${kshort(a.usage.read)} cache read`))] : []),
     )
   }
+  out.push(line('', dim(' Observed requests only; input includes cache')))
   return out
 }

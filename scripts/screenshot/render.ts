@@ -56,7 +56,7 @@ function paneShot(): string {
     .map(l =>
       'head' in l
         ? `<div class="head">${esc(l.head)}</div>`
-        : `<div><span style="color:${l.label.dimColor ? DIM : (colorOf(l.label) ?? INK)}">${esc(l.label.text.padEnd(LABEL))}</span>${spans(l.spans)}</div>`,
+        : `<div${l.gapBefore ? ' style="margin-top:24px"' : ''}><span style="color:${l.label.dimColor ? DIM : (colorOf(l.label) ?? INK)}">${esc(l.label.text.padEnd(LABEL))}</span>${spans(l.spans)}</div>`,
     )
     .join('')
   return page(

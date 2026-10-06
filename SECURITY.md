@@ -5,12 +5,13 @@ reads, what it keeps, and what it sends.
 
 ## What is read
 
-Only figures Claude Code reports to plugins: the context window and its fill, the rate-limit windows, the
+Only usage and agent metadata Claude Code reports to plugins: the context window and its fill, the rate-limit windows, the
 token usage of each request (the main conversation's and each subagent's), the session's local `/context`
 count (tokens by category, the auto-compaction threshold, and the names of MCP servers with their tool
-schemas' tokens), the main loop's model id, each subagent's type and running status, the native USD
+schemas' tokens), the main loop's model id and optional requested effort, each subagent's ID, type, short task description, running status,
+responding model and optional requested effort, the native USD
 cost ledger, the theme, an in-memory session id to detect conversation changes, and each compaction's
-size before and after. ccOverhead does not read the conversation, your prompts, a subagent's task, files or the
+size before and after. ccOverhead does not read the conversation, full prompts, a subagent's spawn prompt, files or the
 environment; its compaction hook passes the compaction on unchanged and reads only the sizes.
 
 `claude plugin validate plugin` lists every engine call the module makes; today they are `$.session.usage`
@@ -27,11 +28,13 @@ never calls `$.agent.spawn`. Spawn and completion schedule a local status refres
 
 | Data | Location |
 |---|---|
-| The session's figures: context and auto-compaction threshold, growth history, quota, cache time and token counts, subagents' types, models and token totals, `/context`'s tokens by category and by MCP server name, cost and turn baseline, theme, session id and the last live quota observation time | Claude Code's per-session plugin state (`$.state`), in memory |
+| The session's figures: context and auto-compaction threshold, growth history, quota, cache time and token counts, subagents' IDs, types, short descriptions, models, requested effort and observed input/output/cache-read totals, `/context`'s tokens by category and by MCP server name, cost and turn baseline, theme, session id and the last live quota observation time | Claude Code's per-session plugin state (`$.state`), in memory |
 | The last quota reading: each window's kind, share used and reset time | Claude Code's per-plugin store (`$.store`, key `limits`) |
 
-Nothing else is written. No credentials, prompts or file paths are stored, and the `/ccoverhead` command
-adds nothing to the conversation.
+Nothing else is written. Credentials, full prompts, transcripts and file contents are not collected.
+Short task descriptions are treated as display text and stay in session memory; they may contain words
+from the task. They come directly from `agent.list`, with no summarization or extra model request.
+The `/ccoverhead` command adds nothing to the conversation.
 
 ## What is sent, and to whom
 

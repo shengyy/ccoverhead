@@ -95,6 +95,17 @@ The saved 2.1.289 declarations and the 2.1.291 test kit cover these paths; this 
   catches delayed picker changes.
 - Main `turn.step` schedules a coalesced 100 ms local usage read. Its summed usage is not treated as
   context size. End-of-turn measurements alone add growth samples.
+- Main and subagent `turn.step` carry requested `model` and optional `effort`; `agentId` identifies a
+  subagent. The result's `usage`
+  gives the responding model and four always-present token counts (uncached input, output, cache read,
+  cache write). The pane sums observed counts, including repeated/smaller inputs, independently of its
+  last-input growth history. No usage means no new entry. Effort is the input observed by this hook,
+  not actual reasoning-token usage or proof that a later hook kept it; a model mismatch hides it.
+  `agent.list`'s short `description`, `type` and full `id` are reused by the existing refresh. The saved
+  declarations identify this as the loop's `agentId`, not `TaskCreated.task_id`; no messaging or task
+  lookup is added. These fields and calculations are test-kit covered, not verified live.
+  Main output joins the existing input/cache counters; subagent steps do not contribute to them.
+  Main `session.id` is displayed from the identity already read for resets. No summary is generated.
 - `agent.list` provides running status. The saved declarations distinguish `pending`, `running`,
   `waiting`, `idle`, `completed`, `failed` and `killed`; only `running` counts in the band and zero is
   hidden. `agent.spawn` is observed and passed through unchanged. Spawn and completion use the same

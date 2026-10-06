@@ -199,7 +199,7 @@ test('forecast uses the window-average formula, hides unusable readings, and sta
   expect(quotaForecast(limit, NOW - 16 * MIN, NOW)).toBeUndefined()
   expect(quotaForecast({ ...limit, kind: 'spend_limit' }, NOW, NOW)).toBeUndefined()
   const input = { now: NOW, ctx: null, history: [], limits: [limit], limitsLive: true, cache: null, cacheTtl: null, model: null }
-  const detail = paneLines({ ...input, limitsAt: NOW, timeline: [], compactions: [], cacheStats: { input: 0, read: 0, write: 0, last: 0 }, agents: [], breakdown: null })
+  const detail = paneLines({ ...input, limitsAt: NOW, timeline: [], compactions: [], cacheStats: { input: 0, output: 0, read: 0, write: 0, last: 0 }, agents: [], breakdown: null })
   expect(JSON.stringify(detail)).toContain('≈125% by reset · limit in ≈2h0m')
   expect(JSON.stringify(fit(input, 160))).not.toContain('pace')
 })

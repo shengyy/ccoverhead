@@ -65,6 +65,13 @@ is not verified live. Browser previews demonstrate the intended animation only.
 Spawn/completion tests also cover running to waiting, idle, completed, failed and killed transitions,
 including the host updating its list after a completion hook returns. Other unsignaled status changes
 still wait for the existing 30-second poll; task status is not a per-token activity signal.
+Pane tests on all four surfaces cover per-agent native short description and full ID, responding model,
+optional requested effort (hidden when unknown or when another model answers), and observed input/output
+and cache-read totals. Repeated/smaller inputs still accumulate, null usage adds nothing, and the existing
+eight-entry bound starts a new observed period after eviction. These additions are not verified live.
+The main pane shows the existing session ID and model plus observed requested effort and output tokens.
+Tests cover isolation from subagent usage, compaction preserving totals, and model/session changes
+clearing stale metadata; the session change clears all observed totals.
 The window-average quota estimate is arithmetic-tested and pane-only. These
 changes are **not verified in a live session**; no model requests were made for this validation.
 

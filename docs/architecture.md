@@ -13,7 +13,7 @@ the band from that state. External facts about the engine live in
  command.run ccoverhead ┘    breakdown 'summary')
  session.compact, main thread ────▶ $.state: compactions; history, timeline restart
  turn.step, main thread ──────────▶ $.state: cache, cacheStats
- turn.step, a subagent ($.agent.list until typed) ─▶ $.state: agents
+ turn.step, a subagent + existing $.agent.list refresh ─▶ $.state: agents
  classic.PostModelSwitch, $.session.model() ─▶ $.state: model, cacheTtl, cache (cold)
  turn.start / turn.complete / session.measure ─▶ native cost total and turn increment
  config.list / config.set ─▶ theme
@@ -68,11 +68,12 @@ plugin from a folder (ignored by Git).
 | `cacheStats` | `OverheadCacheStats` | `turn.step`, `session.compact`, `classic.SessionStart` (cleared; on a resume or fork, `last` is the transcript's last context) | The main conversation's input, cache-read and cache-written tokens, the last request's total, and the latest rewrite, until a later turn reads the cache |
 | `cacheTtl` | `number \| null` | `classic.PostModelSwitch`, `classic.SessionStart` (resume or fork) | The cache lifetime in ms; unknown until a switch reports it or a resume shows it |
 | `model` | `string \| null` | load, `session.measure`, `classic.PostModelSwitch` | The main loop's model; picks its own weekly window (`weeklyWindow`) |
-| `agents` | `OverheadAgent[]` | `turn.step`, cleared by `classic.SessionStart` | Up to eight subagents: type, model and last eight changed input totals |
+| `agents` | `OverheadAgent[]` | `turn.step`, existing agent-list refresh; cleared on conversation change | Up to eight subagents: native ID/type/short description, latest responding model and requested effort, changed input totals and cumulative observed input/output/cache-read usage |
 
 The additional session-state fields and their types have one owner in `types/index.d.ts`: native cost
 and its turn baseline, theme, session identity, last live quota observation time, and running-agent count.
-Cost comes from `session.measure` / `session.usage`; the count from `agent.list`; identity and theme from
+Main requested effort is pane-only metadata from `turn.step`; its output count joins the existing
+`cacheStats` counters, avoiding a second input ledger. Cost comes from `session.measure` / `session.usage`; the count from `agent.list`; identity and theme from
 `session.id` and `config.list`. Render hooks only consume them.
 
 `$.store` keeps one key, `limits`, written only when this session's own reading changes.
