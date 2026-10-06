@@ -82,11 +82,12 @@ export const register: Register = on => {
   // After each turn, and whenever a quota window moves a point. A reading that says the windows changed is
   // taken even when it is empty: a window withdrawn (a spend limit has no reset to expire it) goes too.
   on('session.measure', async ($, e, next) => {
-    const revision = conversationRevision
+    let revision = conversationRevision
     const result = await next(e)
     if (revision !== conversationRevision) return result
-    await syncSession($)
-    if (revision !== conversationRevision) return result
+    const changed = await syncSession($)
+    if (!changed && revision !== conversationRevision) return result
+    revision = conversationRevision
     await readModel($)
     if (revision !== conversationRevision) return result
     await takeCost($, e.cost?.usd)
@@ -175,8 +176,8 @@ export const register: Register = on => {
     const requestedEffort = baseModel(e.model) === baseModel(u.model) ? e.effort : undefined
     if (e.agentId === undefined) {
       const touched = (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0)
-      await syncSession($)
-      if (revision !== conversationRevision) return result
+      const changed = await syncSession($)
+      if (!changed && revision !== conversationRevision) return result
       await setModel($, u.model)
       await update($, effort, () => requestedEffort ?? null)
       await update($, cache, () => ({ at: started, warm: touched > 0 }))

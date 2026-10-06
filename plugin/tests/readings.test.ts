@@ -13,6 +13,32 @@ const SPAWN: AgentSpawnInput = {
 }
 
 for (const surface of SURFACES) {
+  test(`native events retain the first reading when they discover a new conversation (${surface})`, async ($, on) => {
+    let id = 'fictional-old'
+    on('session.start', ($, e) => ({ cwd: e.cwd }))
+    on('session.id', () => ({ value: id }))
+    on('session.usage', () => ({ value: usage(9_000, [], false) }))
+    on('session.measure', ($, e) => ({ changed: e.changed }))
+    on('turn.step', async function* () { return cached(30_000, 1_000) })
+    mockHost(on)
+    const clock = mock.clock(on, { now: NOW })
+    await $.session.start(session(surface))
+    const ui = await $.ui.mount(band(surface))
+    for await (const _ of $.turn.step(STEP)) { /* drain */ }
+    id = 'fictional-measure'
+    await $.session.measure({ ...measured(fill(9_000)), cost: { usd: 0.5 } })
+    expect(await ui.find({ type: 'Text', text: /^ ?9k\/1M$/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /^ ?≈\$0.50$/ })).toBeDefined()
+    const detail = await $.ui.mount({ plugin: 'ccoverhead', surface, component: 'Pane', requestId: 'ccoverhead',
+      props: { title: 'ccOverhead', isFocused: false, bodyColumns: 100, placement: 'inline', scroll: { offset: 0, bodyRows: 60 }, view: {} } })
+    expect(await detail.find({ type: 'Text', text: /31k in/ })).toBeUndefined()
+    id = 'fictional-step'
+    for await (const _ of $.turn.step(STEP)) { /* drain */ }
+    expect(await detail.find({ type: 'Text', text: /^ ?31k in · 1 out$/ })).toBeDefined()
+    await clock.advance(100)
+    expect(await detail.find({ type: 'Text', text: /^ ?fictional-step$/ })).toBeDefined()
+  })
+
   test(`late cost and quota readings settle without a context change (${surface})`, async ($, on) => {
     let dollars = 1
     let percentUsed = 20
@@ -54,7 +80,7 @@ for (const surface of SURFACES) {
 
   for (const [source, delayed] of [
     ['load', 'identity'], ['load', 'usage'], ['load', 'breakdown'], ['load', 'model'],
-    ['measure', 'model'], ['step', 'identity'],
+    ['measure', 'identity'], ['measure', 'model'], ['step', 'identity'],
   ] as const) {
     test(`a ${source} ${delayed} read crossing clear cannot restore old session figures (${surface})`, async ($, on) => {
       let id = 'fictional-old'
