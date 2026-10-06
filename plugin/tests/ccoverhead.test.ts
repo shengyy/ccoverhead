@@ -3,7 +3,7 @@ import type { ClassicResultOf, SessionRateLimit } from 'claude-code'
 
 import { gainTier, modelFamily, pctTier, weeklyWindow } from '../hooks/format'
 import { addAgentStep } from '../hooks/track'
-import { BREAKDOWN, MIN, NOW, STEP, SURFACES, TIER_HEX, band, cached, fill, graphic, iso, measured, session, tiers, usage } from './kit'
+import { mockHost, BREAKDOWN, MIN, NOW, STEP, SURFACES, TIER_HEX, band, cached, fill, graphic, iso, measured, session, tiers, usage } from './kit'
 
 test('the weekly window follows the main model when one is named after it (not verified against a real window)', () => {
   expect(['claude-fable-5-1', 'claude-opus-5-5', 'claude-haiku-4-5-20251001', 'some-other-model', null].map(modelFamily)).toEqual(['fable', 'opus', 'haiku', undefined, undefined])
@@ -26,14 +26,26 @@ test('the weekly window follows the main model when one is named after it (not v
   expect(weeklyWindow(scoped, 'claude-opus-5-5')).toEqual({ limit: scoped[1], label: '7d' })
 })
 
-test('a subagent keeps its totals as the main context does: changed ones only, restarting on a drop', () => {
-  const u = (t: number) => ({ input_tokens: 0, cache_read_input_tokens: t, cache_creation_input_tokens: 0 })
-  let list = addAgentStep([], 'a1', 'm', u(10_000), 'Explore')
+test('subagent usage counts repeated and smaller requests while its growth history deduplicates and restarts', () => {
+  const u = (t: number) => ({ input_tokens: 0, output_tokens: 500, cache_read_input_tokens: t, cache_creation_input_tokens: 0 })
+  let list = addAgentStep([], 'a1', 'm', u(10_000), 'high')
+  expect(list[0]?.effort).toBe('high')
   for (const t of [10_000, 10_000, 12_000]) list = addAgentStep(list, 'a1', 'm', u(t))
   expect(list[0]?.totals).toEqual([10_000, 12_000])
-  expect(list[0]?.label).toBe('Explore')
+  expect(list[0]?.usage).toEqual({ input: 42_000, output: 2_000, read: 42_000 })
+  expect(list[0]?.effort).toBeUndefined()
   list = addAgentStep(list, 'a1', 'm', u(4_000))
   expect(list[0]?.totals).toEqual([4_000])
+  expect(list[0]?.usage).toEqual({ input: 46_000, output: 2_500, read: 46_000 })
+  list = addAgentStep(list, 'a2', 'other', { ...u(1_000), input_tokens: 200, cache_creation_input_tokens: 3_000 }, 0)
+  expect(list[1]?.usage).toEqual({ input: 4_200, output: 500, read: 1_000 })
+  expect(list[1]?.effort).toBe(0)
+  // Eviction bounds memory; a returning agent starts another observed period rather than inventing history.
+  for (let i = 3; i <= 9; i++) list = addAgentStep(list, `a${i}`, 'm', u(1_000))
+  expect(list.length).toBe(8)
+  expect(list.some(a => a.id === 'a1')).toBe(false)
+  list = addAgentStep(list, 'a1', 'm', u(2_000))
+  expect(list.at(-1)?.usage).toEqual({ input: 2_000, output: 500, read: 2_000 })
 })
 
 test('percent tiers step every 10% from tier 2', () => {
@@ -53,7 +65,7 @@ describe('ccoverhead', () => {
       let rateLimits: SessionRateLimit[] = []
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
-      mock.store(on)
+      mockHost(on)
       // No breakdown either: the placeholder path.
       on('session.usage', () => ({ value: usage(tokens, rateLimits, false) }))
       on('turn.step', async function* () {
@@ -104,7 +116,7 @@ describe('ccoverhead', () => {
         // drain
       }
       // A freshly warm cache, its minutes in the same colour: none of the lifetime gone, the scale's sky.
-      expect((await ui.find({ type: 'Text', text: /^ ?warm 1h0m$/ }))?.props.color).toBe(TIER_HEX[2])
+      expect((await ui.find({ type: 'Text', text: /^ ?TTL unknown$/ }))?.props.dimColor).toBe(true)
       // The conversation's state first (context, then cache), then the account's quota.
       const order = (await ui.findAll({ type: 'Text' })).map(t => t.text.trim())
       expect(order.indexOf('ctx') < order.indexOf('cache') && order.indexOf('cache') < order.indexOf('5h') && order.indexOf('5h') < order.indexOf('7d')).toBe(true)
@@ -128,10 +140,10 @@ describe('ccoverhead', () => {
       expect((await ui.find({ type: 'Text', text: /^ ?90%$/ }))?.props.color).toBe(TIER_HEX[9])
     })
 
-    test(`narrow band drops the sparkline first (${surface})`, async ($, on) => {
+    test(`narrow band preserves growth before auxiliary details (${surface})`, async ($, on) => {
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
-      mock.store(on)
+      mockHost(on)
       on('session.usage', () => ({ value: usage(60_000, [], false) }))
       mock.clock(on, { now: NOW })
       await $.session.start(session(surface))
@@ -144,19 +156,21 @@ describe('ccoverhead', () => {
       }
       const wide = await $.ui.mount(band(surface, 160))
       expect(await wide.find({ type: 'Text', text: /↑18k/ })).toBeDefined()
-      // "ctx ■□□□□□□□□□ 9% 90k/1M | 5h 24% ↻2h30m | 7d 41% ↻5d0h" is 55 cells; the sparkline would add 10.
+      // Rightmost quota details yield before the per-turn growth chart.
       const narrow = await $.ui.mount(band(surface, 60))
-      expect(await narrow.find({ type: 'Text', text: /↑/ })).toBeUndefined()
+      expect(await narrow.find({ type: 'Text', text: /↑18k/ })).toBeDefined()
       expect(await narrow.find({ type: 'Text', text: /^ ?90k\/1M$/ })).toBeDefined()
+      expect(await narrow.find({ type: 'Text', text: /↻5d/ })).toBeUndefined()
       const tiny = await $.ui.mount(band(surface, 40))
-      expect(await tiny.find({ type: 'Text', text: /1M/ })).toBeUndefined()
-      expect(await tiny.find({ type: 'Text', text: /^5h$/ })).toBeDefined()
+      expect(await tiny.find({ type: 'Text', text: /^ ?90k\/1M$/ })).toBeDefined()
+      expect(await tiny.find({ type: 'Text', text: /↑18k/ })).toBeDefined()
+      expect(await tiny.find({ type: 'Text', text: /^5h$/ })).toBeUndefined()
     })
 
     test(`a new session shows the last saved quota dimmed (${surface})`, async ($, on) => {
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
-      mock.store(on, {
+      mockHost(on, {
         limits: [
           { kind: 'five_hour', percentUsed: 30, resetsAt: iso(90 * MIN) },
           // Already reset: dropped.
@@ -167,8 +181,9 @@ describe('ccoverhead', () => {
       mock.clock(on, { now: NOW })
       await $.session.start(session(surface))
       const ui = await $.ui.mount(band(surface))
-      const q = await ui.find({ type: 'Text', text: /^ ?30% ↻1h30m$/ })
-      expect(q?.props.dimColor).toBe(true)
+      for (const text of [/^ ?30%$/, /^ ?↻1h30m$/]) {
+        expect((await ui.find({ type: 'Text', text }))?.props.dimColor).toBe(true)
+      }
       expect(await ui.find({ type: 'Text', text: /^7d$/ })).toBeUndefined()
       expect(await ui.find({ type: 'Text', text: /^ ?-- \/1M$/ })).toBeDefined()
     })
@@ -177,7 +192,7 @@ describe('ccoverhead', () => {
       let tokens: number | undefined
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
-      mock.store(on)
+      mockHost(on)
       on('session.usage', ($, e) => ({ value: usage(tokens, [], e.breakdown !== undefined) }))
       mock.clock(on, { now: NOW })
       await $.session.start(session(surface))
@@ -196,7 +211,7 @@ describe('ccoverhead', () => {
     test(`a breakdown the engine refuses leaves the placeholder, not a stale band (${surface})`, async ($, on) => {
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
-      mock.store(on)
+      mockHost(on)
       on('session.usage', ($, e) => (e.breakdown ? { deny: 'no session bound' } : { value: usage(undefined, [], false) }))
       mock.clock(on, { now: NOW })
       await $.session.start(session(surface))
@@ -208,7 +223,7 @@ describe('ccoverhead', () => {
       let current = 'claude-fable-5-1'
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
-      mock.store(on)
+      mockHost(on)
       on('session.model', () => ({ value: current }))
       on('classic.PostModelSwitch', () => ({}))
       // A fictional model-specific window: Claude Code has not been seen reporting one.
@@ -247,7 +262,7 @@ describe('ccoverhead', () => {
       let tokens: number | undefined
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
-      mock.store(on)
+      mockHost(on)
       on('session.usage', ($, e) => ({ value: usage(tokens, [], e.breakdown !== undefined) }))
       // The lifecycle observer must preserve the settings hook's first-message and stop decisions.
       const downstream: ClassicResultOf['classic.SessionStart'] = {
@@ -274,7 +289,7 @@ describe('ccoverhead', () => {
         // drain
       }
       expect(await ui.find({ type: 'Text', text: /^ ?↑12\.3k$/ })).toBeDefined()
-      expect(await ui.find({ type: 'Text', text: /^ ?warm 1h0m$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /^ ?TTL unknown$/ })).toBeDefined()
 
       expect(await $.classic.SessionStart({ source: 'clear' })).toEqual(downstream)
       expect(await ui.find({ type: 'Text', text: /↑/ })).toBeUndefined()
@@ -286,7 +301,7 @@ describe('ccoverhead', () => {
       let read = 0
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
-      mock.store(on)
+      mockHost(on)
       on('session.usage', () => ({ value: usage(undefined, [], false) }))
       on('classic.SessionStart', () => ({}))
       on('turn.step', async function* () {
@@ -331,7 +346,8 @@ describe('ccoverhead', () => {
       let at = 0
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
-      mock.store(on)
+      mockHost(on)
+      on('classic.PostModelSwitch', () => ({}))
       on('session.usage', () => ({ value: usage(40_000, [], false) }))
       on('turn.step', async function* () {
         const [turnId, read, write] = steps[at++]!
@@ -339,6 +355,7 @@ describe('ccoverhead', () => {
       })
       const clock = mock.clock(on, { now: NOW })
       await $.session.start(session(surface))
+      await $.classic.PostModelSwitch({ from_model: STEP.model, to_model: STEP.model, requested_model: null, source: 'command', context_tokens: 40_000, prompt_cache_warm: false, cache_ttl: '1h', estimated_cache_write_usd: 0, pricing: 'catalog' })
       await $.session.measure(measured(fill(40_000, 4)))
       const ui = await $.ui.mount(band(surface))
       const step = async (turnId: string) => {
@@ -374,11 +391,12 @@ describe('ccoverhead', () => {
     test(`a model switch leaves the cache cold and sets its lifetime (${surface})`, async ($, on) => {
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
-      mock.store(on)
+      mockHost(on)
       on('session.usage', () => ({ value: usage(40_000, [], false) }))
       on('classic.PostModelSwitch', () => ({}))
-      on('turn.step', async function* () {
-        return cached(30_000, 1_000)
+      on('turn.step', async function* ($, e) {
+        const r = cached(30_000, 1_000)
+        return { ...r, usage: { ...r.usage!, model: e.model } }
       })
       mock.clock(on, { now: NOW })
       await $.session.start(session(surface))
@@ -387,7 +405,7 @@ describe('ccoverhead', () => {
       for await (const _ of $.turn.step(STEP)) {
         // drain
       }
-      expect(await ui.find({ type: 'Text', text: /^ ?warm 1h0m$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /^ ?TTL unknown$/ })).toBeDefined()
       await $.classic.PostModelSwitch({
         from_model: 'claude-opus-5-5',
         to_model: 'claude-haiku-4-5-20251001',
@@ -400,7 +418,7 @@ describe('ccoverhead', () => {
         pricing: 'catalog',
       })
       expect(await ui.find({ type: 'Text', text: /^ ?cold$/ })).toBeDefined()
-      for await (const _ of $.turn.step(STEP)) {
+      for await (const _ of $.turn.step({ ...STEP, model: 'claude-haiku-4-5-20251001' })) {
         // drain
       }
       expect(await ui.find({ type: 'Text', text: /^ ?warm 5m$/ })).toBeDefined()
@@ -409,7 +427,7 @@ describe('ccoverhead', () => {
     test(`a gateway's spend limit shows past 100% with no reset (${surface})`, async ($, on) => {
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
-      mock.store(on)
+      mockHost(on)
       on('session.usage', () => ({ value: usage(40_000, [], false) }))
       mock.clock(on, { now: NOW })
       await $.session.start(session(surface))
@@ -424,7 +442,7 @@ describe('ccoverhead', () => {
     test(`a reset time that does not parse is no reset (${surface})`, async ($, on) => {
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
-      mock.store(on)
+      mockHost(on)
       on('session.usage', () => ({ value: usage(40_000, [], false) }))
       mock.clock(on, { now: NOW })
       await $.session.start(session(surface))
@@ -450,7 +468,7 @@ describe('ccoverhead', () => {
       let at = 0
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
-      mock.store(on)
+      mockHost(on)
       on('session.usage', () => ({ value: usage(40_000, [], false) }))
       on('session.model', () => ({ value: 'claude-opus-5-5' }))
       on('agent.list', () => ({
@@ -502,7 +520,7 @@ describe('ccoverhead', () => {
       // A fictional summary: the compaction's content does not matter here, only that it ran.
       const SUMMARY = [{ role: 'user' as const, text: 'Fictional summary.', toolUses: [] }]
       on('session.compact', () => ({ messages: SUMMARY, tokensBefore: 80_000, tokensAfter: 30_000 }))
-      mock.store(on)
+      mockHost(on)
       on('session.usage', () => ({ value: usage(80_000, [], false) }))
       on('turn.step', async function* () {
         const [turnId, read, write] = steps[at++]!
@@ -536,7 +554,7 @@ describe('ccoverhead', () => {
       on('session.model', () => ({ value: current }))
       on('classic.PostModelSwitch', () => ({}))
       on('agent.list', () => ({ value: [{ id: 'a1', type: 'Explore', description: 'fictional', status: 'running' }] }))
-      mock.store(on)
+      mockHost(on)
       on('session.usage', () => ({ value: usage(40_000, [], false) }))
       on('turn.step', async function* () {
         const r = cached(0, 100_000)
@@ -569,7 +587,7 @@ describe('ccoverhead', () => {
     test(`a spend limit withdrawn by a later reading goes (${surface})`, async ($, on) => {
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
-      mock.store(on)
+      mockHost(on)
       on('session.usage', () => ({ value: usage(40_000, [], false) }))
       mock.clock(on, { now: NOW })
       await $.session.start(session(surface))
@@ -589,7 +607,7 @@ describe('ccoverhead', () => {
       let at = 0
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
-      mock.store(on)
+      mockHost(on)
       on('session.usage', () => ({ value: usage(80_000, [], false) }))
       on('turn.step', async function* () {
         const [turnId, read, write] = steps[at++]!

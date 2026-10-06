@@ -6,8 +6,22 @@ All notable changes to ccOverhead are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Late native accounting now updates the turn increment and quota even when context stays unchanged.
+  Native reads that outlive a conversation clear cannot restore the old session's figures.
+- The band preserves content drawn by later mods and Claude Code. Main-context readings refresh between
+  requests, and native session/command observations recover changes when `classic.*` is unavailable.
+- Cache warmth no longer assumes an hour before the engine reports a lifetime; a long response does not
+  extend the countdown. Light-theme text uses the light palette.
+
 ### Changed
 
+- Narrowing follows the visible band from right to left: last-turn cost first, then all cost, then agents,
+  keeping the context growth chart until all groups to its right have gone. The plain `agent` label is
+  followed by one lime spinner per running agent, up to three with `+N` for the rest. Each four-row grid
+  has five lit dots; terminal glyphs and matching desktop vectors rotate clockwise in sync.
+  Only the host-reported running agents animate; native spawn/completion observations refresh the count.
 - The website build takes its version and color scale from the plugin, keeping the public introduction
   aligned with the code it illustrates.
 - The website presents the detail pane, cache rewrites, resume behavior and subagent view alongside the
@@ -18,6 +32,19 @@ All notable changes to ccOverhead are documented here. The format follows
 
 ### Added
 
+- Installation instructions for the official Anthropic Directory listing and the repository's own
+  marketplace in both READMEs, the bundled plugin README and the website.
+- Main-session ID, requested effort and observed output tokens in the pane, using the existing native
+  readings and input/cache counters; main and subagent usage stay separate. No model-generated summaries.
+- Per-agent details in the pane: native short task description, full agent ID, latest responding model,
+  requested effort when available, and observed input/output/cache-read totals alongside the last-input
+  growth chart. The existing agent-list refresh supplies metadata; no new engine calls or history store.
+- Session cost and the latest turn's increase from Claude Code's own cost ledger: a gold total with a
+  secondary delta, hidden when unavailable and styled like other groups without a separate frame or
+  background. Running agents appear only while the count is nonzero.
+- A pane-only quota exhaustion estimate at the current window's average pace; early, expired or stale
+  readings have no forecast. The detail quota bar shades projected use by reset; no time progress bars
+  or persistent history are added.
 - Website previews for a cache rewrite and the band while viewing a subagent's transcript.
 
 ## [1.4.0] - 2026-10-04

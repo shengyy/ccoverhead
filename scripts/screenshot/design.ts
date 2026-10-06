@@ -4,7 +4,7 @@
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { CACHE_TTL_MS, DEGRADE, HISTORY, cells, colorOf, fit, gainTier, groups, items, pctTier, svgOf, width, SEP } from '../../plugin/hooks/format'
+import { CACHE_TTL_MS, HISTORY, bandVariants, cells, colorOf, fit, gainTier, groups, items, pctTier, svgOf, width, SEP } from '../../plugin/hooks/format'
 import type { BandInput, Span } from '../../plugin/hooks/format'
 import { band, rewriting } from './fixture'
 
@@ -26,11 +26,11 @@ function terminal(value: Span[][]) {
 }
 function desktop(value: Span[][]) {
   return value.map(g => `<span class="band-group">${items(g).map(it => it.kind === 'graphic'
-    ? `<img src="data:image/svg+xml;base64,${Buffer.from(it.graphic.source).toString('base64')}" width="${it.graphic.width}" height="${it.graphic.height}" alt="${escape(it.graphic.alt)}">`
+    ? `<span style="display:inline-flex;align-items:center"><img src="data:image/svg+xml;base64,${Buffer.from(it.graphic.source.replace(/<animate\b[^>]*\/>/g, '')).toString('base64')}" width="${it.graphic.width}" height="${it.graphic.height}" alt="${escape(it.graphic.alt)}">${it.suffix ? textSpan(it.suffix) : ''}</span>`
     : textSpan(it.span)).join('')}</span>`).join('<span class="dim separator">|</span>')
 }
 function groupByLabel(input: BandInput, label: string) {
-  return groups(input, DEGRADE[0]!).filter(g => g[0]?.text === label)
+  return groups(input).filter(g => g[0]?.text === label)
 }
 const full = fit(band, 110)
 const featureDescriptions = [
@@ -39,11 +39,10 @@ const featureDescriptions = [
   ['缓存冷热', 'warm / cold / 剩余分钟', '仅跟踪主对话请求的缓存读写。', 'cache'],
   ['使用额度', '5 小时 / 每周 / 重置倒计时', '显示已用比例，额度读数来自宿主。', 'quota'],
 ]
-const steps = ['完整信息', '隐藏增长图与 ↑', '再隐藏缓存改写', '再隐藏缓存', '再隐藏 token 数', '再隐藏每周倒计时', '再隐藏 5 小时倒计时']
+const steps = ['完整信息', '隐藏本轮费用', '再隐藏会话费用', '再隐藏 agent', '再隐藏每周倒计时', '再隐藏每周额度', '再隐藏 5 小时倒计时', '再隐藏 5 小时额度', '再隐藏缓存改写', '再隐藏缓存', '隐藏增长图与 ↑', '再隐藏 token 数']
 // A turn that rewrote the cache, so the narrowing table shows that step too.
-const responsive = DEGRADE.map((detail, i) => {
-  const gs = groups(rewriting, detail)
-  return `<div class="responsive-row"><span class="step-no">${String(i + 1).padStart(2, '0')}</span><span class="step-label">${steps[i]}</span><code class="demo-band">${terminal(gs)}</code><span class="cell-count">${width(gs)} cells</span></div>`
+const responsive = bandVariants(rewriting).map((gs, i) => {
+  return `<div class="responsive-row"><span class="step-no">${String(i + 1).padStart(2, '0')}</span><span class="step-label">${steps[i]}<small class="cell-count">${width(gs)} cells</small></span><code class="demo-band">${terminal(gs)}</code></div>`
 }).join('')
 const estimate: BandInput = { ...band, ctx: { window: band.ctx!.window, estimate: band.ctx!.tokens }, history: [] }
 const placeholder: BandInput = { ...band, ctx: { window: band.ctx!.window }, history: [] }
@@ -114,11 +113,11 @@ const css = `
   .terminal-prompt { margin-top:17px; padding:11px 18px; border:1px solid #4a4640; border-radius:6px; }
   .terminal-prompt .cursor { display:inline-block; width:10px; height:20px; margin-left:15px; vertical-align:-3px; background:#d97757; }
   .responsive-table { border-top:1px solid var(--line); }
-  .responsive-row { display:grid; grid-template-columns:32px 185px 1fr 80px; gap:13px; align-items:center; min-height:43px; border-bottom:1px solid #2c2c29; }
+  .responsive-row { display:grid; grid-template-columns:32px 170px 1fr; gap:13px; align-items:center; min-height:52px; border-bottom:1px solid #2c2c29; }
   .step-no { color:var(--dim); font:12px Menlo,monospace; }
   .step-label { font-size:14px; color:var(--sub); }
   .demo-band { font:14px Menlo,monospace; white-space:pre; }
-  .cell-count { color:var(--dim); text-align:right; font:12px Menlo,monospace; }
+  .cell-count { display:block; margin-top:4px; color:var(--dim); font:12px Menlo,monospace; }
   .small-note { color:var(--sub); font-size:13px; line-height:1.65; margin:12px 0 0; }
   .scale { display:grid; grid-template-columns:repeat(10,1fr); gap:9px; }
   .scale-step { text-align:center; }
@@ -193,7 +192,7 @@ const layout = `
   <div class="section-heading"><span class="index">03</span><h2>一套十档色阶，始终从安全走向警告</h2><span class="aside">标签保持普通文字，数值承担状态</span></div>
   <div class="palette-label"><span>深色主题 · Text 与 Svg</span><span>每列依次：颜色 / 上下文与额度已用比例 / 单次增长占窗口比例</span></div>
   <div class="scale">${scale}</div><div class="scale-meanings"><span>安全 · 冷色</span><span>注意 · 黄绿到黄</span><span>警告 · 暖色到红</span></div>
-  <div class="light-palette"><div class="palette-label"><span>浅色主题 · 仅 Svg 自动切换</span><span>Text 仍用深色列；浅色主题尚未实测</span></div><div class="scale">${lightScale}</div></div>
+  <div class="light-palette"><div class="palette-label"><span>浅色主题 · Text 与 Svg</span><span>浅色 Text 使用浅色列；尚未实测</span></div><div class="scale">${lightScale}</div></div>
   <div class="mapping"><p><b>图形尺寸</b>　桌面进度条 60 × 6 px；增长柱宽 4 px，柱间距 2 px，柱高 3–14 px。终端进度条为 10 格，按最接近的 10% 绘制。</p><p><b>增长与缓存</b>　保留 ${HISTORY} 个不同总量，形成最多 ${HISTORY - 1} 根柱。柱高相对比较，颜色按绝对占比；warm 与剩余分钟同色，按缓存寿命已过的比例取色，cold 为暗色。</p></div>
   <footer>${stamp}</footer>
 </section>`
@@ -206,8 +205,8 @@ const states = `
     <div class="state"><h3>回复后的实际读数</h3><code class="context-code">${terminal(groupByLabel(band, 'ctx'))}</code><p>容量、已用比例、token 数有实际读数；增长历史只在总量变化时增加。</p></div>
     <div class="state"><h3>首个回复前的本地估算</h3><code class="context-code">${terminal(groupByLabel(estimate, 'ctx'))}</code><p>使用宿主 /context 估算，带 ~；进度条和数值变暗，不发送模型请求。</p></div>
     <div class="state"><h3>没有估算值</h3><code class="context-code">${terminal(groupByLabel(placeholder, 'ctx'))}</code><p>保留窗口大小，用 -- 占位；不沿用上个窗口的数字。</p></div>
-    <div class="state quota-state"><h3>额度：本会话读数 / 跨会话记忆</h3><div class="state-pair"><span class="state-tag">当前</span><code>${terminal(groups(band, DEGRADE[0]!).filter(g => ['5h', '7d'].includes(g[0]!.text)))}</code></div><div class="state-pair"><span class="state-tag">记忆</span><code>${terminal(groups(remembered, DEGRADE[0]!).filter(g => ['5h', '7d'].includes(g[0]!.text)))}</code></div><p>新会话拿到自己的读数前，显示最近一次额度，数值与倒计时变暗。重置时间已过的窗口直接隐藏。</p></div>
-    <div class="state"><h3>缓存：warm → cold</h3><div class="state-pair"><code>${terminal(groupByLabel(band, 'cache'))}</code><span class="state-tag">→</span><code>${terminal(groupByLabel(expiredCache, 'cache'))}</code></div><p>主对话读 / 写缓存后变热，颜色随寿命流逝由冷转暖；未触及、到期或切换模型变冷，没有读数时隐藏。寿命默认 ${CACHE_TTL_MS / 3_600_000} 小时（Claude Pro 实测），切换模型或恢复会话时取宿主给出的寿命。</p></div>
+    <div class="state quota-state"><h3>额度：本会话读数 / 跨会话记忆</h3><div class="state-pair"><span class="state-tag">当前</span><code>${terminal(groups(band).filter(g => ['5h', '7d'].includes(g[0]!.text)))}</code></div><div class="state-pair"><span class="state-tag">记忆</span><code>${terminal(groups(remembered).filter(g => ['5h', '7d'].includes(g[0]!.text)))}</code></div><p>新会话拿到自己的读数前，显示最近一次额度，数值与倒计时变暗。重置时间已过的窗口直接隐藏。</p></div>
+    <div class="state"><h3>缓存：warm → cold</h3><div class="state-pair"><code>${terminal(groupByLabel(band, 'cache'))}</code><span class="state-tag">→</span><code>${terminal(groupByLabel(expiredCache, 'cache'))}</code></div><p>主对话读 / 写缓存后变热，颜色随寿命流逝由冷转暖；未触及、到期或切换模型变冷，没有读数时隐藏。寿命由切换模型或恢复会话的证据确定，否则显示 TTL unknown。</p></div>
   </div>
   <div class="section-heading"><span class="index">02</span><h2>会话变化时，重置该重置的状态</h2></div>
   <table class="lifecycle"><thead><tr><th>触发</th><th>状态变化</th><th>画面规则</th></tr></thead><tbody>
@@ -262,13 +261,18 @@ const english: Record<string, string> = {
   '等宽字体 · 字符进度条 · 字符增长图': 'Monospace · glyph bar · glyph growth chart',
   '空间不足时，按顺序删细节': 'When space runs out, shed details in order',
   'cell 数为横条内容宽度，不是窗口断点': 'Cells measure content, not viewport breakpoints',
+  '隐藏本轮费用': 'Hide turn cost',
+  '再隐藏 agent': 'Then agents',
+  '再隐藏会话费用': 'Then session cost',
   '完整信息': 'Full detail',
   '隐藏增长图与 ↑': 'Hide growth and ↑',
   '再隐藏缓存改写': 'Then hide cache rewrite',
   '再隐藏缓存': 'Then hide cache',
   '再隐藏 token 数': 'Then hide tokens',
   '再隐藏每周倒计时': 'Then weekly reset',
+  '再隐藏每周额度': 'Then weekly quota',
   '再隐藏 5 小时倒计时': 'Then 5-hour reset',
+  '再隐藏 5 小时额度': 'Then 5-hour quota',
   '宽度预算取 bodyColumns − 2，左右各留 1 cell。最后一档仍放不下时，终端截断尾部。优先留下上下文；桌面端每组用 Box 的 gap 分隔。': 'Width budget: bodyColumns − 2, with 1 cell on each side. If the last stage still does not fit, the terminal truncates the end. Context stays longest; desktop groups use Box gap spacing.',
   '一套十档色阶，始终从安全走向警告': 'One ten-tier scale, from safe to warning',
   '标签保持普通文字，数值承担状态': 'Plain labels; figures carry the state',
@@ -277,8 +281,8 @@ const english: Record<string, string> = {
   '安全 · 冷色': 'Safe · cool',
   '注意 · 黄绿到黄': 'Caution · lime to yellow',
   '警告 · 暖色到红': 'Warning · warm to red',
-  '浅色主题 · 仅 Svg 自动切换': 'Light theme · Svg switches automatically',
-  'Text 仍用深色列；浅色主题尚未实测': 'Text keeps dark colors; light themes are not verified',
+  '浅色主题 · Text 与 Svg': 'Light theme · Svg switches automatically',
+  '浅色 Text 使用浅色列；尚未实测': 'Light Text uses light colors; not verified live',
   '图形尺寸': 'Graphic dimensions',
   '桌面进度条 60 × 6 px；增长柱宽 4 px，柱间距 2 px，柱高 3–14 px。终端进度条为 10 格，按最接近的 10% 绘制。': 'Desktop bar: 60 × 6 px. Growth columns: 4 px wide, 2 px apart, 3–14 px tall. The terminal bar has 10 cells, rounded to the nearest 10%.',
   '增长与缓存': 'Growth and cache',
@@ -297,7 +301,7 @@ const english: Record<string, string> = {
   '记忆': 'Saved',
   '新会话拿到自己的读数前，显示最近一次额度，数值与倒计时变暗。重置时间已过的窗口直接隐藏。': 'Show the last quota reading until this session gets its own; figures and countdowns are dim. Hide any window whose reset time has passed.',
   '缓存：warm → cold': 'Cache: warm → cold',
-  [`主对话读 / 写缓存后变热，颜色随寿命流逝由冷转暖；未触及、到期或切换模型变冷，没有读数时隐藏。寿命默认 ${CACHE_TTL_MS / 3_600_000} 小时（Claude Pro 实测），切换模型或恢复会话时取宿主给出的寿命。`]: `A main-conversation cache read/write makes it warm, its color warming as the lifetime drains. No touch, expiry or a model switch makes it cold; no reading hides it. Lifetime: ${CACHE_TTL_MS / 3_600_000} hour by default (verified on Claude Pro), or what a model switch or a resume reports.`,
+  [`主对话读 / 写缓存后变热，颜色随寿命流逝由冷转暖；未触及、到期或切换模型变冷，没有读数时隐藏。寿命由切换模型或恢复会话的证据确定，否则显示 TTL unknown。`]: `A main-conversation cache read/write makes it warm, its color warming as the lifetime drains. No touch, expiry or a model switch makes it cold; no reading hides it. Lifetime comes from a model switch or resume evidence; otherwise TTL unknown.`,
   '会话变化时，重置该重置的状态': 'Conversation changes reset the relevant state',
   '触发': 'Trigger',
   '状态变化': 'State change',

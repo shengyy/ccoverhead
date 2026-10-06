@@ -6,8 +6,8 @@
 
 <p align="center">
   Your Claude Code overhead, right overhead.<br>
-  Context, each turn's growth, quota and cache warmth in one band above the prompt,<br>
-  and the detail behind them in one <code>/ccoverhead</code> pane.
+  Context, growth, quota, cache warmth, native cost and agent activity above the prompt.<br>
+  Session and agent details in one <code>/ccoverhead</code> pane.
 </p>
 
 <p align="center">
@@ -21,6 +21,7 @@
 </p>
 
 <p align="center"><a href="https://shengyy.github.io/ccoverhead/"><strong>Website &amp; previews</strong></a></p>
+<p align="center"><a href="#install">Available in Anthropic Directory · search ccOverhead</a></p>
 
 <p align="center">
   <img src="assets/screenshots/desktop.png" width="760" alt="The ccOverhead band in the Claude desktop app: a context bar at 27 percent, a seven-bar growth chart in mixed colours, the cache warm for 38 minutes, 5-hour quota 42 percent, weekly quota 63 percent">
@@ -32,7 +33,8 @@ While you work in Claude Code, a few numbers decide what you should do next: how
 is (time to `/compact`?), how fast it is filling, how much of your 5-hour and weekly quota is left, and
 whether the prompt cache is still warm. ccOverhead is a Claude Code mod (a plugin of function
 hooks) that keeps all of them in one band right above the prompt, colored on a single scale from safe to warning,
-and opens the detail behind them in a pane when you ask.
+with native cost and running-agent indicators alongside. The pane adds session and agent IDs, short
+task descriptions, models, requested effort and observed token usage without model requests.
 
 ## Features
 
@@ -40,20 +42,29 @@ and opens the detail behind them in a pane when you ask.
   of a session (or after `/clear` or compaction) it shows Claude Code's own `/context` estimate, marked
   `~`, instead of a blank.
 - **Each turn's growth.** A seven-bar chart of what every recent turn added to the context, plus the last
-  turn's `↑` figure. Each bar is colored by its share of the window, so a heavy turn stands out.
+  turn's `↑` figure. Context readings also refresh between requests within a turn. Each bar is colored by its share of the window, so a heavy turn stands out.
 - **Quota with reset countdowns.** The 5-hour and weekly windows (and a Claude gateway's spend limit), as a
   percentage used and the time until each resets.
 - **Prompt-cache warmth.** Whether the last main-conversation request hit the cache and how long it stays
   warm, warming in color as it drains, so you know when a pause will cost a cache rewrite; when a turn did
   rewrite it, the band says how much.
-- **Subagents too.** Open a subagent's transcript and the band follows that agent's context and growth.
+- **Native cost.** `cost ≈$1.84 (+$0.12)` shows the session's API-price reference and latest turn
+  increment from Claude Code. Gold total, secondary increment, hidden when unavailable; no price table.
+  On subscriptions this is a usage reference, not an extra bill.
+- **Subagents too.** `agent` shows one spinner per running agent, up to three with `+N` for the rest; hidden at zero. Open a subagent's transcript and the band follows that agent's context and growth.
 - **The `/ccoverhead` pane.** What is in the window by category (which MCP server costs what), growth since
-  the last compaction and each compaction, the cache's hit rate, every quota window with how much of its
-  time is gone, and the eight most recently active subagents. It also works in VS Code and the mobile app, where the band is not drawn.
+  the last compaction and each compaction, the cache's hit rate, every quota window with a
+  window-average exhaustion estimate (when useful), and the eight most recently observed subagents:
+  short task description, full agent ID, model, requested effort when reported, input/output tokens and
+  cache reads. Counts cover observed requests; input includes cache. It also works in VS Code and the
+  mobile app, where the band is not drawn.
+- **Main-session detail.** Its full session ID, model, requested effort when reported, and observed
+  input/output tokens, kept separate from subagent usage. Short agent descriptions come from the host;
+  displaying them does not ask a model to summarize anything.
 - **One color language.** Cool means safe, yellow means caution, warm to red means warning, the same for
-  every number in the band. The scale stays readable for red-green color-blind users.
+  every usage number in the band. Cost keeps a fixed gold accent. The scale stays readable for red-green color-blind users.
 - **Terminal and desktop.** One line of text in the terminal; crisp vector bars in the Claude desktop app,
-  where block characters would not line up.
+  where block characters would not line up. Text follows dark/light themes.
 - **Private and free.** It only reads figures Claude Code already reports. No files, no network, no model
   requests, no telemetry.
 
@@ -67,11 +78,24 @@ and opens the detail behind them in a pane when you ask.
   [docs/status.md](docs/status.md).
 - The band is drawn in the terminal and in the Claude desktop app's Code tab. Quota appears on Claude
   subscription plans, which report rate limits, and as `spend` on a Claude gateway that reports a spend
-  limit; other API-key sessions show context and cache only.
+  limit; other API-key sessions show context, cache and native cost when available.
 
 ## Install
 
-In Claude Code:
+Choose either source; enable only one copy of ccOverhead.
+
+### Recommended: Anthropic Directory
+
+ccOverhead is available in the official **Anthropic Directory**. In the Claude desktop app, open
+**Settings → Plugins → Discover**, search **`ccOverhead`**, and select the entry whose source is
+**Anthropic Directory**. Install it and keep it enabled for Claude Code.
+**No marketplace setup or terminal commands are needed for this method.**
+
+[Open ccOverhead in Anthropic Directory](https://claude.ai/customize/plugins/id/d9866436-5b36-4af8-83d9-7c066d390bdb%40anthropic-plugin-directory)
+
+### Alternative: this repository's marketplace
+
+For a direct install from our GitHub marketplace, run these inside Claude Code:
 
 ```text
 /plugin marketplace add shengyy/ccoverhead
@@ -79,34 +103,38 @@ In Claude Code:
 /reload-plugins
 ```
 
-Update with `/plugin marketplace update ccoverhead`, then `/plugin update ccoverhead@ccoverhead`.
-Remove with `/plugin uninstall ccoverhead@ccoverhead`.
+For this marketplace installation, update with `/plugin marketplace update ccoverhead`, then
+`/plugin update ccoverhead@ccoverhead`; remove with `/plugin uninstall ccoverhead@ccoverhead`.
+For the directory installation, use its plugin details in Claude to update or remove it.
 
 ## Use
 
 The band reads left to right, from what changes every turn to what changes slowly:
 
 ```text
-ctx ■■■□□□□□□□ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | cache warm 38m | 5h 42% ↻2h34m | 7d 63% ↻2d7h
+ctx ■■■□□□□□□□ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | cache warm 38m | 5h 42% ↻2h34m | 7d 63% ↻2d7h | cost ≈$1.84 (+$0.12)
 ```
 
 | Group | Meaning |
 |---|---|
 | `ctx` | Context used: bar, percentage, tokens. `~` marks the pre-response estimate. Reads `agent` while a subagent's transcript is on screen |
 | Bars and `↑` | What each of the last seven turns added; `↑` is the latest turn |
-| `cache` | `warm` and its minutes, warming in color as the lifetime drains, or `cold`; `rewrote` and its tokens on a turn that wrote the cache again instead of reading it |
+| `cache` | `warm` and its minutes, warming in color as the lifetime drains, or `cold`; `TTL unknown` until the host provides lifetime evidence; `rewrote` and its tokens on a turn that wrote the cache again instead of reading it |
 | `5h`, `7d` | Quota used in each window, and `↻` the time until it resets. Dim when remembered from an earlier session. `7d` follows the main model's own weekly window when Claude Code reports one, such as `7d fable` (not verified) |
+| `cost` | Gold session USD total and secondary latest-turn increment; native API-price reference, hidden when absent |
+| `agent` + spinners | One lime spinner per running agent, up to three plus `+N` for the rest. Four-row dots rotate clockwise in sync on both surfaces; zero is hidden |
 | `spend` | A Claude gateway's spend limit, when reported; it can pass 100% (not verified) |
 
 Colors follow one ten-step scale from cool to warm. Percentages (context and quota) move one step per 10%
 from sky blue at 0–29% to red at 90% and above; each growth bar takes a step by its share of the window,
 doubling from 0.1%. The full table is in [docs/design.md](docs/design.md#color-scale). On a narrow window
-the band drops the chart, then the cache, then details, keeping the context longest.
+the band shrinks from right to left, keeping context and its per-turn growth chart longer than the groups
+to their right.
 
 Type `/ccoverhead` for the pane. It only displays and adds nothing to the conversation:
 
 <p align="center">
-  <img src="assets/screenshots/pane.png" width="620" alt="The ccOverhead pane in a terminal: the context with the auto-compaction threshold, the window broken down by category and MCP server, growth since the last compaction, cache state and hit rate, quota with the share of each window's time gone, and one subagent">
+  <img src="assets/screenshots/pane.png" width="620" alt="The ccOverhead pane in a terminal: the context with the auto-compaction threshold, the window broken down by category and MCP server, growth since the last compaction, cache state and hit rate, quota with window-average exhaustion estimates, native cost, and one subagent">
 </p>
 
 ## Design rationale
@@ -118,7 +146,7 @@ The diagrams below illustrate layout, color thresholds and state rules using fic
 [the design specification](docs/design.md) for the rules and how to regenerate them.
 
 <p align="center">
-  <img src="assets/screenshots/design-layout-en.png" width="1000" alt="ccOverhead layout and color reference: desktop and terminal rendering, seven narrowing stages, dark and light palettes, and color thresholds">
+  <img src="assets/screenshots/design-layout-en.png" width="1000" alt="ccOverhead layout and color reference: desktop and terminal rendering, progressive narrowing stages, dark and light palettes, and color thresholds">
 </p>
 
 <p align="center">
@@ -130,8 +158,7 @@ The diagrams below illustrate layout, color thresholds and state rules using fic
 ccOverhead is a plugin of function hooks. It draws the `AbovePrompt` site and, on `/ccoverhead`, a `Pane`;
 it reads the context and rate limits that Claude Code reports after each turn (`session.measure`,
 `$.session.usage`, with `/context`'s local count for the threshold and the breakdown, which sends no
-request), and watches each request's token usage (`turn.step`). Everything it shows is a figure Claude Code
-already has; nothing is computed from your files or sent anywhere. The Claude Code facts it relies on, and
+request), and watches each request's token usage (`turn.step`). Cost is native; turn increments and pane-only forecasts are calculated from those readings; nothing is computed from your files or sent anywhere. The Claude Code facts it relies on, and
 the version each was checked on, are in [docs/claude-code-integration.md](docs/claude-code-integration.md).
 
 ## Privacy

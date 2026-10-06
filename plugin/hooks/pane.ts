@@ -1,10 +1,10 @@
 // Pure formatting for the /ccoverhead pane: the detail the band has no room for, as headed sections of lines.
 // Each line is a label column and a run of spans, drawn like the band's (block glyphs on the terminal, Svg on
 // the surfaces with a proportional font).
-import type { OverheadAgent, OverheadBreakdown, OverheadCacheStats, OverheadCompaction } from '../types'
+import type { OverheadAgent, OverheadBreakdown, OverheadCacheStats, OverheadCompaction, OverheadEffort } from '../types'
 import type { BandInput, Span } from './format'
-import { FALLBACK_WINDOW, bar, cacheTier, dur, gainTier, gains, kshort, ktok, modelFamily, pctTier, sparkline, weeklyWindow } from './format'
-import { AGENTS, hitRate } from './track'
+import { FALLBACK_WINDOW, bar, cacheStatus, dur, forecastBar, gainTier, gains, kshort, ktok, pctTier, sparkline, usd, validCost, weeklyWindow } from './format'
+import { AGENTS, hitRate, quotaForecast } from './track'
 
 export type PaneInput = BandInput & {
   timeline: number[]
@@ -14,10 +14,13 @@ export type PaneInput = BandInput & {
   breakdown: OverheadBreakdown | null
   // The agent whose transcript is on screen, if any.
   viewing?: string
+  limitsAt?: number | null
+  sessionId?: string | null
+  effort?: OverheadEffort | null
 }
 
 // `end`: the label is a figure, right-aligned in its column; `nested`: the line belongs to the one above.
-export type PaneLine = { head: string } | { label: Span; spans: Span[]; end?: boolean; nested?: boolean }
+export type PaneLine = { head: string } | { label: Span; spans: Span[]; end?: boolean; nested?: boolean; wrap?: boolean; gapBefore?: boolean }
 
 // Cells the label column takes on the terminal.
 export const LABEL = 12
@@ -25,19 +28,13 @@ export const LABEL = 12
 const clip = (name: string) => (name.length > LABEL - 1 ? `${name.slice(0, LABEL - 2)}…` : name)
 // MCP servers listed under the breakdown, the costliest first.
 const SERVERS = 5
-// How long each known quota window runs, for the share of it gone.
-const SPANS: [test: (kind: string) => boolean, ms: number][] = [
-  [kind => kind === 'five_hour', 5 * 3_600_000],
-  [kind => kind.startsWith('seven_day') || kind.includes('weekly'), 7 * 86_400_000],
-]
-
 const line = (label: string | Span, ...spans: Span[]): PaneLine => ({ label: typeof label === 'string' ? { text: label } : label, spans })
 const figure = (label: Span, ...spans: Span[]): PaneLine => ({ label, spans, end: true })
 const dim = (text: string): Span => ({ text, dimColor: true })
 const pad = (text: string, n: number) => text.padStart(n)
 
 export function paneLines(p: PaneInput): PaneLine[] {
-  return [...context(p), ...breakdown(p), ...growth(p), ...cache(p), ...quota(p), ...agents(p)]
+  return [...context(p), ...breakdown(p), ...growth(p), ...cache(p), ...quota(p), ...cost(p), ...agents(p)]
 }
 
 function context(p: PaneInput): PaneLine[] {
@@ -69,7 +66,8 @@ function context(p: PaneInput): PaneLine[] {
   } else if (p.breakdown && !p.breakdown.autoCompact) {
     out.push(line('compacts', dim(' never: auto-compaction is off')))
   }
-  if (p.model) out.push(line('model', dim(` ${p.model}`)))
+  if (p.model) out.push(line('model', dim(` ${p.model}`), ...(p.effort != null ? [dim(` · effort ${p.effort} (requested)`)] : [])))
+  if (p.sessionId) out.push({ ...line('session ID', dim(` ${p.sessionId}`)), wrap: true })
   return out
 }
 
@@ -113,18 +111,19 @@ function growth(p: PaneInput): PaneLine[] {
 }
 
 function cache(p: PaneInput): PaneLine[] {
-  const out: PaneLine[] = [{ head: 'Cache, main conversation' }]
+  const out: PaneLine[] = [{ head: 'Tokens & cache, main conversation' }]
   const c = p.cache
   if (!c) out.push(line('state', dim(' no request yet')))
   else {
-    const left = c.at + p.cacheTtl - p.now
-    out.push(
-      c.warm && left > 0
-        ? line('state', { text: ` warm ${dur(left)}`, tier: cacheTier(left, p.cacheTtl) }, dim(` left of ${p.cacheTtl % 3_600_000 === 0 ? `${p.cacheTtl / 3_600_000}h` : dur(p.cacheTtl)}`))
-        : line('state', dim(' cold')),
-    )
+    const status = cacheStatus(c, p.cacheTtl, p.now)
+    out.push(line('state', status, ...(status.text.startsWith(' warm') && p.cacheTtl !== null ? [dim(` left of ${dur(p.cacheTtl)}`)] : [])))
   }
   const s = p.cacheStats
+  const input = s.input + s.read + s.write
+  if (s.output !== undefined && (input > 0 || s.output > 0)) {
+    out.push(line('tokens', { text: ` ${kshort(input)} in · ${kshort(s.output)} out` }))
+    out.push(line('', dim(' Observed requests only; input includes cache')))
+  }
   const hit = hitRate(s)
   if (hit !== undefined) {
     out.push(line('hit rate', { text: ` ${Math.trunc(hit)}%`, tier: pctTier(100 - hit) }, dim(` · read ${kshort(s.read)} · written ${kshort(s.write)} · uncached ${kshort(s.input)}`)))
@@ -133,7 +132,7 @@ function cache(p: PaneInput): PaneLine[] {
   return out
 }
 
-// Every window reported, with the share of its time gone beside the share used: a fact, not a forecast.
+// Every reported window, with a labeled window-average projection only for fresh live readings.
 function quota(p: PaneInput): PaneLine[] {
   const out: PaneLine[] = [{ head: p.limitsLive ? 'Quota' : 'Quota, as an earlier session last saw it' }]
   const weekly = weeklyWindow(p.limits, p.model)
@@ -145,41 +144,62 @@ function quota(p: PaneInput): PaneLine[] {
       l.kind === 'five_hour' ? '5h' : l === weekly.limit ? weekly.label : l.kind === 'seven_day' ? '7d' : l.kind === 'spend_limit' ? 'spend' : l.kind,
     )
     const resets = l.resetsAt === undefined ? undefined : Date.parse(l.resetsAt)
-    const span = SPANS.find(([test]) => test(l.kind))?.[1]
-    const gone = span && resets !== undefined ? Math.min(Math.max(Math.round(((span - (resets - p.now)) * 100) / span), 0), 100) : undefined
+    const forecast = p.limitsLive ? quotaForecast(l, p.limitsAt, p.now) : undefined
     const ink = (s: Span): Span => (p.limitsLive ? s : { text: s.text, bar: s.bar, dimColor: true })
     out.push(
       line(
         label,
         { text: ' ' },
-        ink({ text: bar(pc), tier: pctTier(pc), bar: Math.min(pc, 100) }),
+        ink({ text: forecast ? forecastBar(pc, forecast.percentAtReset) : bar(pc), tier: pctTier(pc), bar: Math.min(pc, 100), barLabel: 'quota', forecast: forecast?.percentAtReset }),
         ink({ text: ` ${pc}%`, tier: pctTier(pc) }),
         ...(resets === undefined ? [] : [dim(` ↻${dur(resets - p.now)}`)]),
-        ...(gone === undefined ? [] : [dim(` · ${gone}% of the window gone`)]),
       ),
     )
+    if (forecast !== undefined && resets !== undefined) {
+      out[0] = { head: 'Quota, shaded = window-average projection' }
+      const runway = forecast.exhaustsAt < resets ? `limit in ≈${dur(forecast.exhaustsAt - p.now)}` : 'reset comes first'
+      out.push(line('', dim(` ≈${Math.round(forecast.percentAtReset)}% by reset · ${runway}`)))
+    }
   }
   return out
 }
 
-// The conversation's most recently active subagents: type, model family, last context total, growth, and which
-// one is on screen.
+function cost(p: PaneInput): PaneLine[] {
+  if (!validCost(p.cost)) return []
+  return [
+    { head: 'Cost, API-price reference' },
+    line('session', { text: ` ≈${usd(p.cost)}`, money: true }),
+    ...(validCost(p.turnCost) ? [line('last turn', dim(` +${usd(p.turnCost)}`))] : []),
+    line('', dim(' API-price reference, not a billing receipt')),
+  ]
+}
+
+// Latest model/effort and last input are separate from cumulative usage. Input includes cache reads/writes;
+// the cache-read figure is a subset, not another amount to add. No missing effort is inferred.
 function agents(p: PaneInput): PaneLine[] {
   if (p.agents.length === 0) return []
   const window = p.ctx?.window ?? FALLBACK_WINDOW
   const out: PaneLine[] = [{ head: p.agents.length < AGENTS ? 'Subagents' : `Subagents, the last ${AGENTS} active` }]
-  for (const a of p.agents) {
+  for (const [index, a] of p.agents.entries()) {
     const gs = gains(a.totals)
     const name = a.label ?? 'agent'
     out.push(
+      { ...line(clip(name), ...(a.description?.trim() ? [{ text: ` ${a.description.replace(/\s+/g, ' ').trim()}` }] : [])), wrap: true, gapBefore: index > 0 },
+      { ...line('agent ID', dim(` ${a.id}`)), wrap: true },
       line(
-        clip(name),
+        'model',
+        { text: ` ${a.model}` },
+        ...(a.effort !== undefined ? [dim(` · effort ${a.effort} (requested)`)] : []),
+      ),
+      line(
+        'last input',
         { text: ` ${ktok(a.totals.at(-1) ?? 0)}` },
-        ...(gs.length > 0 ? [{ text: ' ' }, { text: sparkline(gs), spark: gs, tiers: gs.map(v => gainTier(v, window)) }] : []),
-        dim(` ${modelFamily(a.model) ?? a.model}`),
+        ...(gs.length > 0 ? [{ text: ' ' }, { text: sparkline(gs), spark: gs, sparkLabel: 'input' as const, tiers: gs.map(v => gainTier(v, window)) }] : []),
         ...(a.id === p.viewing ? [dim(' · on screen')] : []),
       ),
+      ...(a.usage ? [line('tokens', { text: ` ${kshort(a.usage.input)} in · ${kshort(a.usage.output)} out` }, dim(` · ${kshort(a.usage.read)} cache read`))] : []),
     )
   }
+  out.push(line('', dim(' Observed requests only; input includes cache')))
   return out
 }

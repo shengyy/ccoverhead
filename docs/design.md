@@ -7,15 +7,29 @@ figures, warm ones only when something deserves attention. What it shows and whe
 ## The band
 
 ```text
-ctx ■■■□□□□□□□ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | cache warm 38m | 5h 42% ↻2h34m | 7d 63% ↻2d7h
+ctx ■■■□□□□□□□ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | cache warm 38m | 5h 42% ↻2h34m | 7d 63% ↻2d7h | cost ≈$1.84 (+$0.12)
 ```
 
 - Groups, left to right: context (bar, percentage, tokens, growth chart,
   `↑` latest growth), cache (`warm` and the minutes left, or `cold`; then `rewrote` and its tokens
   on a turn that rewrote the cache), 5-hour quota, weekly quota, `spend` (a gateway's spend limit, when
-  reported). A dim ` | ` separates groups.
+  reported), then nonzero running agents and cost last. A dim ` | ` separates groups.
+- The `cost` label uses normal text like `ctx`, `cache` and `agent`. Its total stays gold
+  (`#dfbc70` dark, `#8a6215` light), and its increment uses native secondary text. Both
+  surfaces use the same spacing and separators as other groups, without a separate background, border
+  or padding. No amount changes its color, and no progress bar is added.
+- Running agents use a plain-text `agent` label, then one spinner per agent in fixed lime (tier 5:
+  `#b8e45c` dark, `#567a00` light). At most three spinners appear; `+N` adds the rest, so seven is
+  three spinners immediately followed by `+4`, without a separating space. The group has no frame or
+  background and is hidden at zero. Each terminal
+  spinner uses one cell of eight-dot braille (two columns, four rows), with five lit dots moving clockwise
+  every 140 ms; no emoji or image protocol. All spinners rotate in sync. The desktop uses
+  8 × 14 px vector dot grids with 2 px between them, sharing the same masks, phases and timing
+  (1.12 s per cycle). Its SVG respects reduced motion. One local terminal Client clock drives the whole
+  row. Narrowing removes the whole group, never an individual spinner that would change the count.
+  Animation does not refresh usage. Native playback has not yet been observed in a live Claude Code session.
 - `warm` and its minutes are one span in one color, the share of the lifetime gone on the percentage
-  scale: sky while fresh, up through the tiers to red in the last tenth; `cold` is dim. The minutes already
+  scale: sky while fresh, up through the tiers to red in the last tenth; `cold` and `TTL unknown` are dim. The minutes already
   say how long, so no gauge repeats them.
 - The bar carries no auto-compaction mark. On the 1M window most sessions run, the threshold (967k) rounds
   to the bar's end, where a mark read as a separator between the bar and its figures; the pane gives the
@@ -25,9 +39,11 @@ ctx ■■■□□□□□□□ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | 
   instead of `7d`.
 - Labels (`ctx`, `5h`, `7d`, `cache`) are plain text. Figures take their tier's color. Secondary detail
   (tokens, countdowns, `↑`, remembered quota, the estimate) is dim.
-- Widths are counted in terminal cells. Narrowing drops the growth chart, the cache rewrite, the cache, the
-  context tokens, the weekly and spend countdowns and the 5-hour countdown, in that order, then truncates the
-  end.
+- Widths are counted in terminal cells. Narrowing follows the visible order from right to left: cost,
+  agents, spend (if reported), weekly quota, 5-hour quota, cache, then context. The last-turn cost yields
+  first, followed by the whole cost group, then all agents. Within each remaining rightmost
+  group, its trailing detail yields before the whole group. Context keeps its growth chart until every
+  group to its right is gone; then growth yields before token counts, keeping the bar and percentage last.
 - The band redraws every 30 s so countdowns keep time.
 
 ## Color scale
@@ -38,13 +54,13 @@ One scale, one meaning: cool is safe, yellow is caution, warm to red is warning.
 |---|---|---|---|---|---|
 | 0 | indigo `#5965cd` | `#4c55bc` | < 0.1% | < 1k | — |
 | 1 | blue `#4087de` | `#266ec3` | 0.1–0.2% | 1–2k | — |
-| 2 | sky `#37aae3` | `#0481b3` | 0.2–0.4% | 2–4k | 0–29% |
-| 3 | cyan `#35c5db` | `#0c8d9e` | 0.4–0.8% | 4–8k | 30–39% |
-| 4 | teal `#49d6cc` | `#17938b` | 0.8–1.6% | 8–16k | 40–49% |
-| 5 | lime `#b8e45c` | `#74980d` | 1.6–3.2% | 16–32k | 50–59% |
-| 6 | yellow `#f9e149` | `#b39b00` | 3.2–6.4% | 32–64k | 60–69% |
-| 7 | amber `#fea92f` | `#b77610` | 6.4–12.8% | 64–128k | 70–79% |
-| 8 | orange `#fd7933` | `#bd4d00` | 12.8–25.6% | 128–256k | 80–89% |
+| 2 | sky `#37aae3` | `#0076a8` | 0.2–0.4% | 2–4k | 0–29% |
+| 3 | cyan `#35c5db` | `#007a8b` | 0.4–0.8% | 4–8k | 30–39% |
+| 4 | teal `#49d6cc` | `#007c74` | 0.8–1.6% | 8–16k | 40–49% |
+| 5 | lime `#b8e45c` | `#567a00` | 1.6–3.2% | 16–32k | 50–59% |
+| 6 | yellow `#f9e149` | `#856d00` | 3.2–6.4% | 32–64k | 60–69% |
+| 7 | amber `#fea92f` | `#a05f00` | 6.4–12.8% | 64–128k | 70–79% |
+| 8 | orange `#fd7933` | `#bc4c00` | 12.8–25.6% | 128–256k | 80–89% |
 | 9 | red `#ed4b43` | `#bb0916` | ≥ 25.6% | ≥ 256k | ≥ 90% |
 
 The colors are defined once, in `plugin/hooks/format.ts`; this table follows it.
@@ -67,9 +83,10 @@ share of the window: a rewrite is a cost like a turn's growth, while a category'
   In the maintainer's last 30 days (328 turns) the median turn added about 8k; the first seven tiers each
   held 10–18% of turns, 64k and more about 7%, 256k and more under 1%. Everyday turns spread across the
   cool tiers; warm bars mark the heavy ones.
-- **Text in the dark palette.** `Text` takes a theme key, a color name or a hex color, and the theme keys
-  cannot express this scale, so figures use the dark-theme hex. On a light theme bright figures such as
-  yellow read faint; the desktop's Svg switches to the light column itself.
+- **Theme-aware text.** `config.list` supplies the native theme. Dark/light themes use the matching
+  palette; other themes retain native semantic colors. Every light-palette tier clears 4.5:1 against
+  `#f5f5f5`. Desktop Svg switches palettes with `prefers-color-scheme`. Live light-theme rendering is not
+  verified; the fictional previews and test kit cover the implementation.
 
 ## Desktop drawing
 
@@ -87,10 +104,21 @@ There, and only there:
 `/ccoverhead` opens a pane of headed sections. Each line is a 12-cell label column and a run of the band's
 own spans, so the bars, sparkline and colors are the band's: block glyphs on the terminal, `Svg` on the
 surfaces with a proportional font (desktop, VS Code, mobile), where a line is a `Box` row spaced by `gap`.
+The quota bar uses solid fill for actual use and a muted extension for projected use by reset. The
+projection and estimated exhaustion use the same window-average rate. The percentage can exceed 100%;
+the bar stops at 100%. Only the pane has this overlay, with an explicit legend and `≈` label.
 Headings are bold; explanations and secondary figures are dim. The breakdown's label column holds each
 category's tokens, right-aligned, colored by its share of the window; MCP servers are indented under the
 `MCP tools` row and dim. The engine places the pane (docked beside a fullscreen transcript, else above the
 prompt) and scrolls it; it opens asking for 24 rows.
+
+The main context section includes its full `session ID`, model and optional requested effort. Its
+tokens/cache section reuses the cache totals and adds observed output. Each observed subagent uses a
+compact block: type and short description, full `agent ID`, model and
+optional requested effort, last input with its growth chart, then input/output tokens and cache reads.
+Description and ID wrap rather than truncate. A shared note states that the counts cover observed
+requests and input includes cache. A blank line separates agents, without cards or additional borders.
+These details do not add groups to the band.
 
 ## Logo
 
@@ -116,7 +144,7 @@ bun scripts/screenshot/render.ts   # needs Google Chrome and ImageMagick
 It stages the band in a terminal frame and in a desktop frame, and the pane in a terminal frame,
 screenshots them at 4x with headless Chrome for wide and high-density displays, and trims them into
 `assets/screenshots/{terminal,desktop,pane}.png`. It also writes `cache-rewrite.png` and `agent.png`
-as close-ups of those groups from the shared state fixtures for the website. Never commit screenshots of a
+as close-ups of those groups, plus `cost.png`, `cost-light.png` and `terminal-light.png` from the shared state fixtures for the website. Never commit screenshots of a
 real session.
 
 The website uses a warm charcoal background, off-white text, a sand-colored action and serif headings,

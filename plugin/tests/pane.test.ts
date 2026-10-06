@@ -2,7 +2,7 @@ import { describe, expect, mock, test } from 'claude-code/testing'
 import type { MountTarget } from 'claude-code/testing'
 import type { PaneOpenArgs, RenderSurface, SessionStartInput } from 'claude-code'
 
-import { BREAKDOWN, MIN, NOW, STEP, TIER_HEX, cached, fill, iso, measured, usage } from './kit'
+import { mockHost, BREAKDOWN, MIN, NOW, STEP, TIER_HEX, cached, fill, iso, measured, usage } from './kit'
 
 // The pane is raised on every surface, unlike the band.
 const SURFACES = ['terminal', 'desktop', 'vscode', 'mobile'] as const
@@ -51,7 +51,7 @@ describe('the /ccoverhead pane', () => {
         return { value: { isPlaced: true } }
       })
       on('session.model', () => ({ value: 'claude-opus-5-5' }))
-      mock.store(on)
+      mockHost(on)
       const limits = [
         { kind: 'five_hour', percentUsed: 42, resetsAt: iso(150 * MIN) },
         { kind: 'seven_day', percentUsed: 63, resetsAt: iso(3 * 24 * 60 * MIN) },
@@ -78,7 +78,7 @@ describe('the /ccoverhead pane', () => {
 
       const ui = await $.ui.mount(pane(surface))
       const text = async (re: RegExp) => (await ui.find({ type: 'Text', text: re }))?.text
-      for (const head of ['Context', 'In the window, as /context estimates it', 'Growth', 'Cache, main conversation', 'Quota']) {
+      for (const head of ['Context', 'In the window, as /context estimates it', 'Growth', 'Tokens & cache, main conversation', 'Quota, shaded = window-average projection']) {
         expect(await text(new RegExp(`^${head.replace(/[/,]/g, '.')}$`))).toBeDefined()
       }
       // 72k used of a 967k threshold.
@@ -94,13 +94,12 @@ describe('the /ccoverhead pane', () => {
       // Growth since the compaction, and the compaction itself.
       expect(await text(/^ ?↑12k$/)).toBeDefined()
       expect(await text(/^ ?431k → 60k$/)).toBeDefined()
-      expect(await text(/^ ?warm 1h0m$/)).toBeDefined()
-      expect(await text(/^ ?left of 1h$/)).toBeDefined()
+      expect(await text(/^ ?TTL unknown$/)).toBeDefined()
+      expect(await text(/left of/)).toBeUndefined()
       // 400k of 431k read from the cache.
       expect(await text(/^ ?92%$/)).toBeDefined()
-      // Quota with the share of each window's time gone: 2.5h of 5h left, 3d of 7d left.
-      expect(await text(/^ ?· 50% of the window gone$/)).toBeDefined()
-      expect(await text(/^ ?· 57% of the window gone$/)).toBeDefined()
+      // Quota keeps reset countdowns, without a separate elapsed-time progress bar.
+      expect(await text(/of the window gone/)).toBeUndefined()
       if (surface !== 'terminal') {
         expect(await ui.find({ type: 'Text', text: /[■□▁▂▃▄▅▆▇█]/ })).toBeUndefined()
         expect((await ui.findAll({ type: 'Svg' })).length).toBeGreaterThan(0)
@@ -114,15 +113,15 @@ describe('the /ccoverhead pane', () => {
     test(`lists the subagents and the one on screen (${surface})`, async ($, on) => {
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
-      on('agent.list', () => ({ value: [{ id: 'a1', type: 'Explore', description: 'fictional', status: 'running' }] }))
-      mock.store(on)
+      on('agent.list', () => ({ value: [{ id: 'a1', type: 'Explore', description: 'Trace cache refresh behavior', status: 'running' }] }))
+      mockHost(on)
       on('session.usage', () => ({ value: usage(40_000, [], false) }))
       on('turn.step', async function* () {
-        return { ...cached(0, 11_000), usage: { ...cached(0, 11_000).usage!, model: 'claude-haiku-4-5-20251001' } }
+        return { ...cached(8_000, 3_000), usage: { ...cached(8_000, 3_000).usage!, output_tokens: 200 } }
       })
       mock.clock(on, { now: NOW })
       await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
-      for await (const _ of $.turn.step({ ...STEP, agentId: 'a1' })) {
+      for await (const _ of $.turn.step({ ...STEP, agentId: 'a1', effort: 'high' })) {
         // drain
       }
       const target = pane(surface)
@@ -130,8 +129,43 @@ describe('the /ccoverhead pane', () => {
       expect(await ui.find({ type: 'Text', text: /^Subagents$/ })).toBeDefined()
       expect(await ui.find({ type: 'Text', text: /^ ?Explore$/ })).toBeDefined()
       expect(await ui.find({ type: 'Text', text: /^ ?11k$/ })).toBeDefined()
-      expect(await ui.find({ type: 'Text', text: /^ ?haiku$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /^ ?Trace cache refresh behavior$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /^ ?a1$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /^agent ID$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /^ ?claude-opus-5-5$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /^ ?· effort high \(requested\)$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /^ ?11k in · 200 out$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /^ ?· 8k cache read$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /Observed requests only; input includes cache/ })).toBeDefined()
       expect(await ui.find({ type: 'Text', text: /^ ?· on screen$/ })).toBeDefined()
+    })
+
+    test(`agent effort follows the latest observed request and is absent for another responding model (${surface})`, async ($, on) => {
+      on('session.start', ($, e) => ({ cwd: e.cwd }))
+      mockHost(on)
+      mock.clock(on, { now: NOW })
+      let model = STEP.model
+      let hasUsage = true
+      on('turn.step', async function* () {
+        return { ...cached(1_000, 0), usage: hasUsage ? { ...cached(1_000, 0).usage!, model } : null }
+      })
+      await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
+      const ui = await $.ui.mount(pane(surface))
+      for (const effort of ['high', undefined, 0] as const) {
+        for await (const _ of $.turn.step({ ...STEP, agentId: 'a1', effort })) { /* drain */ }
+        const shown = await ui.find({ type: 'Text', text: /effort .*\(requested\)/ })
+        if (effort === undefined) expect(shown).toBeUndefined()
+        else expect(shown?.text).toContain(`effort ${effort} (requested)`)
+      }
+      model = 'claude-haiku-4-5-20251001'
+      for await (const _ of $.turn.step({ ...STEP, agentId: 'a1', effort: 'high' })) { /* drain */ }
+      expect(await ui.find({ type: 'Text', text: /effort .*\(requested\)/ })).toBeUndefined()
+      expect(await ui.find({ type: 'Text', text: /^ ?claude-haiku-4-5-20251001$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /^ ?4k in · 4 out$/ })).toBeDefined()
+      hasUsage = false
+      for await (const _ of $.turn.step({ ...STEP, agentId: 'a2', effort: 'high' })) { /* drain */ }
+      expect(await ui.find({ type: 'Text', text: /^ ?a2$/ })).toBeUndefined()
+      expect(await ui.find({ type: 'Text', text: /^ ?4k in · 4 out$/ })).toBeDefined()
     })
 
     test(`names a subagent once the agent list has it (${surface})`, async ($, on) => {
@@ -140,7 +174,7 @@ describe('the /ccoverhead pane', () => {
       on('session.measure', ($, e) => ({ changed: e.changed }))
       // The list does not have the agent at its first request.
       on('agent.list', () => ({ value: listed ? [{ id: 'a1', type: 'Explore', description: 'fictional', status: 'running' as const }] : [] }))
-      mock.store(on)
+      mockHost(on)
       on('session.usage', () => ({ value: usage(40_000, [], false) }))
       let read = 0
       on('turn.step', async function* () {
@@ -157,13 +191,53 @@ describe('the /ccoverhead pane', () => {
       }
       const ui = await $.ui.mount(pane(surface))
       expect(await ui.find({ type: 'Text', text: /^ ?Explore$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /^ ?fictional$/ })).toBeDefined()
+    })
+
+    test(`main usage and effort stay separate from subagents and reset with the session (${surface})`, async ($, on) => {
+      let id = 'fictional-main-session'
+      let currentModel = STEP.model
+      const summary = [{ role: 'user' as const, text: 'Fictional summary.', toolUses: [] }]
+      on('session.start', ($, e) => ({ cwd: e.cwd }))
+      on('session.id', () => ({ value: id }))
+      on('session.model', () => ({ value: currentModel }))
+      on('session.usage', () => ({ value: usage(40_000, [], false) }))
+      on('session.compact', () => ({ messages: summary, tokensBefore: 40_000, tokensAfter: 1_000 }))
+      on('turn.step', async function* () {
+        return { ...cached(8_000, 3_000), usage: { ...cached(8_000, 3_000).usage!, output_tokens: 200, model: currentModel } }
+      })
+      mockHost(on)
+      const clock = mock.clock(on, { now: NOW })
+      await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
+      for (let i = 0; i < 2; i++) {
+        for await (const _ of $.turn.step({ ...STEP, effort: 'high' })) { /* drain */ }
+      }
+      for await (const _ of $.turn.step({ ...STEP, agentId: 'a1', effort: 'low' })) { /* drain */ }
+      const ui = await $.ui.mount(pane(surface))
+      expect(await ui.find({ type: 'Text', text: /^ ?fictional-main-session$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /^ ?22k in · 400 out$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /^ ?11k in · 200 out$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /effort high \(requested\)/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /effort low \(requested\)/ })).toBeDefined()
+      await $.session.compact({ trigger: 'manual', messages: summary })
+      expect(await ui.find({ type: 'Text', text: /^ ?22k in · 400 out$/ })).toBeDefined()
+      currentModel = 'claude-haiku-4-5-20251001'
+      await clock.advance(30_000)
+      expect(await ui.find({ type: 'Text', text: /effort high \(requested\)/ })).toBeUndefined()
+      expect(await ui.find({ type: 'Text', text: /effort low \(requested\)/ })).toBeDefined()
+      id = 'fictional-new-session'
+      await clock.advance(30_000)
+      expect(await ui.find({ type: 'Text', text: /^ ?fictional-new-session$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /^ ?fictional-main-session$/ })).toBeUndefined()
+      expect(await ui.find({ type: 'Text', text: /in · \d+ out|effort .*\(requested\)/ })).toBeUndefined()
+      expect(await ui.find({ type: 'Text', text: /^Subagents$/ })).toBeUndefined()
     })
 
     test(`odd readings: a long window name fits its column, a bad reset shows none, an unreachable threshold says nothing (${surface})`, async ($, on) => {
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
       on('session.model', () => ({ value: 'claude-opus-5-5' }))
-      mock.store(on)
+      mockHost(on)
       // Fictional: a window kind ccOverhead has no name for, a reset time that does not parse, and an
       // auto-compaction threshold past the window's end.
       const limits = [
@@ -185,7 +259,7 @@ describe('the /ccoverhead pane', () => {
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('command.register', ($, e) => ({ value: { command: e.name } }))
       on('ui.open', () => ({ value: { isPlaced: false, reason: 'fictional: no surface places panes' } }))
-      mock.store(on)
+      mockHost(on)
       on('session.usage', () => ({ value: usage(40_000, [], false) }))
       mock.clock(on, { now: NOW })
       await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
@@ -198,7 +272,7 @@ describe('the /ccoverhead pane', () => {
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
       on('classic.SessionStart', () => ({}))
-      mock.store(on)
+      mockHost(on)
       on('session.usage', ($, e) => (e.breakdown && refuse ? { deny: 'fictional refusal' } : { value: usage(431_000, [], e.breakdown !== undefined && DETAILED) }))
       mock.clock(on, { now: NOW })
       await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
@@ -221,7 +295,7 @@ describe('the /ccoverhead pane', () => {
       on('session.model', () => ({ value: current }))
       on('classic.PostModelSwitch', () => ({}))
       on('session.compact', () => ({ messages: SUMMARY, tokensBefore: 431_000, tokensAfter: 30_000 }))
-      mock.store(on)
+      mockHost(on)
       on('session.usage', ($, e) => (e.breakdown && refuse ? { deny: 'fictional refusal' } : { value: usage(tokens, [], e.breakdown !== undefined && DETAILED) }))
       mock.clock(on, { now: NOW })
       await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
@@ -261,7 +335,7 @@ describe('the /ccoverhead pane', () => {
       let refuse = false
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
-      mock.store(on)
+      mockHost(on)
       on('session.usage', ($, e) => (e.breakdown && refuse ? { deny: 'fictional refusal' } : { value: usage(80_000, [], e.breakdown !== undefined && DETAILED) }))
       mock.clock(on, { now: NOW })
       await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })

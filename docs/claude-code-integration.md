@@ -24,7 +24,7 @@ row when you rely on it in a new version, and add the version you checked.
 | The main context total `session.measure` reports equals the last main-thread request's `input_tokens + cache_read_input_tokens + cache_creation_input_tokens`; ccOverhead counts a subagent's context the same way | 2.1.289 (requests without a server-side tool loop) |
 | Under a server-side tool loop a step's `usage` sums several responses, so it may exceed the loop's last context | not verified (declarations of 2.1.289) |
 | `$.agent.list()` lists a running subagent with its `id` (the `agentId` of its steps) and its `type` (`Explore`) | 2.1.289 |
-| Main-conversation cache writes are `ephemeral_1h`; ccOverhead counts warmth over one hour | 2.1.288 (Claude Pro only; other plans not verified) |
+| Observed main-conversation cache writes were `ephemeral_1h`; this does not establish a default for other sessions | 2.1.288 (Claude Pro only; other plans not verified) |
 | The API's usage carries `cache_creation.ephemeral_5m_input_tokens` and `ephemeral_1h_input_tokens` (seen in `claude -p --output-format json`), but the `usage` a plugin's `turn.step` receives is declared with five numbers only; whether the breakdown reaches plugins is unknown: a probe plugin run under `claude -p` left no record to read. ccOverhead reads only the declared fields | not verified (declarations of 2.1.289) |
 | On a Claude Pro account without Fable access, `rateLimits` holds only `five_hour` and `seven_day` (all models); a Fable request is refused with "Fable 5.1 requires usage credits" and reports no windows | 2.1.288 |
 | `$.session.model()` returns the main loop's resolved model id (`claude-haiku-4-5-20251001`, `claude-fable-5-1`, `claude-opus-5-5`); `classic.PostModelSwitch` carries `from_model` and `to_model` | 2.1.288, 2.1.289 |
@@ -78,3 +78,52 @@ row when you rely on it in a new version, and add the version you checked.
 | `ui.find({ key })` matches an element's `props.key`; a JSX `key` is not in props | 2.1.288 |
 | `$.classic.<Event>` needs a test-side `on('classic.<Event>', …)` at the bottom of the chain | 2.1.288 |
 | `$.ui.mount` validates the tree against the named surface's element table, so a tree the surface would refuse fails the test | 2.1.288 |
+
+## Native observation paths (not verified live)
+
+The saved 2.1.289 declarations and the 2.1.291 test kit cover these paths; this is not live acceptance.
+
+- `session.measure.cost.usd` / `session.usage().cost.usd` provide the session ledger. The plugin
+  snapshots it at main `turn.start`, subtracts on every local ledger refresh, and keeps that baseline
+  until the next turn or reset so delayed accounting can settle. Subagent completion does not replace
+  it. `turn.complete` is passed on unchanged. The existing poll adopts cost and quota changes even when
+  context is unchanged; this timing is tested with delayed fictional readings, not verified live.
+- `config.list` exposes the theme; allowed `config.set` results update colors. Unknown theme names use
+  native semantic colors. No configuration is written.
+- `session.id`, `session.model` and `session.usage` allow local refreshes when `classic.*` is unavailable.
+  The upstream [sec-default guard](https://github.com/anthropics/claude-code/blob/main/mods/sec-default/hooks/register.ts)
+  skips user classic hooks for managed/Team/Enterprise contexts. ccOverhead still respects refused reads;
+  it does not bypass policy. Native command events schedule a refresh, and the existing 30-second tick
+  catches delayed picker changes.
+- Main `turn.step` schedules a coalesced 100 ms local usage read. Its summed usage is not treated as
+  context size. End-of-turn measurements alone add growth samples.
+- Conversation reset invalidates pending native identity, model, usage and breakdown reads. Tests let
+  an old read finish after clear and the new reading, and check that the new figures survive.
+- Main and subagent `turn.step` carry requested `model` and optional `effort`; `agentId` identifies a
+  subagent. The result's `usage`
+  gives the responding model and four always-present token counts (uncached input, output, cache read,
+  cache write). The pane sums observed counts, including repeated/smaller inputs, independently of its
+  last-input growth history. No usage means no new entry. Effort is the input observed by this hook,
+  not actual reasoning-token usage or proof that a later hook kept it; a model mismatch hides it.
+  `agent.list`'s short `description`, `type` and full `id` are reused by the existing refresh. The saved
+  declarations identify this as the loop's `agentId`, not `TaskCreated.task_id`; no messaging or task
+  lookup is added. These fields and calculations are test-kit covered, not verified live.
+  Main output joins the existing input/cache counters; subagent steps do not contribute to them.
+  Main `session.id` is displayed from the identity already read for resets. No summary is generated.
+- There is no agent selector on `session.usage`, and `agent.list` has no context history. Agent charts
+  therefore describe changes in observed input totals (`last input`), not a separate host-reported
+  context series. A server-side tool loop can aggregate several responses in one step's usage.
+- `agent.list` provides running status. The saved declarations distinguish `pending`, `running`,
+  `waiting`, `idle`, `completed`, `failed` and `killed`; only `running` counts in the band and zero is
+  hidden. `agent.spawn` is observed and passed through unchanged. Spawn and completion use the same
+  coalesced 100 ms refresh as context so a status installed after a hook returns is read again. The
+  existing 30-second poll is the fallback. These transitions are test-kit covered, not verified live.
+  This is task status, not a per-token activity signal. The declarations warn that a teammate in its own
+  terminal pane can leave a stale roster status if that pane dies; the mod cannot infer a live process
+  heartbeat from this API.
+- The saved declarations expose a terminal `Client` with `surface.every`, automatically canceled on
+  unmount, and desktop `Svg.isInteractive` for sandboxed SMIL playback. The activity indicator uses
+  these without model or network calls. Mounting is test-kit covered; native playback and unmount
+  cleanup are not verified live.
+- `AbovePrompt` preserves the tree returned by `next(e)` below its own row. The host test fixture
+  supplies a downstream renderer, making composition regressions visible on both surfaces.

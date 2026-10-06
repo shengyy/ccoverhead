@@ -10,7 +10,7 @@ ccOverhead is for people who work in Claude Code and want to know, without askin
 budget a session is using. It answers four questions from one band above the prompt: *how full is the
 context window and how far is auto-compaction, how fast is it filling, how much quota is left, and is the
 prompt cache still warm?* The `/ccoverhead` pane answers the follow-ups the band has no room for: *what is
-in the window, how has it grown, how well is the cache working, and which subagent costs what?*
+in the window, how has it grown, how well is the cache working, and what have the session and its subagents used?*
 
 It shows figures; it never acts on them. Compacting, pausing or switching models stays the user's call.
 
@@ -30,7 +30,9 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
 - **Hit rate**: the share of the main conversation's input tokens the cache served since the conversation
   started.
 - **Subagent context**: a subagent's own input total, as its last request reported it.
-- **Scale**: one ten-step color scale from safe to warning, shared by every figure in the band.
+- **Cost**: the native session USD ledger, an API-price reference. A turn's increment is the difference
+  from its starting ledger; it includes any work the host charges to that session. Missing readings stay hidden.
+- **Scale**: one ten-step color scale from safe to warning for usage; money has a fixed gold accent.
 
 ## Rules
 
@@ -39,10 +41,15 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
 - Groups read left to right from what changes every turn to what changes slowly: the conversation's own
   state first (context with its growth chart, then the cache, which every request renews), then the
   account's quota (the 5-hour window, the weekly window, a gateway's spend limit).
-- When the band is too narrow it drops, in order, the growth chart, the cache rewrite, the cache, the
-  context token counts, the weekly and spend resets, the 5-hour reset, then truncates. The context stays
-  longest.
-- It yields to a survey that holds the band, and draws nothing until it has a figure to show.
+- When the band is too narrow it shrinks from right to left. It removes the rightmost group's trailing
+  detail (a turn increment, reset or cache rewrite), then the group itself, before touching anything to
+  its left. Context and its growth chart outlast all groups to their right; once context is alone, growth
+  yields before token counts. Its bar and percentage stay longest, then truncate if necessary.
+- Running agents follow quota: `agent` and one spinner per running agent, capped at three with `+N`
+  for the rest. The whole group is hidden at zero; idle and completed agents do not count.
+- Cost comes last: a gold session total and a secondary turn increment. Narrowing hides the increment,
+  then the whole cost group, then the whole agent group before continuing to the left.
+- It yields to a survey that holds the band, preserves the downstream band, and draws nothing until it has a figure to show.
 - While a subagent's transcript is on screen, the context group shows that agent instead, labeled `agent`:
   its last input total, its growth, and its bar and percentage when it runs the model the context window was
   last read for (the only window Claude Code reports); otherwise, and after a model switch until the next
@@ -51,7 +58,8 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
 
 ### Context
 
-- The figure is the one Claude Code reports after each response. Before the first response of a window (a
+- The figure is Claude Code's own reading, refreshed between requests within a turn; growth is recorded
+  only by the end-of-turn measurement. It is never reconstructed from summed step usage. Before the first response of a window (a
   new session, after `/clear`, after compaction) it shows Claude Code's local `/context` estimate, dim and
   marked `~`; the estimate sends no request.
 - If Claude Code cannot give an estimate, the band shows the window size with `--`, never a stale figure.
@@ -86,8 +94,8 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
 
 - Only main-conversation requests count, not subagents. A request that read or wrote the cache makes it
   warm for the cache lifetime from that moment; anything else, or an expired lifetime, is cold.
-- The lifetime is one hour until a model switch reports the session's own (`5m` or `1h`), or a resume
-  shows it: the engine's verdict on a cache between five minutes and an hour old tells the two apart. A
+- The lifetime stays unknown (`TTL unknown`) until a model switch reports the session's own (`5m` or
+  `1h`), or a resume shows it: the engine's verdict on a cache between five minutes and an hour old tells the two apart. A
   switch to another model leaves the cache cold: each model has its own.
 - A resumed or forked conversation shows its cache warm or cold at once, aged from the transcript's last
   response, and its first request counts as a rewrite when it writes the transcript again.
@@ -104,9 +112,27 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
 - Sections: the context with the threshold and the tokens left to it; `/context`'s local estimate by
   category with the five costliest MCP servers' loaded tool schemas (and how many more there are); the
   growth since the last compaction and the last three compactions' sizes before and after; the cache's
-  state, hit rate and token counts; every quota window with the share of its time gone beside the share
-  used; the eight most recently active subagents with type, model family, last context total and growth.
-- The share of a window's time gone is a fact about the clock. Nothing is extrapolated from it.
+  state, hit rate and observed input/output token counts; main model, optional requested effort and full
+  session ID; quota and a compact exhaustion estimate; native cost and turn increment;
+  the eight most recently observed subagents with type, native short task description, full agent ID,
+  latest responding model, optional requested effort, last input and growth, and cumulative input/output
+  tokens with cache reads shown separately as a subset of input.
+- Subagent usage covers only requests observed while each entry is retained, not pre-load history or
+  requests lost after eviction. Repeated input and smaller contexts still add to usage. A step with no
+  usage adds nothing; unknown effort stays hidden, including when a different model answered. Effort is
+  the request setting observed by this hook, not measured reasoning tokens. Input already includes cache
+  reads and writes; it is neither billable tokens at one price nor a subscription quota percentage.
+- Agent IDs identify agents within the session; they are not task-list numbers or cross-session handles.
+  Only the native short description is displayed, never the full spawn prompt. The pane has no send,
+  resume or stop controls.
+- Main input/output totals reuse the cache counters and exclude subagent requests; compaction preserves
+  them and a conversation change clears them. Requested effort follows the latest observed request and
+  clears on a model or conversation change. No main-session description is generated.
+- The estimate uses the window-average formula also used by
+  [WeekToken](https://github.com/3dnow/claude-mods/blob/main/weektoken/hooks/pace.ts): remaining duration = elapsed duration × (1 − used share)
+  / used share. It is marked `≈`, appears only in the pane, and says when reset comes first. Missing,
+  early, expired, zero/full and stale readings have no forecast. The existing quota bar overlays projected additional usage in a lighter shade; it adds no time-progress
+  bar or history. The projected percentage may exceed 100%, while the bar stops at 100%.
 - The breakdown is always the latest local count's: a compaction or a switch to another model drops it at
   once, and a count the engine refuses leaves none, never an older one. A switch also drops the old model's
   auto-compaction threshold.
@@ -116,7 +142,10 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
 - One meaning everywhere: cool for safe, yellow for caution, warm to red for warning.
 - Percentages (context and quota) move one tier per 10%, starting at the third tier so a figure is never
   drawn dimmer than the band's secondary text. Growth bars use all ten tiers.
-- Labels are plain text: they name things, they are not states.
+- Labels are plain text: they name things, they are not states. Money stays gold regardless of amount.
+  A nonzero running-agent count has a fixed lime accent for activity; its color does not imply a measured
+  spending rate or quota level.
+- Text uses the configured dark/light palette; other themes keep Claude Code semantic colors.
 
 ## Non-goals
 
@@ -124,8 +153,8 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
   Claude Code already reports to plugins. In particular it does not read Claude Code's own caches or
   credentials to reach undocumented usage endpoints, even for figures plugins are not given (such as a
   model's own weekly quota).
-- **No cost accounting.** It shows tokens and quota shares, not money, and it does not predict when a limit
-  will be hit.
+- **No independent billing system.** It reads native cost, never keeps model prices or presents subscription
+  usage as an extra invoice. Forecasts use existing quota readings without persistent sampling.
 - **No notifications.** It never raises a toast or a sound; the band's colors are the warning.
 - **No actions.** It never compacts, clears, pauses or changes anything in the session.
 - **No telemetry.** Nothing leaves the machine.

@@ -4,7 +4,7 @@ Your Claude Code overhead, right overhead. ccOverhead is a Claude Code mod that 
 per-turn growth, 5-hour and weekly quota, and prompt-cache warmth in one quiet
 band above the prompt. One cool-to-warm color scale makes changes easy to notice while you work. Type
 `/ccoverhead` for a pane with the detail: where auto-compaction runs, the window by category and MCP server, growth and compactions,
-cache hit rate, quota with how much of each window's time is gone, and subagents.
+cache hit rate, quota with a shaded projection at the window-average pace, native cost, and subagents.
 
 The band uses text and glyphs in the terminal, and vector graphics in the Claude desktop app's Code tab.
 It reads only figures Claude Code already reports: no user files, network requests, model requests or
@@ -12,7 +12,13 @@ telemetry. Compacting, pausing and switching models remain your decisions.
 
 ## Install and use
 
-In Claude Code:
+Choose one installation source and enable only one copy:
+
+- **Recommended — Anthropic Directory:** in Claude desktop, open **Settings → Plugins → Discover**, search
+  **`ccOverhead`**, and install the entry from **Anthropic Directory**.
+  No marketplace setup or terminal commands are needed.
+  [Open the directory listing](https://claude.ai/customize/plugins/id/d9866436-5b36-4af8-83d9-7c066d390bdb%40anthropic-plugin-directory).
+- **Alternative — our GitHub marketplace:** use these commands instead of the directory installation:
 
 ```text
 /plugin marketplace add shengyy/ccoverhead
