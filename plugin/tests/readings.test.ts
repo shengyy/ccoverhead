@@ -28,7 +28,7 @@ for (const surface of SURFACES) {
     expect((await ui.find({ type: 'Text', text: /^ ?≈\$1.84$/ }))?.props.color).toBe('#8a6215')
     expect((await ui.find({ type: 'Text', text: /^ ?\(\+\$0.12\)$/ }))?.props.dimColor).toBe(true)
     // A narrow band keeps the total and drops the turn increment only when it cannot fit.
-    const narrow = await $.ui.mount(band(surface, 50))
+    const narrow = await $.ui.mount(band(surface, 40))
     expect(await narrow.find({ type: 'Text', text: /^ ?≈\$1.84$/ })).toBeDefined()
     expect(await narrow.find({ type: 'Text', text: /\+\$/ })).toBeUndefined()
     // Ledger restarts must never leave an increment belonging to the old total.
