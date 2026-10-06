@@ -49,7 +49,7 @@ and opens the detail behind them in a pane when you ask.
 - **Native cost.** `cost ≈$1.84 (+$0.12)` shows the session's API-price reference and latest turn
   increment from Claude Code. Gold total, secondary increment, hidden when unavailable; no price table.
   On subscriptions this is a usage reference, not an extra bill.
-- **Subagents too.** Running agents show a count while nonzero. Open a subagent's transcript and the band follows that agent's context and growth.
+- **Subagents too.** `agent` shows one spinner per running agent, up to three with `+N` for the rest; hidden at zero. Open a subagent's transcript and the band follows that agent's context and growth.
 - **The `/ccoverhead` pane.** What is in the window by category (which MCP server costs what), growth since
   the last compaction and each compaction, the cache's hit rate, every quota window with how much of its
   window-average exhaustion estimate (when useful), and the eight most recently active subagents. It also works in VS Code and the mobile app, where the band is not drawn.
@@ -100,7 +100,7 @@ ctx ■■■□□□□□□□ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | 
 | `cache` | `warm` and its minutes, warming in color as the lifetime drains, or `cold`; `TTL unknown` until the host provides lifetime evidence; `rewrote` and its tokens on a turn that wrote the cache again instead of reading it |
 | `5h`, `7d` | Quota used in each window, and `↻` the time until it resets. Dim when remembered from an earlier session. `7d` follows the main model's own weekly window when Claude Code reports one, such as `7d fable` (not verified) |
 | `cost` | Gold session USD total and secondary latest-turn increment; native API-price reference, hidden when absent |
-| Activity icon + count | Currently running agents in lime: a four-row dot animation rotating clockwise, terminal glyphs and matching desktop vectors; zero is hidden |
+| `agent` + spinners | One lime spinner per running agent, up to three plus `+N` for the rest. Four-row dots rotate clockwise in sync on both surfaces; zero is hidden |
 | `spend` | A Claude gateway's spend limit, when reported; it can pass 100% (not verified) |
 
 Colors follow one ten-step scale from cool to warm. Percentages (context and quota) move one step per 10%

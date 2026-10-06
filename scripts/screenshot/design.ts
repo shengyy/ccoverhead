@@ -26,7 +26,7 @@ function terminal(value: Span[][]) {
 }
 function desktop(value: Span[][]) {
   return value.map(g => `<span class="band-group">${items(g).map(it => it.kind === 'graphic'
-    ? `<img src="data:image/svg+xml;base64,${Buffer.from(it.graphic.source.replace(/<animate\b[^>]*\/>/g, '')).toString('base64')}" width="${it.graphic.width}" height="${it.graphic.height}" alt="${escape(it.graphic.alt)}">`
+    ? `<span style="display:inline-flex;align-items:center"><img src="data:image/svg+xml;base64,${Buffer.from(it.graphic.source.replace(/<animate\b[^>]*\/>/g, '')).toString('base64')}" width="${it.graphic.width}" height="${it.graphic.height}" alt="${escape(it.graphic.alt)}">${it.suffix ? textSpan(it.suffix) : ''}</span>`
     : textSpan(it.span)).join('')}</span>`).join('<span class="dim separator">|</span>')
 }
 function groupByLabel(input: BandInput, label: string) {
@@ -39,7 +39,7 @@ const featureDescriptions = [
   ['缓存冷热', 'warm / cold / 剩余分钟', '仅跟踪主对话请求的缓存读写。', 'cache'],
   ['使用额度', '5 小时 / 每周 / 重置倒计时', '显示已用比例，额度读数来自宿主。', 'quota'],
 ]
-const steps = ['完整信息', '隐藏 agent 数量', '隐藏本轮费用', '再隐藏会话费用', '再隐藏每周倒计时', '再隐藏每周额度', '再隐藏 5 小时倒计时', '再隐藏 5 小时额度', '再隐藏缓存改写', '再隐藏缓存', '隐藏增长图与 ↑', '再隐藏 token 数']
+const steps = ['完整信息', '隐藏本轮费用', '再隐藏会话费用', '再隐藏 agent', '再隐藏每周倒计时', '再隐藏每周额度', '再隐藏 5 小时倒计时', '再隐藏 5 小时额度', '再隐藏缓存改写', '再隐藏缓存', '隐藏增长图与 ↑', '再隐藏 token 数']
 // A turn that rewrote the cache, so the narrowing table shows that step too.
 const responsive = bandVariants(rewriting).map((gs, i) => {
   return `<div class="responsive-row"><span class="step-no">${String(i + 1).padStart(2, '0')}</span><span class="step-label">${steps[i]}<small class="cell-count">${width(gs)} cells</small></span><code class="demo-band">${terminal(gs)}</code></div>`
@@ -262,7 +262,7 @@ const english: Record<string, string> = {
   '空间不足时，按顺序删细节': 'When space runs out, shed details in order',
   'cell 数为横条内容宽度，不是窗口断点': 'Cells measure content, not viewport breakpoints',
   '隐藏本轮费用': 'Hide turn cost',
-  '隐藏 agent 数量': 'Hide agent count',
+  '再隐藏 agent': 'Then agents',
   '再隐藏会话费用': 'Then session cost',
   '完整信息': 'Full detail',
   '隐藏增长图与 ↑': 'Hide growth and ↑',

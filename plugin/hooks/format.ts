@@ -1,6 +1,6 @@
 // Pure formatting for the band: its groups, their widths and colours, and the desktop's Svg graphics.
 import type { OverheadAgent, OverheadCache, OverheadCtx, OverheadLimit, OverheadTheme } from '../types'
-import { ACTIVITY_FRAMES, activityBody } from './activity'
+import { activityBody, activityGlyphs, activityOverflow, activityWidth } from './activity'
 
 // The two cache lifetimes the engine can report. Neither is assumed before evidence arrives.
 export const CACHE_TTL_MS = 60 * 60 * 1000
@@ -115,8 +115,8 @@ function svg(width: number, height: number, style: string, body: string): string
 // colour.
 export function svgOf(s: Span): Graphic | undefined {
   if (s.agentCount !== undefined) return {
-    source: svg(8, 14, inks([['k', GAIN[5]!]]), activityBody()),
-    alt: `${s.agentCount} running agents`, width: 8, height: 14, isInteractive: true,
+    source: svg(activityWidth(s.agentCount), 14, inks([['k', GAIN[5]!]]), activityBody(s.agentCount)),
+    alt: `${s.agentCount} running agents`, width: activityWidth(s.agentCount), height: 14, isInteractive: true,
   }
   if (s.bar !== undefined) {
     const ink = s.dimColor ? DIM : (GAIN[s.tier ?? -1] ?? DIM)
@@ -348,11 +348,14 @@ export function groups(b: BandInput): Span[][] {
     ])
   }
 
+  if ((b.activeAgents ?? 0) > 0) out.push([
+    { text: 'agent' }, { text: ' ' },
+    { text: activityGlyphs(b.activeAgents!) + activityOverflow(b.activeAgents!), tier: 5, agentCount: b.activeAgents },
+  ])
   if (validCost(b.cost)) out.push([
-    { text: 'cost', dimColor: true }, { text: ` ≈${usd(b.cost)}`, money: true },
+    { text: 'cost' }, { text: ` ≈${usd(b.cost)}`, money: true },
     ...(validCost(b.turnCost) ? [{ text: ` (+${usd(b.turnCost)})`, dimColor: true, fold: 'turn-cost' as const }] : []),
   ])
-  if ((b.activeAgents ?? 0) > 0) out.push([{ text: `${ACTIVITY_FRAMES[0]} ${b.activeAgents}`, tier: 5, agentCount: b.activeAgents }])
 
   return out
 }
@@ -402,17 +405,19 @@ export function fit(b: BandInput, columns: number): Span[][] {
   return levels.find(gs => width(gs) <= columns) ?? levels.at(-1)!
 }
 
-export type Item = { kind: 'text'; span: Span } | { kind: 'graphic'; graphic: Graphic }
+export type Item = { kind: 'text'; span: Span } | { kind: 'graphic'; graphic: Graphic; suffix?: Span }
 
 // One group as the desktop draws it: a row of items spaced by the Box's gap, not by spaces, which a
 // proportional font draws narrow; the graphic spans become an Svg, the spaces-only ones go.
 export function items(g: Span[]): Item[] {
   return g.flatMap((s): Item[] => {
     const graphic = svgOf(s)
-    if (graphic) return [
-      { kind: 'graphic', graphic },
-      ...(s.agentCount === undefined ? [] : [{ kind: 'text' as const, span: { text: String(s.agentCount), tier: s.tier } }]),
-    ]
+    if (graphic) return [{
+      kind: 'graphic', graphic,
+      ...(s.agentCount !== undefined && activityOverflow(s.agentCount) ? {
+        suffix: { text: activityOverflow(s.agentCount), tier: s.tier },
+      } : {}),
+    }]
     const text = s.text.trim()
     return text ? [{ kind: 'text', span: { ...s, text } }] : []
   })

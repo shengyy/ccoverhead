@@ -18,8 +18,10 @@ environment; its compaction hook passes the compaction on unchanged and reads on
 `$.session.model`, `$.session.id`, `$.config.list` (theme only), `$.agent.list`, `$.command.register` (the `/ccoverhead` command), `$.clock`, `$.state`,
 `$.store` and `$.ui` (drawing, redrawing and opening the pane).
 
-The terminal activity icon runs in a one-cell surface module with no mods API. Its local clock changes
-only a braille glyph while mounted; it sends no messages. The desktop icon is a script-free SVG animation.
+The terminal activity row runs in a surface module of at most three cells with no mods API. One local
+clock changes only its braille glyphs; it sends no messages. The desktop uses a script-free SVG animation.
+The `agent.spawn` hook observes a spawn initiated by the host and passes it through unchanged; this mod
+never calls `$.agent.spawn`. Spawn and completion schedule a local status refresh on the existing timer.
 
 ## What is stored
 

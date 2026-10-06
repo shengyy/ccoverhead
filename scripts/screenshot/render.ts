@@ -74,7 +74,7 @@ function desktop(input: BandInput = band, width = 160, detail?: string, theme: T
       `<span class="group">${items(g)
         .map(it =>
           it.kind === 'graphic'
-            ? `<img src="data:image/svg+xml;base64,${btoa(it.graphic.source.replace(/<animate\b[^>]*\/>/g, ''))}" width="${it.graphic.width}" height="${it.graphic.height}" alt="${esc(it.graphic.alt)}">`
+            ? `<span style="display:inline-flex;align-items:center"><img src="data:image/svg+xml;base64,${btoa(it.graphic.source.replace(/<animate\b[^>]*\/>/g, ''))}" width="${it.graphic.width}" height="${it.graphic.height}" alt="${esc(it.graphic.alt)}">${it.suffix ? `<span style="color:${colorOf(it.suffix, theme) ?? INK}">${esc(it.suffix.text)}</span>` : ''}</span>`
             : `<span style="color:${it.span.dimColor ? DIM : (colorOf(it.span, theme) ?? INK)}">${esc(it.span.text)}</span>`,
         )
         .join('')}</span>`,

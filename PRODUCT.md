@@ -45,8 +45,10 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
   detail (a turn increment, reset or cache rewrite), then the group itself, before touching anything to
   its left. Context and its growth chart outlast all groups to their right; once context is alone, growth
   yields before token counts. Its bar and percentage stay longest, then truncate if necessary.
-- Cost follows quota: a gold session total and a secondary turn increment. A running-agent count follows
-  when nonzero; idle and completed agents do not count.
+- Running agents follow quota: `agent` and one spinner per running agent, capped at three with `+N`
+  for the rest. The whole group is hidden at zero; idle and completed agents do not count.
+- Cost comes last: a gold session total and a secondary turn increment. Narrowing hides the increment,
+  then the whole cost group, then the whole agent group before continuing to the left.
 - It yields to a survey that holds the band, preserves the downstream band, and draws nothing until it has a figure to show.
 - While a subagent's transcript is on screen, the context group shows that agent instead, labeled `agent`:
   its last input total, its growth, and its bar and percentage when it runs the model the context window was

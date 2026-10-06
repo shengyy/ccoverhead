@@ -6,6 +6,7 @@ import type { OverheadTheme } from '../types'
 
 import type { Span } from './format'
 import { SEP, cells, colorOf, items } from './format'
+import { activityCount, activityOverflow } from './activity'
 import type { PaneLine } from './pane'
 import { LABEL } from './pane'
 
@@ -36,10 +37,13 @@ function textRun({ Text }: Term, spans: Span[], key: string, theme: OverheadThem
 }
 
 // Spans as a row's items: text trimmed, graphics as Svg.
-function itemRun({ Text, Svg }: Rich, spans: Span[], key: string, theme: OverheadTheme) {
+function itemRun({ Box, Text, Svg }: Rich, spans: Span[], key: string, theme: OverheadTheme) {
   return items(spans).map((it, j) =>
     it.kind === 'graphic' ? (
-      <Svg key={`${key}-${j}`} {...it.graphic} />
+      it.suffix ? <Box key={`${key}-${j}`} flexDirection="row" alignItems="center" gap={0}>
+        <Svg {...it.graphic} />
+        <Text color={colorOf(it.suffix, theme)}>{it.suffix.text}</Text>
+      </Box> : <Svg key={`${key}-${j}`} {...it.graphic} />
     ) : (
       <Text key={`${key}-${j}`} color={colorOf(it.span, theme)} dimColor={it.span.dimColor}>
         {it.span.text}
@@ -51,23 +55,24 @@ function itemRun({ Text, Svg }: Rich, spans: Span[], key: string, theme: Overhea
 // The terminal's band: one line of text, cut at its end if it still does not fit.
 export function bandTerminal(els: AnimatedTerm, gs: Span[][], theme: OverheadTheme = 'dark') {
   const { Box, Text, Client } = els
-  // Activity is the final group. Keep its tiny Client outside Text, as the host requires.
-  const activity = gs.at(-1)?.find(s => s.agentCount !== undefined)
-  const textGroups = activity ? gs.slice(0, -1) : gs
   return (
     <Box flexDirection="row" paddingX={1}>
-      <Text wrap="truncate-end">
-        {textGroups.flatMap((g, i) => [
-          ...(i > 0 ? [<Text key={`sep-${i}`} dimColor>{SEP}</Text>] : []),
-          ...textRun(els, g, String(i), theme),
-        ])}
-      </Text>
-      {activity && <Box flexDirection="row">
-        {textGroups.length > 0 && <Text dimColor>{SEP}</Text>}
-        <Client key="agent-activity" module="./activity-client.ts" width={1} height={1}
-          props={{ color: colorOf(activity, theme) }} />
-        <Text color={colorOf(activity, theme)}>{` ${activity.agentCount}`}</Text>
-      </Box>}
+      {gs.map((g, i) => {
+        const activity = g.find(s => s.agentCount !== undefined)
+        const label = <Text key={`text-${i}`} wrap="truncate-end">
+          {i > 0 && <Text dimColor>{SEP}</Text>}
+          {textRun(els, g.filter(s => s !== activity), String(i), theme)}
+        </Text>
+        if (!activity) return label
+        // Keep the Client outside Text, as the host requires. One clock drives every spinner.
+        const count = activity.agentCount!
+        return <Box key="activity" flexDirection="row">
+          {label}
+          <Client key="agent-activity" module="./activity-client.ts" width={activityCount(count)} height={1}
+            props={{ color: colorOf(activity, theme), count }} />
+          {activityOverflow(count) && <Text color={colorOf(activity, theme)}>{activityOverflow(count)}</Text>}
+        </Box>
+      })}
     </Box>
   )
 }

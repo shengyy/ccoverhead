@@ -120,6 +120,14 @@ export const register: Register = on => {
     return result
   })
 
+  // Observe the host's spawn, never initiate one. Its list can settle just after the hook returns.
+  on('agent.spawn', async ($, e, next) => {
+    const result = await next(e)
+    await readActiveAgents($)
+    settling = refreshSoon($, settling)
+    return result
+  })
+
   on('turn.start', async ($, e, next) => {
     await syncSession($)
     const reading = await $.session.usage().catch(() => undefined)
@@ -131,6 +139,7 @@ export const register: Register = on => {
   on('turn.complete', async ($, e, next) => {
     const result = await next(e)
     await readActiveAgents($)
+    settling = refreshSoon($, settling)
     if (e.agentId === undefined) {
       const ledger = await $.session.usage().catch(() => undefined)
       await takeCost($, ledger?.cost?.usd, true)
@@ -462,5 +471,8 @@ function pick(rateLimits: SessionRateLimit[] | undefined): OverheadLimit[] {
 // The host installs readings after the hook returns; one coalesced refresh reads its figures.
 function refreshSoon($: EngineInterface, previous: Timer | undefined): Timer {
   previous?.cancel()
-  return $.clock.after(100, () => load($).catch(() => undefined))
+  return $.clock.after(100, async () => {
+    await readActiveAgents($)
+    await load($).catch(() => undefined)
+  })
 }

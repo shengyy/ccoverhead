@@ -95,7 +95,14 @@ The saved 2.1.289 declarations and the 2.1.291 test kit cover these paths; this 
   catches delayed picker changes.
 - Main `turn.step` schedules a coalesced 100 ms local usage read. Its summed usage is not treated as
   context size. End-of-turn measurements alone add growth samples.
-- `agent.list` provides running status. Only running agents count in the band; zero is hidden.
+- `agent.list` provides running status. The saved declarations distinguish `pending`, `running`,
+  `waiting`, `idle`, `completed`, `failed` and `killed`; only `running` counts in the band and zero is
+  hidden. `agent.spawn` is observed and passed through unchanged. Spawn and completion use the same
+  coalesced 100 ms refresh as context so a status installed after a hook returns is read again. The
+  existing 30-second poll is the fallback. These transitions are test-kit covered, not verified live.
+  This is task status, not a per-token activity signal. The declarations warn that a teammate in its own
+  terminal pane can leave a stale roster status if that pane dies; the mod cannot infer a live process
+  heartbeat from this API.
 - The saved declarations expose a terminal `Client` with `surface.every`, automatically canceled on
   unmount, and desktop `Svg.isInteractive` for sandboxed SMIL playback. The activity indicator uses
   these without model or network calls. Mounting is test-kit covered; native playback and unmount

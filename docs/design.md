@@ -13,18 +13,21 @@ ctx ■■■□□□□□□□ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | 
 - Groups, left to right: context (bar, percentage, tokens, growth chart,
   `↑` latest growth), cache (`warm` and the minutes left, or `cold`; then `rewrote` and its tokens
   on a turn that rewrote the cache), 5-hour quota, weekly quota, `spend` (a gateway's spend limit, when
-  reported), then cost and a nonzero running-agent count. A dim ` | ` separates groups.
-- Cost stays gold (`#dfbc70` dark, `#8a6215` light). Its increment uses native secondary text. Both
+  reported), then nonzero running agents and cost last. A dim ` | ` separates groups.
+- The `cost` label uses normal text like `ctx`, `cache` and `agent`. Its total stays gold
+  (`#dfbc70` dark, `#8a6215` light), and its increment uses native secondary text. Both
   surfaces use the same spacing and separators as other groups, without a separate background, border
   or padding. No amount changes its color, and no progress bar is added.
-- The running-agent count is an activity icon, a gap, and a stationary number, in fixed lime (tier 5:
-  `#b8e45c` dark, `#567a00` light). It has no frame or background and is hidden at zero. The terminal
-  uses one cell of eight-dot braille (two columns, four rows), with four lit dots moving clockwise
-  every 140 ms; no emoji or image protocol. The desktop uses an 8 × 14 px vector dot grid driven by
-  exactly the same frame masks and timing (1.12 s per cycle). Its SVG respects
-  reduced motion. The terminal uses a local Client frame clock; narrowing removes its icon from the
-  tree. Neither surface moves the count or refreshes usage to animate. Native animation has
-  not yet been observed in a live Claude Code session.
+- Running agents use a plain-text `agent` label, then one spinner per agent in fixed lime (tier 5:
+  `#b8e45c` dark, `#567a00` light). At most three spinners appear; `+N` adds the rest, so seven is
+  three spinners immediately followed by `+4`, without a separating space. The group has no frame or
+  background and is hidden at zero. Each terminal
+  spinner uses one cell of eight-dot braille (two columns, four rows), with five lit dots moving clockwise
+  every 140 ms; no emoji or image protocol. All spinners rotate in sync. The desktop uses
+  8 × 14 px vector dot grids with 2 px between them, sharing the same masks, phases and timing
+  (1.12 s per cycle). Its SVG respects reduced motion. One local terminal Client clock drives the whole
+  row. Narrowing removes the whole group, never an individual spinner that would change the count.
+  Animation does not refresh usage. Native playback has not yet been observed in a live Claude Code session.
 - `warm` and its minutes are one span in one color, the share of the lifetime gone on the percentage
   scale: sky while fresh, up through the tiers to red in the last tenth; `cold` and `TTL unknown` are dim. The minutes already
   say how long, so no gauge repeats them.
@@ -36,8 +39,9 @@ ctx ■■■□□□□□□□ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | 
   instead of `7d`.
 - Labels (`ctx`, `5h`, `7d`, `cache`) are plain text. Figures take their tier's color. Secondary detail
   (tokens, countdowns, `↑`, remembered quota, the estimate) is dim.
-- Widths are counted in terminal cells. Narrowing follows the visible order from right to left: agent
-  count, cost, spend (if reported), weekly quota, 5-hour quota, cache, then context. Within the rightmost
+- Widths are counted in terminal cells. Narrowing follows the visible order from right to left: cost,
+  agents, spend (if reported), weekly quota, 5-hour quota, cache, then context. The last-turn cost yields
+  first, followed by the whole cost group, then all agents. Within each remaining rightmost
   group, its trailing detail yields before the whole group. Context keeps its growth chart until every
   group to its right is gone; then growth yields before token counts, keeping the bar and percentage last.
 - The band redraws every 30 s so countdowns keep time.

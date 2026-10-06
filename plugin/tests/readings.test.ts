@@ -1,5 +1,5 @@
 import { expect, mock, test } from 'claude-code/testing'
-import type { SessionUsage, TurnCompleteInput } from 'claude-code'
+import type { AgentInfo, AgentSpawnInput, SessionUsage, TurnCompleteInput } from 'claude-code'
 import { ACTIVITY_FRAME_MS, ACTIVITY_FRAMES } from '../hooks/activity'
 import { colorOf, fit, forecastBar, svgOf, width } from '../hooks/format'
 import { quotaForecast } from '../hooks/track'
@@ -7,8 +7,45 @@ import { paneLines } from '../hooks/pane'
 import { MIN, NOW, STEP, SURFACES, band, cached, fill, iso, measured, mockHost, session, usage } from './kit'
 
 const DONE: TurnCompleteInput = { turnId: 't', answer: '', durationMs: 1, isAborted: false, reason: 'answer' }
+const SPAWN: AgentSpawnInput = {
+  prompt: 'fictional fixture', description: 'fictional', tool_use_id: 'fixture', subagentType: 'Explore',
+  provider: { plugin: 'engine', tier: 'core' }, parentModel: 'claude-haiku-4-5', background: true, fork: false,
+}
 
 for (const surface of SURFACES) {
+  test(`agent animation follows native spawn and settled status without a model call (${surface})`, async ($, on) => {
+    let status: AgentInfo['status'] = 'pending'
+    let denied = false
+    on('session.start', ($, e) => ({ cwd: e.cwd }))
+    on('turn.complete', () => ({ text: '' }))
+    on('agent.list', () => ({ value: [{ id: 'a1', type: 'Explore', description: 'fictional', status }] }))
+    on('agent.spawn', () => {
+      if (denied) return { deny: 'fictional denial' }
+      status = 'running'
+      return { model: 'claude-haiku-4-5', agentId: 'a1' }
+    })
+    mockHost(on)
+    const clock = mock.clock(on, { now: NOW })
+    await $.session.start(session(surface))
+    const ui = await $.ui.mount(band(surface))
+    expect(await ui.find({ type: 'Text', text: /^agent$/ })).toBeUndefined()
+    for (const stopped of ['waiting', 'idle', 'completed', 'failed', 'killed'] as const) {
+      expect(await $.agent.spawn(SPAWN)).toEqual({ model: 'claude-haiku-4-5', agentId: 'a1' })
+      expect(await ui.find({ type: 'Text', text: /^agent$/ })).toBeDefined()
+      await $.turn.complete({ ...DONE, agentId: 'a1' })
+      // Model the host installing final status after the completion hook returns.
+      status = stopped
+      await clock.advance(100)
+      expect(await ui.find({ type: 'Text', text: /^agent$/ })).toBeUndefined()
+      expect(await ui.find({ type: 'Client' })).toBeUndefined()
+      expect((await ui.findAll({ type: 'Svg' })).some(n => String(n.props.alt).endsWith('running agents'))).toBe(false)
+    }
+    denied = true
+    expect(await $.agent.spawn(SPAWN)).toEqual({ deny: 'fictional denial' })
+    await clock.advance(100)
+    expect(await ui.find({ type: 'Text', text: /^agent$/ })).toBeUndefined()
+  })
+
   test(`native cost total, turn delta and downstream band survive together (${surface})`, async ($, on) => {
     let dollars: number | undefined = 1.72
     on('session.start', ($, e) => ({ cwd: e.cwd }))
@@ -27,6 +64,10 @@ for (const surface of SURFACES) {
     await $.turn.complete({ ...DONE, agentId: 'a1' })
     await $.turn.complete(DONE)
     expect((await ui.find({ type: 'Text', text: /^ ?≈\$1.84$/ }))?.props.color).toBe('#8a6215')
+    const costLabel = await ui.find({ type: 'Text', text: /^cost$/ })
+    expect(costLabel).toBeDefined()
+    expect(costLabel?.props.color).toBeUndefined()
+    expect(costLabel?.props.dimColor).not.toBe(true)
     expect((await ui.find({ type: 'Text', text: /^ ?\(\+\$0.12\)$/ }))?.props.dimColor).toBe(true)
     // A narrow band keeps the total and drops the turn increment only when it cannot fit.
     const narrow = await $.ui.mount(band(surface, 40))
@@ -84,7 +125,7 @@ for (const surface of SURFACES) {
     const ui = await $.ui.mount(band(surface))
     if (surface === 'terminal') {
       expect(await ui.find({ type: 'Client', key: 'agent-activity' })).toBeDefined()
-      expect((await ui.find({ type: 'Text', text: ' 1' }))?.props.color).toBe('#b8e45c')
+      expect((await ui.find({ type: 'Text', in: 'agent-activity' }))?.props.color).toBe('#b8e45c')
       const bandBeforeAnimation = await ui.drawn()
       expect(await ui.find({ type: 'Text', text: ACTIVITY_FRAMES[0], in: 'agent-activity' })).toBeDefined()
       await ui.advance(ACTIVITY_FRAME_MS)
@@ -101,11 +142,39 @@ for (const surface of SURFACES) {
       expect(await ui.find({ type: 'Client', key: 'agent-activity' })).toBeDefined()
     } else {
       expect((await ui.findAll({ type: 'Svg' })).some(n => n.props.alt === '1 running agents' && n.props.isInteractive === true)).toBe(true)
-      expect((await ui.find({ type: 'Text', text: /^1$/ }))?.props.color).toBe('#b8e45c')
+    }
+    expect((await ui.find({ type: 'Text', text: /^agent$/ }))?.props.color).toBeUndefined()
+    for (const count of [2, 3, 4, 7]) {
+      list = Array.from({ length: count }, (_, i) => ({ id: `a${i}`, type: 'Explore', description: 'fictional', status: 'running' }))
+      await clock.advance(30_000)
+      const visible = Math.min(count, 3)
+      if (surface === 'terminal') {
+        const clients = await ui.findAll({ type: 'Client' })
+        expect(clients.length).toBe(1)
+        expect(clients[0]?.props.width).toBe(visible)
+        const before = [...(await ui.find({ type: 'Text', in: 'agent-activity' }))!.text!]
+        expect(before.length).toBe(visible)
+        const phase = ACTIVITY_FRAMES.indexOf(before[0]!)
+        expect(before.join('')).toBe(ACTIVITY_FRAMES[phase]!.repeat(visible))
+        await ui.advance(ACTIVITY_FRAME_MS)
+        const after = [...(await ui.find({ type: 'Text', in: 'agent-activity' }))!.text!]
+        expect(after.join('')).toBe(ACTIVITY_FRAMES[(phase + 1) % 8]!.repeat(visible))
+      } else {
+        const icon = (await ui.findAll({ type: 'Svg' })).find(n => n.props.alt === `${count} running agents`)!
+        expect(icon.props.width).toBe(visible * 10 - 2)
+        expect(icon.props.height).toBe(14)
+        // All four rows exist in each vector grid, including the bottom braille dots.
+        const source = String(icon.props.source)
+        expect(source.match(/cy="12.5"/g)?.length).toBe(visible * 4)
+        const phases = [...source.matchAll(/<animate[^>]*values="([^"]+)"/g)]
+        expect(new Set(Array.from({ length: visible }, (_, i) => phases[i * 8]![1])).size).toBe(1)
+      }
+      if (count > 3) expect((await ui.find({ type: 'Text', text: `+${count - 3}` }))?.props.color).toBe('#b8e45c')
+      else expect(await ui.find({ type: 'Text', text: /^\+\d+$/ })).toBeUndefined()
     }
     const narrow = await $.ui.mount(band(surface, 40))
     expect(await narrow.find({ type: 'Client' })).toBeUndefined()
-    expect((await narrow.findAll({ type: 'Svg' })).some(n => n.props.alt === '1 running agents')).toBe(false)
+    expect((await narrow.findAll({ type: 'Svg' })).some(n => String(n.props.alt).endsWith('running agents'))).toBe(false)
     expect(await ui.find({ type: 'Text', text: /^ ?TTL unknown$/ })).toBeDefined()
     id = 'fictional-b'
     ledger = usage(undefined, [], true)
@@ -113,7 +182,8 @@ for (const surface of SURFACES) {
     await clock.advance(30_000)
     expect(await ui.find({ type: 'Text', text: /40k|\$|TTL|↑/ })).toBeUndefined()
     expect(await ui.find({ type: 'Client' })).toBeUndefined()
-    expect((await ui.findAll({ type: 'Svg' })).some(n => n.props.alt === '1 running agents')).toBe(false)
+    expect((await ui.findAll({ type: 'Svg' })).some(n => String(n.props.alt).endsWith('running agents'))).toBe(false)
+    expect(await ui.find({ type: 'Text', text: /^agent$/ })).toBeUndefined()
     expect(await ui.find({ type: 'Text', text: /^ ?~13k\/1M$/ })).toBeDefined()
   })
 }
@@ -149,7 +219,7 @@ test('growth survives cost, agents and countdowns at constrained widths', () => 
       { kind: 'seven_day', percentUsed: 63, resetsAt: iso(3300 * MIN) },
     ],
     limitsLive: true, cache: null, cacheTtl: null, model: null,
-    cost: 1.84, turnCost: 0.12, activeAgents: 1,
+    cost: 1.84, turnCost: 0.12, activeAgents: 7,
   }
   for (const columns of [100, 80, 60, 50]) {
     const gs = fit(input, columns)
@@ -161,10 +231,15 @@ test('growth survives cost, agents and countdowns at constrained widths', () => 
   expect(narrowText).not.toContain(ACTIVITY_FRAMES[0])
   expect(narrowText).not.toContain('$')
   const fullWidth = width(fit(input, 160))
-  const withoutAgent = fit(input, fullWidth - 1).flat().map(s => s.text).join('')
-  expect(withoutAgent).not.toContain(ACTIVITY_FRAMES[0])
-  expect(withoutAgent).toContain('+$0.12')
-  // A gateway window between weekly quota and cost follows the same right-to-left rule.
+  const withoutDelta = fit(input, fullWidth - 1).flat().map(s => s.text).join('')
+  expect(withoutDelta).toContain('agent ⢹⢹⢹+4')
+  expect(withoutDelta).toContain('≈$1.84')
+  expect(withoutDelta).not.toContain('+$0.12')
+  const withoutCost = fit(input, width(fit(input, fullWidth - 1)) - 1)
+  expect(withoutCost.flat().map(s => s.text).join('')).not.toContain('$')
+  expect(withoutCost.at(-1)?.some(s => s.agentCount === 7)).toBe(true)
+  expect(fit(input, width(withoutCost) - 1).flat().some(s => s.agentCount !== undefined)).toBe(false)
+  // A gateway window between weekly quota and agents follows the same right-to-left rule.
   const withSpend = { ...input, limits: [...input.limits, { kind: 'spend_limit', percentUsed: 12, resetsAt: iso(60 * MIN) }] }
   let prior = fit(withSpend, 300)
   for (let columns = width(prior) - 1; columns >= 18; columns--) {
@@ -173,7 +248,7 @@ test('growth survives cost, agents and countdowns at constrained widths', () => 
     expect(gs.slice(0, -1)).toEqual(prior.slice(0, gs.length - 1))
     prior = gs
   }
-  const agent = fit(input, 160).flat().find(s => s.agentCount === 1)!
+  const agent = fit(input, 160).flat().find(s => s.agentCount === 7)!
   expect(colorOf(agent, 'light')).toBe('#567a00')
   expect(fit({ ...input, activeAgents: 0 }, 160).flat().some(s => s.agentCount !== undefined)).toBe(false)
 })

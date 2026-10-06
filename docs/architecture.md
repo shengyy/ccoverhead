@@ -17,7 +17,7 @@ the band from that state. External facts about the engine live in
  classic.PostModelSwitch, $.session.model() ─▶ $.state: model, cacheTtl, cache (cold)
  turn.start / turn.complete / session.measure ─▶ native cost total and turn increment
  config.list / config.set ─▶ theme
- native commands / turn.step ─▶ coalesced refresh after 100 ms
+ native commands / turn.step / agent.spawn / turn.complete ─▶ coalesced refresh after 100 ms
  clock, every 30 s ─▶ local session/model/context check, running-agent count, redraw
                                                    │
  ui.render { AbovePrompt } ◀── read $.state ───────┤ ──▶ format.ts: fit → groups → spans ──┐
@@ -42,8 +42,8 @@ classic events are unavailable. No additional polling loop or persistent history
 | `hooks/format.ts` | Pure formatting of the band: groups and spans, narrowing (`fit`), the weekly window for the model (`weeklyWindow`, `modelFamily`), the color scale (`GAIN`, `pctTier`, `gainTier`), the cache state (`cacheTier`), multi-colored spans (`cells`), the desktop's Svg (`svgOf`, `items`) |
 | `hooks/pane.ts` | Pure formatting of the pane: its sections as lines of a label and spans (`paneLines`) |
 | `hooks/draw.tsx` | The band and the pane as element trees, for the terminal and for the surfaces with Svg |
-| `hooks/activity.ts` | Shared clockwise dot masks and timing; terminal glyphs and matching desktop vectors |
-| `hooks/activity-client.ts` | One visible terminal glyph and its local frame clock; automatically unmounted when hidden |
+| `hooks/activity.ts` | Shared clockwise dot masks, synchronized phases, three-spinner cap and overflow; terminal glyphs and matching desktop vectors |
+| `hooks/activity-client.ts` | Up to three terminal glyphs driven by one local frame clock; removed from the tree when hidden |
 | `types/index.d.ts` | The `$.state` contract, `PluginState['ccoverhead']` |
 | `tests/kit.ts` | Shared fictional figures and engine answers for the tests |
 | `tests/ccoverhead.test.ts` | The band's behavior through the engine's test kit, on the terminal and desktop surfaces |
@@ -87,6 +87,7 @@ renders each group or line as a `Box` row spaced by `gap`, trims text to drop th
 needs, and turns graphic spans into `Svg` with their own light-theme colors. The look is specified in
 [design.md](design.md).
 
-The running-agent icon is separate from its stationary count. On the terminal it is a one-cell `Client`
-outside the text run; its frame clock and phase belong only to that mounted instance, not `$.state`.
+The running-agent spinners sit between the plain `agent` label and an optional overflow suffix. On the
+terminal a single `Client` of up to three cells sits outside the text run; its clock and phase belong only
+to that instance, not `$.state`. Changing the count updates its props without creating another timer.
 No animation tick reads usage or invalidates the band. The desktop's dots animate inside their SVG.

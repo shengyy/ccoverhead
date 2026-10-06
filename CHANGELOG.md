@@ -15,9 +15,11 @@ All notable changes to ccOverhead are documented here. The format follows
 
 ### Changed
 
-- Narrowing follows the visible band from right to left, keeping the context growth chart until all
-  groups to its right have gone. Running-agent counts use a fixed theme-aware lime, with a one-cell
-  four-row dot animation rotating clockwise: a terminal glyph and matching desktop vectors. The count stays still.
+- Narrowing follows the visible band from right to left: last-turn cost first, then all cost, then agents,
+  keeping the context growth chart until all groups to its right have gone. The plain `agent` label is
+  followed by one lime spinner per running agent, up to three with `+N` for the rest. Each four-row grid
+  has five lit dots; terminal glyphs and matching desktop vectors rotate clockwise in sync.
+  Only the host-reported running agents animate; native spawn/completion observations refresh the count.
 - The website build takes its version and color scale from the plugin, keeping the public introduction
   aligned with the code it illustrates.
 - The website presents the detail pane, cache rewrites, resume behavior and subagent view alongside the
