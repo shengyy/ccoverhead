@@ -128,7 +128,7 @@ describe('ccoverhead', () => {
       expect((await ui.find({ type: 'Text', text: /^ ?90%$/ }))?.props.color).toBe(TIER_HEX[9])
     })
 
-    test(`narrow band drops the sparkline first (${surface})`, async ($, on) => {
+    test(`narrow band preserves growth before auxiliary details (${surface})`, async ($, on) => {
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
       mockHost(on)
@@ -144,13 +144,15 @@ describe('ccoverhead', () => {
       }
       const wide = await $.ui.mount(band(surface, 160))
       expect(await wide.find({ type: 'Text', text: /↑18k/ })).toBeDefined()
-      // "ctx ■□□□□□□□□□ 9% 90k/1M | 5h 24% ↻2h30m | 7d 41% ↻5d0h" is 55 cells; the sparkline would add 10.
+      // Rightmost quota details yield before the per-turn growth chart.
       const narrow = await $.ui.mount(band(surface, 60))
-      expect(await narrow.find({ type: 'Text', text: /↑/ })).toBeUndefined()
+      expect(await narrow.find({ type: 'Text', text: /↑18k/ })).toBeDefined()
       expect(await narrow.find({ type: 'Text', text: /^ ?90k\/1M$/ })).toBeDefined()
+      expect(await narrow.find({ type: 'Text', text: /↻5d/ })).toBeUndefined()
       const tiny = await $.ui.mount(band(surface, 40))
-      expect(await tiny.find({ type: 'Text', text: /1M/ })).toBeUndefined()
-      expect(await tiny.find({ type: 'Text', text: /^5h$/ })).toBeDefined()
+      expect(await tiny.find({ type: 'Text', text: /^ ?90k\/1M$/ })).toBeDefined()
+      expect(await tiny.find({ type: 'Text', text: /↑18k/ })).toBeDefined()
+      expect(await tiny.find({ type: 'Text', text: /^5h$/ })).toBeUndefined()
     })
 
     test(`a new session shows the last saved quota dimmed (${surface})`, async ($, on) => {
@@ -167,8 +169,9 @@ describe('ccoverhead', () => {
       mock.clock(on, { now: NOW })
       await $.session.start(session(surface))
       const ui = await $.ui.mount(band(surface))
-      const q = await ui.find({ type: 'Text', text: /^ ?30% ↻1h30m$/ })
-      expect(q?.props.dimColor).toBe(true)
+      for (const text of [/^ ?30%$/, /^ ?↻1h30m$/]) {
+        expect((await ui.find({ type: 'Text', text }))?.props.dimColor).toBe(true)
+      }
       expect(await ui.find({ type: 'Text', text: /^7d$/ })).toBeUndefined()
       expect(await ui.find({ type: 'Text', text: /^ ?-- \/1M$/ })).toBeDefined()
     })

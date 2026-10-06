@@ -56,7 +56,8 @@ Each Claude Code behavior these rely on, and the version it was checked against,
 On Claude Code 2.1.291, the validator and test kit cover native cost, turn increments, running-agent
 counts, theme colors, downstream band preservation, mid-turn context refresh, and conversation changes
 without classic events. Type checking uses the saved 2.1.289 declarations. Fictional previews cover dark
-and light cost styling. The window-average quota estimate is arithmetic-tested and pane-only. These
+and light cost styling, lime agent counts, and right-to-left narrowing that preserves the growth chart.
+The window-average quota estimate is arithmetic-tested and pane-only. These
 changes are **not verified in a live session**; no model requests were made for this validation.
 
 ## Known limitations

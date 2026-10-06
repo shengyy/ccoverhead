@@ -15,6 +15,8 @@ All notable changes to ccOverhead are documented here. The format follows
 
 ### Changed
 
+- Narrowing follows the visible band from right to left, keeping the context growth chart until all
+  groups to its right have gone. Running-agent counts read `agent*N` in a fixed theme-aware lime.
 - The website build takes its version and color scale from the plugin, keeping the public introduction
   aligned with the code it illustrates.
 - The website presents the detail pane, cache rewrites, resume behavior and subagent view alongside the
@@ -27,7 +29,7 @@ All notable changes to ccOverhead are documented here. The format follows
 
 - Session cost and the latest turn's increase from Claude Code's own cost ledger: a gold total with a
   secondary delta, hidden when unavailable and styled like other groups without a separate frame or
-  background. Running agents appear as `agent×N` only while the count is nonzero.
+  background. Running agents appear only while the count is nonzero.
 - A pane-only quota exhaustion estimate at the current window's average pace; early, expired or stale
   readings have no forecast. The detail quota bar shades projected use by reset; no time progress bars
   or persistent history are added.

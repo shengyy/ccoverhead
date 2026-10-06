@@ -100,13 +100,14 @@ ctx ■■■□□□□□□□ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | 
 | `cache` | `warm` and its minutes, warming in color as the lifetime drains, or `cold`; `TTL unknown` until the host provides lifetime evidence; `rewrote` and its tokens on a turn that wrote the cache again instead of reading it |
 | `5h`, `7d` | Quota used in each window, and `↻` the time until it resets. Dim when remembered from an earlier session. `7d` follows the main model's own weekly window when Claude Code reports one, such as `7d fable` (not verified) |
 | `cost` | Gold session USD total and secondary latest-turn increment; native API-price reference, hidden when absent |
-| `agent×N` | Currently running agents only; zero is hidden |
+| `agent*N` | Currently running agents, highlighted in lime; zero is hidden |
 | `spend` | A Claude gateway's spend limit, when reported; it can pass 100% (not verified) |
 
 Colors follow one ten-step scale from cool to warm. Percentages (context and quota) move one step per 10%
 from sky blue at 0–29% to red at 90% and above; each growth bar takes a step by its share of the window,
 doubling from 0.1%. The full table is in [docs/design.md](docs/design.md#color-scale). On a narrow window
-the band drops the turn cost increment first, then the chart and other details, keeping context longest.
+the band shrinks from right to left, keeping context and its per-turn growth chart longer than the groups
+to their right.
 
 Type `/ccoverhead` for the pane. It only displays and adds nothing to the conversation:
 

@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
 import type { SessionUsage, TurnCompleteInput } from 'claude-code'
-import { colorOf, fit, forecastBar, svgOf } from '../hooks/format'
+import { colorOf, fit, forecastBar, svgOf, width } from '../hooks/format'
 import { quotaForecast } from '../hooks/track'
 import { paneLines } from '../hooks/pane'
 import { MIN, NOW, STEP, SURFACES, band, cached, fill, iso, measured, mockHost, session, usage } from './kit'
@@ -81,7 +81,7 @@ for (const surface of SURFACES) {
     await $.session.measure({ ...measured(fill(40_000)), cost: { usd: 2 } })
     for await (const _ of $.turn.step(STEP)) { /* drain */ }
     const ui = await $.ui.mount(band(surface))
-    expect(await ui.find({ type: 'Text', text: 'agent×1' })).toBeDefined()
+    expect((await ui.findAll({ type: 'Text', text: 'agent*1' })).some(n => n.props.color === '#b8e45c')).toBe(true)
     expect(await ui.find({ type: 'Text', text: /^ ?TTL unknown$/ })).toBeDefined()
     id = 'fictional-b'
     ledger = usage(undefined, [], true)
@@ -112,6 +112,43 @@ test('theme fallback preserves native colors and money has no usage threshold', 
   expect(colorOf({ text: '', tier: 6 }, 'light')).toBe('#856d00')
   expect(colorOf({ text: '', tier: 6 }, 'native')).toBe('warning')
   for (const tier of [0, 6, 9]) expect(colorOf({ text: '', tier, money: true }, 'dark')).toBe('#dfbc70')
+})
+
+test('growth survives cost, agents and countdowns at constrained widths', () => {
+  const input = {
+    now: NOW, ctx: { tokens: 271_400, window: 1_000_000 },
+    history: [180_000, 181_200, 186_000, 198_000, 232_000, 236_500, 268_000, 271_400],
+    limits: [
+      { kind: 'five_hour', percentUsed: 42, resetsAt: iso(154 * MIN) },
+      { kind: 'seven_day', percentUsed: 63, resetsAt: iso(3300 * MIN) },
+    ],
+    limitsLive: true, cache: null, cacheTtl: null, model: null,
+    cost: 1.84, turnCost: 0.12, activeAgents: 1,
+  }
+  for (const columns of [100, 80, 60, 50]) {
+    const gs = fit(input, columns)
+    expect(width(gs)).toBeLessThanOrEqual(columns)
+    expect(gs.flat().some(s => s.spark?.length === 7)).toBe(true)
+    expect(gs.flat().some(s => s.text.includes('↑3.4k'))).toBe(true)
+  }
+  const narrowText = fit(input, 60).flat().map(s => s.text).join('')
+  expect(narrowText).not.toMatch(/agent|\$/)
+  const fullWidth = width(fit(input, 160))
+  const withoutAgent = fit(input, fullWidth - 1).flat().map(s => s.text).join('')
+  expect(withoutAgent).not.toContain('agent')
+  expect(withoutAgent).toContain('+$0.12')
+  // A gateway window between weekly quota and cost follows the same right-to-left rule.
+  const withSpend = { ...input, limits: [...input.limits, { kind: 'spend_limit', percentUsed: 12, resetsAt: iso(60 * MIN) }] }
+  let prior = fit(withSpend, 300)
+  for (let columns = width(prior) - 1; columns >= 18; columns--) {
+    const gs = fit(withSpend, columns)
+    expect(gs.map(g => g[0]!.text)).toEqual(prior.slice(0, gs.length).map(g => g[0]!.text))
+    expect(gs.slice(0, -1)).toEqual(prior.slice(0, gs.length - 1))
+    prior = gs
+  }
+  const agent = fit(input, 160).flat().find(s => s.text === 'agent*1')!
+  expect(colorOf(agent, 'light')).toBe('#567a00')
+  expect(fit({ ...input, activeAgents: 0 }, 160).flat().some(s => s.text.includes('agent'))).toBe(false)
 })
 
 for (const surface of ['terminal', 'desktop', 'vscode', 'mobile'] as const) {

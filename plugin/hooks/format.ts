@@ -32,6 +32,7 @@ export type Span = {
   spark?: number[]
   tiers?: number[]
   money?: boolean
+  fold?: 'growth' | 'tokens' | 'reset' | 'rewrite' | 'turn-cost'
 }
 
 type Ink = { dark: string; light: string }
@@ -238,32 +239,18 @@ export type BandInput = {
   view?: AgentView
 }
 
-// What to leave out, from least to most important, when the band is too narrow.
-export type Detail = { cost?: boolean; turnCost?: boolean; spark: boolean; rewrite: boolean; cache: boolean; tokens: boolean; reset7: boolean; reset5: boolean }
-export const DEGRADE: Detail[] = [
-  { cost: true, turnCost: true, spark: true, rewrite: true, cache: true, tokens: true, reset7: true, reset5: true },
-  { cost: true, spark: true, rewrite: true, cache: true, tokens: true, reset7: true, reset5: true },
-  { cost: true, spark: false, rewrite: true, cache: true, tokens: true, reset7: true, reset5: true },
-  { cost: true, spark: false, rewrite: false, cache: true, tokens: true, reset7: true, reset5: true },
-  { cost: true, spark: false, rewrite: false, cache: false, tokens: true, reset7: true, reset5: true },
-  { cost: true, spark: false, rewrite: false, cache: false, tokens: false, reset7: true, reset5: true },
-  { spark: false, rewrite: false, cache: false, tokens: false, reset7: true, reset5: true },
-  { spark: false, rewrite: false, cache: false, tokens: false, reset7: false, reset5: true },
-  { spark: false, rewrite: false, cache: false, tokens: false, reset7: false, reset5: false },
-]
-
 // The growth sparkline and the latest gain, each bar in its gain's tier of `window`.
 function growth(history: number[], window: number): Span[] {
   const gs = gains(history)
   return [
-    { text: '  ' },
-    { text: sparkline(gs), spark: gs, tiers: gs.map(v => gainTier(v, window)) },
-    { text: ` ↑${kshort(gs.at(-1) ?? 0)}`, dimColor: true },
+    { text: '  ', fold: 'growth' },
+    { text: sparkline(gs), spark: gs, tiers: gs.map(v => gainTier(v, window)), fold: 'growth' },
+    { text: ` ↑${kshort(gs.at(-1) ?? 0)}`, dimColor: true, fold: 'growth' },
   ]
 }
 
 // The main conversation's context: bar, percentage, tokens and growth.
-function contextGroup(b: BandInput, ctx: OverheadCtx, d: Detail): Span[] {
+function contextGroup(b: BandInput, ctx: OverheadCtx): Span[] {
   const { tokens, window, estimate } = ctx
   if (tokens !== undefined && tokens > 0) {
     const p = Math.trunc(ctx.percent ?? (tokens * 100) / window)
@@ -273,8 +260,8 @@ function contextGroup(b: BandInput, ctx: OverheadCtx, d: Detail): Span[] {
       { text: bar(p), tier: pctTier(p), bar: p },
       { text: ` ${p}%`, tier: pctTier(p) },
     ]
-    if (d.tokens) g.push({ text: ` ${ktok(tokens)}/${ktok(window)}`, dimColor: true })
-    if (d.spark && b.history.length >= 2) g.push(...growth(b.history, window))
+    g.push({ text: ` ${ktok(tokens)}/${ktok(window)}`, dimColor: true, fold: 'tokens' })
+    if (b.history.length >= 2) g.push(...growth(b.history, window))
     return g
   }
   if (estimate !== undefined && estimate > 0) {
@@ -286,7 +273,7 @@ function contextGroup(b: BandInput, ctx: OverheadCtx, d: Detail): Span[] {
       { text: bar(p), dimColor: true, bar: p },
       { text: ` ~${p}%`, dimColor: true },
     ]
-    if (d.tokens) g.push({ text: ` ~${ktok(estimate)}/${ktok(window)}`, dimColor: true })
+    g.push({ text: ` ~${ktok(estimate)}/${ktok(window)}`, dimColor: true, fold: 'tokens' })
     return g
   }
   // Neither a response nor an estimate yet.
@@ -295,7 +282,7 @@ function contextGroup(b: BandInput, ctx: OverheadCtx, d: Detail): Span[] {
 
 // A subagent's context while its transcript is on screen: its last request's input total, against its
 // window when that is known, else the tokens alone; its growth bars by the main window's tiers.
-function agentGroup(b: BandInput, view: AgentView, d: Detail): Span[] {
+function agentGroup(b: BandInput, view: AgentView): Span[] {
   const totals = view.agent?.totals ?? []
   const tokens = totals.at(-1)
   if (tokens === undefined) return [{ text: 'agent' }, { text: ' --', dimColor: true }]
@@ -303,64 +290,63 @@ function agentGroup(b: BandInput, view: AgentView, d: Detail): Span[] {
   if (view.window) {
     const p = Math.trunc((tokens * 100) / view.window)
     g.push({ text: ' ' }, { text: bar(p), tier: pctTier(p), bar: p }, { text: ` ${p}%`, tier: pctTier(p) })
-    if (d.tokens) g.push({ text: ` ${ktok(tokens)}/${ktok(view.window)}`, dimColor: true })
+    g.push({ text: ` ${ktok(tokens)}/${ktok(view.window)}`, dimColor: true, fold: 'tokens' })
   } else {
     g.push({ text: ` ${ktok(tokens)}` })
   }
-  if (d.spark && totals.length >= 2) g.push(...growth(totals, view.window ?? b.ctx?.window ?? FALLBACK_WINDOW))
+  if (totals.length >= 2) g.push(...growth(totals, view.window ?? b.ctx?.window ?? FALLBACK_WINDOW))
   return g
 }
 
 // Warm and its minutes left in one colour (`cacheTier`), or cold; then the latest request that rewrote
 // the cache instead of reading it, kept until a later turn reads the cache, tiered like a growth bar by its
 // share of the window.
-function cacheGroup(b: BandInput, cache: OverheadCache, d: Detail): Span[] {
+function cacheGroup(b: BandInput, cache: OverheadCache): Span[] {
   const g: Span[] = [{ text: 'cache' }]
   g.push(cacheStatus(cache, b.cacheTtl, b.now))
-  if (d.rewrite && b.rewrite) {
+  if (b.rewrite) {
     const text = ` rewrote ${kshort(b.rewrite)}`
-    g.push(b.ctx?.window ? { text, tier: gainTier(b.rewrite, b.ctx.window) } : { text, dimColor: true })
+    g.push({ ...(b.ctx?.window ? { text, tier: gainTier(b.rewrite, b.ctx.window) } : { text, dimColor: true }), fold: 'rewrite' })
   }
   return g
 }
 
 // The band's groups, each a run of spans; drawn with a dim " | " between groups. The conversation's own state
 // first (context and its growth, then the cache, which every request renews), then the account's quota,
-// which moves slowest; narrowing drops details by `DEGRADE`, and a truncated end cuts the quota first.
-export function groups(b: BandInput, d: Detail): Span[][] {
+// which moves slowest. Narrowing follows this visual order, from right to left.
+export function groups(b: BandInput): Span[][] {
   const out: Span[][] = []
 
-  if (b.view) out.push(agentGroup(b, b.view, d))
-  else if (b.ctx && b.ctx.window > 0) out.push(contextGroup(b, b.ctx, d))
-  if (d.cache && b.cache) out.push(cacheGroup(b, b.cache, d))
+  if (b.view) out.push(agentGroup(b, b.view))
+  else if (b.ctx && b.ctx.window > 0) out.push(contextGroup(b, b.ctx))
+  if (b.cache) out.push(cacheGroup(b, b.cache))
 
   const weekly = weeklyWindow(b.limits, b.model)
-  const windows: [l: OverheadLimit | undefined, label: string, showReset: boolean][] = [
-    [b.limits.find(x => x.kind === 'five_hour'), '5h', d.reset5],
-    [weekly.limit, weekly.label, d.reset7],
+  const windows: [l: OverheadLimit | undefined, label: string][] = [
+    [b.limits.find(x => x.kind === 'five_hour'), '5h'],
+    [weekly.limit, weekly.label],
     // A Claude gateway's spend limit: it may carry no reset, and goes past 100% once exceeded.
-    [b.limits.find(x => x.kind === 'spend_limit'), 'spend', d.reset7],
+    [b.limits.find(x => x.kind === 'spend_limit'), 'spend'],
   ]
-  for (const [l, label, showReset] of windows) {
+  for (const [l, label] of windows) {
     if (!l) continue
     const resets = l.resetsAt === undefined ? undefined : Date.parse(l.resetsAt)
     // A window whose reset has passed is dropped; only a spend limit may have none.
     if (resets === undefined ? label !== 'spend' : resets <= b.now) continue
     const p = Math.trunc(l.percentUsed)
-    const reset = showReset && resets !== undefined ? ` ↻${dur(resets - b.now)}` : ''
-    out.push(
-      b.limitsLive
-        ? [{ text: label }, { text: ` ${p}%`, tier: pctTier(p) }, ...(reset ? [{ text: reset, dimColor: true }] : [])]
-        : // Remembered from an earlier session, before this one has a reading: all dim.
-          [{ text: label }, { text: ` ${p}%${reset}`, dimColor: true }],
-    )
+    const reset = resets !== undefined ? ` ↻${dur(resets - b.now)}` : ''
+    out.push([
+      { text: label },
+      { text: ` ${p}%`, ...(b.limitsLive ? { tier: pctTier(p) } : { dimColor: true }) },
+      ...(reset ? [{ text: reset, dimColor: true, fold: 'reset' as const }] : []),
+    ])
   }
 
-  if (d.cost && validCost(b.cost)) out.push([
+  if (validCost(b.cost)) out.push([
     { text: 'cost', dimColor: true }, { text: ` ≈${usd(b.cost)}`, money: true },
-    ...(d.turnCost && validCost(b.turnCost) ? [{ text: ` (+${usd(b.turnCost)})`, dimColor: true }] : []),
+    ...(validCost(b.turnCost) ? [{ text: ` (+${usd(b.turnCost)})`, dimColor: true, fold: 'turn-cost' as const }] : []),
   ])
-  if ((b.activeAgents ?? 0) > 0) out.push([{ text: `agent×${b.activeAgents}`, dimColor: true }])
+  if ((b.activeAgents ?? 0) > 0) out.push([{ text: `agent*${b.activeAgents}`, tier: 5 }])
 
   return out
 }
@@ -388,14 +374,26 @@ export function width(gs: Span[][]): number {
   return cells + SEP.length * Math.max(gs.length - 1, 0)
 }
 
+// Each level removes only the rightmost group's trailing detail, then that group. Never skip leftward
+// over a group that is still visible. The leftmost group's core is the final, truncatable level.
+export function bandVariants(b: BandInput): Span[][][] {
+  let gs = groups(b)
+  const levels = [gs]
+  while (gs.length > 0) {
+    const last = gs.at(-1)!
+    const fold = last.at(-1)?.fold
+    if (fold) gs = [...gs.slice(0, -1), last.filter(s => s.fold !== fold)]
+    else if (gs.length > 1) gs = gs.slice(0, -1)
+    else break
+    levels.push(gs)
+  }
+  return levels
+}
+
 // The fullest band that fits `columns`; the last level is drawn truncated if even it does not.
 export function fit(b: BandInput, columns: number): Span[][] {
-  let gs: Span[][] = []
-  for (const d of DEGRADE) {
-    gs = groups(b, d)
-    if (width(gs) <= columns) return gs
-  }
-  return gs
+  const levels = bandVariants(b)
+  return levels.find(gs => width(gs) <= columns) ?? levels.at(-1)!
 }
 
 export type Item = { kind: 'text'; span: Span } | { kind: 'graphic'; graphic: Graphic }

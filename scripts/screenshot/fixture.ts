@@ -20,6 +20,7 @@ export const band: BandInput = {
   model: null,
   cost: 1.84,
   turnCost: 0.12,
+  activeAgents: 1,
 }
 
 export const rewriting: BandInput = { ...band, rewrite: 41_000 }

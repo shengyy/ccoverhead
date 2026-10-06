@@ -41,9 +41,10 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
 - Groups read left to right from what changes every turn to what changes slowly: the conversation's own
   state first (context with its growth chart, then the cache, which every request renews), then the
   account's quota (the 5-hour window, the weekly window, a gateway's spend limit).
-- When the band is too narrow it drops, in order, the turn cost increment, the growth chart, the cache
-  rewrite, the cache, the context token counts, the session cost, the weekly and spend resets, the 5-hour reset, then truncates. The context stays
-  longest.
+- When the band is too narrow it shrinks from right to left. It removes the rightmost group's trailing
+  detail (a turn increment, reset or cache rewrite), then the group itself, before touching anything to
+  its left. Context and its growth chart outlast all groups to their right; once context is alone, growth
+  yields before token counts. Its bar and percentage stay longest, then truncate if necessary.
 - Cost follows quota: a gold session total and a secondary turn increment. A running-agent count follows
   when nonzero; idle and completed agents do not count.
 - It yields to a survey that holds the band, preserves the downstream band, and draws nothing until it has a figure to show.
@@ -126,6 +127,8 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
 - Percentages (context and quota) move one tier per 10%, starting at the third tier so a figure is never
   drawn dimmer than the band's secondary text. Growth bars use all ten tiers.
 - Labels are plain text: they name things, they are not states. Money stays gold regardless of amount.
+  A nonzero running-agent count has a fixed lime accent for activity; its color does not imply a measured
+  spending rate or quota level.
 - Text uses the configured dark/light palette; other themes keep Claude Code semantic colors.
 
 ## Non-goals
