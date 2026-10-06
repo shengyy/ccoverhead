@@ -26,7 +26,7 @@ All notable changes to ccOverhead are documented here. The format follows
 ### Added
 
 - Session cost and the latest turn's increase from Claude Code's own cost ledger: a gold total with a
-  secondary delta, hidden when unavailable. Running agents appear only while the count is nonzero.
+  secondary delta, hidden when unavailable. Running agents appear as `agent×N` only while the count is nonzero.
 - A pane-only quota exhaustion estimate at the current window's average pace; early, expired or stale
   readings have no forecast. The detail quota bar shades projected use by reset; no time progress bars
   or persistent history are added.
