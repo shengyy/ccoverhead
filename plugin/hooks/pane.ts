@@ -194,7 +194,7 @@ function agents(p: PaneInput): PaneLine[] {
       line(
         'last input',
         { text: ` ${ktok(a.totals.at(-1) ?? 0)}` },
-        ...(gs.length > 0 ? [{ text: ' ' }, { text: sparkline(gs), spark: gs, tiers: gs.map(v => gainTier(v, window)) }] : []),
+        ...(gs.length > 0 ? [{ text: ' ' }, { text: sparkline(gs), spark: gs, sparkLabel: 'input' as const, tiers: gs.map(v => gainTier(v, window)) }] : []),
         ...(a.id === p.viewing ? [dim(' · on screen')] : []),
       ),
       ...(a.usage ? [line('tokens', { text: ` ${kshort(a.usage.input)} in · ${kshort(a.usage.output)} out` }, dim(` · ${kshort(a.usage.read)} cache read`))] : []),

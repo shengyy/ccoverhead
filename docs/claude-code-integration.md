@@ -84,8 +84,10 @@ row when you rely on it in a new version, and add the version you checked.
 The saved 2.1.289 declarations and the 2.1.291 test kit cover these paths; this is not live acceptance.
 
 - `session.measure.cost.usd` / `session.usage().cost.usd` provide the session ledger. The plugin
-  snapshots it at main `turn.start`, subtracts at measurement/completion, and ignores subagent completion
-  for that baseline. `turn.complete` is passed on unchanged.
+  snapshots it at main `turn.start`, subtracts on every local ledger refresh, and keeps that baseline
+  until the next turn or reset so delayed accounting can settle. Subagent completion does not replace
+  it. `turn.complete` is passed on unchanged. The existing poll adopts cost and quota changes even when
+  context is unchanged; this timing is tested with delayed fictional readings, not verified live.
 - `config.list` exposes the theme; allowed `config.set` results update colors. Unknown theme names use
   native semantic colors. No configuration is written.
 - `session.id`, `session.model` and `session.usage` allow local refreshes when `classic.*` is unavailable.
@@ -95,6 +97,8 @@ The saved 2.1.289 declarations and the 2.1.291 test kit cover these paths; this 
   catches delayed picker changes.
 - Main `turn.step` schedules a coalesced 100 ms local usage read. Its summed usage is not treated as
   context size. End-of-turn measurements alone add growth samples.
+- Conversation reset invalidates pending native identity, model, usage and breakdown reads. Tests let
+  an old read finish after clear and the new reading, and check that the new figures survive.
 - Main and subagent `turn.step` carry requested `model` and optional `effort`; `agentId` identifies a
   subagent. The result's `usage`
   gives the responding model and four always-present token counts (uncached input, output, cache read,
@@ -106,6 +110,9 @@ The saved 2.1.289 declarations and the 2.1.291 test kit cover these paths; this 
   lookup is added. These fields and calculations are test-kit covered, not verified live.
   Main output joins the existing input/cache counters; subagent steps do not contribute to them.
   Main `session.id` is displayed from the identity already read for resets. No summary is generated.
+- There is no agent selector on `session.usage`, and `agent.list` has no context history. Agent charts
+  therefore describe changes in observed input totals (`last input`), not a separate host-reported
+  context series. A server-side tool loop can aggregate several responses in one step's usage.
 - `agent.list` provides running status. The saved declarations distinguish `pending`, `running`,
   `waiting`, `idle`, `completed`, `failed` and `killed`; only `running` counts in the band and zero is
   hidden. `agent.spawn` is observed and passed through unchanged. Spawn and completion use the same

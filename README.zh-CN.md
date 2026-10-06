@@ -6,8 +6,8 @@
 
 <p align="center">
   Claude Code 的开销，就悬在你头顶。<br>
-  上下文、每轮增长、额度和缓存冷热，一条横条显示在输入框上方；<br>
-  背后的细节，放在 <code>/ccoverhead</code> 面板里。
+  上下文、每轮增长、额度、缓存冷热、原生费用和 agent 活动，放在输入框上方；<br>
+  会话与 agent 的详情，放在 <code>/ccoverhead</code> 面板里。
 </p>
 
 <p align="center">
@@ -21,6 +21,7 @@
 </p>
 
 <p align="center"><a href="https://shengyy.github.io/ccoverhead/"><strong>小站与功能预览</strong></a></p>
+<p align="center"><a href="#安装">已上架 Anthropic Directory · 搜索 ccOverhead 即可安装</a></p>
 
 <p align="center">
   <img src="assets/screenshots/desktop.png" width="760" alt="Claude 桌面端里的 ccOverhead 横条：上下文条 27%、七根颜色各异的增长柱、缓存「还热 38 分钟」、5 小时额度 42%、每周额度 63%">
@@ -29,6 +30,8 @@
 ---
 
 在 Claude Code 里干活时，有几个数字决定你下一步该做什么：上下文窗口满了多少（该 `/compact` 了吗？）、涨得有多快、5 小时和每周额度还剩多少、prompt 缓存还热不热。ccOverhead 是一个 Claude Code mod（由函数钩子组成的插件），把这些数字放进输入框正上方的一条横条里，用同一条从安全到警告的色阶显示用量，费用固定金色；需要细节时，再打开一个面板。
+
+横条也显示原生费用和运行中的 agent。详情面板补充会话与 agent ID、简短任务描述、模型、请求思考等级和观测到的 token 用量，展示这些信息不调用模型。
 
 ## 功能
 
@@ -56,7 +59,20 @@
 
 ## 安装
 
-在 Claude Code 里执行：
+两种来源任选一种，只启用一份 ccOverhead。
+
+### 推荐：从官方目录搜索安装
+
+ccOverhead 已上架官方 **Anthropic Directory**。在 Claude 桌面客户端打开
+**设置 → 插件 → 发现**，搜索 **`ccOverhead`**，选择来源为 **Anthropic Directory** 的条目，
+安装并保持启用，即可在 Claude Code 中使用。
+**这种方式无需添加我们的市场，也无需执行下面的安装命令。**
+
+[在 Anthropic Directory 打开 ccOverhead](https://claude.ai/customize/plugins/id/d9866436-5b36-4af8-83d9-7c066d390bdb%40anthropic-plugin-directory)
+
+### 可选：添加本仓库的市场安装
+
+也可以直接从我们的 GitHub 市场安装，在 Claude Code 里执行：
 
 ```text
 /plugin marketplace add shengyy/ccoverhead
@@ -64,7 +80,9 @@
 /reload-plugins
 ```
 
-更新：先 `/plugin marketplace update ccoverhead`，再 `/plugin update ccoverhead@ccoverhead`。卸载：`/plugin uninstall ccoverhead@ccoverhead`。
+通过本仓库市场安装的版本，更新时先执行 `/plugin marketplace update ccoverhead`，再执行
+`/plugin update ccoverhead@ccoverhead`；卸载用 `/plugin uninstall ccoverhead@ccoverhead`。
+通过官方目录安装的版本，在 Claude 的插件详情页更新或移除。
 
 ## 使用
 

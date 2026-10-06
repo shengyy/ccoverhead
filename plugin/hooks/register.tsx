@@ -39,6 +39,9 @@ const TICK_MS = 30_000
 const STORE_LIMITS = 'limits'
 // The pane's id and the command that opens it; named after the plugin, since a command has no plugin prefix.
 const PANE = 'ccoverhead'
+// Invalidates in-flight native reads on a conversation reset. This is cancellation bookkeeping;
+// all displayed values remain in the host's atoms.
+let conversationRevision = 0
 
 export const register: Register = on => {
   let tick: Timer | undefined
@@ -79,15 +82,19 @@ export const register: Register = on => {
   // After each turn, and whenever a quota window moves a point. A reading that says the windows changed is
   // taken even when it is empty: a window withdrawn (a spend limit has no reset to expire it) goes too.
   on('session.measure', async ($, e, next) => {
+    const revision = conversationRevision
     const result = await next(e)
+    if (revision !== conversationRevision) return result
     await syncSession($)
+    if (revision !== conversationRevision) return result
     await readModel($)
-    await takeCost($, e.cost?.usd, true)
+    if (revision !== conversationRevision) return result
+    await takeCost($, e.cost?.usd)
     if (e.changed.includes('rateLimits')) {
       const at = await $.clock.now()
       await update($, limitsAt, () => at)
     }
-    await take($, e.context, e.rateLimits, e.changed.includes('rateLimits'))
+    await take($, e.context, e.rateLimits, e.changed.includes('rateLimits'), true, revision)
     return result
   })
 
@@ -131,20 +138,25 @@ export const register: Register = on => {
 
   on('turn.start', async ($, e, next) => {
     await syncSession($)
+    const revision = conversationRevision
     const reading = await $.session.usage().catch(() => undefined)
+    if (revision !== conversationRevision) return next(e)
     await update($, turnCostBase, () => (validCost(reading?.cost?.usd) ? reading.cost.usd : null))
     await update($, turnCost, () => null)
     return next(e)
   })
 
   on('turn.complete', async ($, e, next) => {
+    const revision = conversationRevision
     const result = await next(e)
+    if (revision !== conversationRevision) return result
     await readActiveAgents($)
     settling = refreshSoon($, settling)
     if (e.agentId === undefined) {
       const ledger = await $.session.usage().catch(() => undefined)
-      await takeCost($, ledger?.cost?.usd, true)
-      await update($, turnCostBase, () => null)
+      if (revision !== conversationRevision) return result
+      await takeCost($, ledger?.cost?.usd)
+      // Keep the baseline until the next turn/reset: the host can post the ledger after this hook.
     }
     return result
   })
@@ -152,9 +164,11 @@ export const register: Register = on => {
   // Each request: on the main conversation, when it started, whether it touched the cache and the running
   // counts; on a subagent, its input history, cumulative usage and observed requested effort.
   on('turn.step', async function* ($, e, next) {
+    const revision = conversationRevision
     // Cache age starts with the request, not after a potentially long streamed response.
     const started = await $.clock.now()
     const result = yield* next(e)
+    if (revision !== conversationRevision) return result
     const u = result.usage
     if (!u) return result
     // A downstream model rewrite/fallback cannot establish the effort of the model that answered.
@@ -162,6 +176,7 @@ export const register: Register = on => {
     if (e.agentId === undefined) {
       const touched = (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0)
       await syncSession($)
+      if (revision !== conversationRevision) return result
       await setModel($, u.model)
       await update($, effort, () => requestedEffort ?? null)
       await update($, cache, () => ({ at: started, warm: touched > 0 }))
@@ -268,12 +283,18 @@ async function bandInput($: EngineInterface, viewing: string | undefined): Promi
 // Start of session, a reload or the pane: the engine's figures, else the last live quota from the store.
 async function load($: EngineInterface) {
   await syncSession($)
+  const revision = conversationRevision
   const { context, rateLimits, cost: ledger } = await $.session.usage()
+  if (revision !== conversationRevision) return
   await readModel($)
+  if (revision !== conversationRevision) return
   await takeCost($, ledger?.usd)
-  await take($, context, rateLimits, false, false)
+  if (revision !== conversationRevision) return
+  await take($, context, rateLimits, false, false, revision)
+  if (revision !== conversationRevision) return
   if (pick(rateLimits).length === 0) {
     const saved = await $.store.get(STORE_LIMITS)
+    if (revision !== conversationRevision) return
     if (Array.isArray(saved) && !(await read($, limitsLive))) {
       await update($, limits, () => saved as OverheadLimit[])
     }
@@ -281,10 +302,11 @@ async function load($: EngineInterface) {
 }
 
 // `withdrawn`: an empty reading means the windows went away, not that there is no reading yet.
-async function take($: EngineInterface, context: SessionContextUsage | undefined, rateLimits: SessionRateLimit[] | undefined, withdrawn: boolean, recordGrowth = true) {
+async function take($: EngineInterface, context: SessionContextUsage | undefined, rateLimits: SessionRateLimit[] | undefined, withdrawn: boolean, recordGrowth = true, revision = conversationRevision) {
   // Each reading's own breakdown, or none: one the engine refused this time is unknown, never the last one,
   // which may describe a conversation since compacted or another model.
   const b = await localBreakdown($)
+  if (revision !== conversationRevision) return
   await update($, breakdown, () => (b ? slim(b) : null))
   if (context?.window) {
     const m = await read($, model)
@@ -311,25 +333,36 @@ async function take($: EngineInterface, context: SessionContextUsage | undefined
     }
     await update($, ctx, () => next)
   }
+  if (revision !== conversationRevision) return
+  await takeLimits($, rateLimits, withdrawn)
+}
+
+// Plain local refreshes also adopt quota changes, even when main context did not move.
+async function takeLimits($: EngineInterface, rateLimits: SessionRateLimit[] | undefined, withdrawn: boolean) {
   const live = pick(rateLimits)
   if (live.length > 0 || withdrawn) {
     const before = JSON.stringify(await read($, limits))
     await update($, limits, () => live)
     await update($, limitsLive, () => true)
     // Only this session's own new reading is shared, so an idle session never overwrites a newer one.
-    if (JSON.stringify(live) !== before) await $.store.set(STORE_LIMITS, live)
+    if (JSON.stringify(live) !== before) {
+      const at = await $.clock.now()
+      await update($, limitsAt, () => at)
+      await $.store.set(STORE_LIMITS, live)
+    }
   }
 }
 
 // The main loop's model; a host that cannot say leaves the weekly group on the all-models window.
 async function readModel($: EngineInterface) {
+  const revision = conversationRevision
   let id: string | null = null
   try {
     id = await $.session.model()
   } catch {
     // keep the all-models window
   }
-  if (id !== null) await setModel($, id)
+  if (revision === conversationRevision && id !== null) await setModel($, id)
 }
 
 async function setModel($: EngineInterface, id: string) {
@@ -345,17 +378,16 @@ async function setModel($: EngineInterface, id: string) {
   await update($, model, () => id)
 }
 
-async function takeCost($: EngineInterface, value: number | undefined, measured = false) {
+async function takeCost($: EngineInterface, value: number | undefined) {
   const previous = await read($, cost)
   await update($, cost, () => (validCost(value) ? value : null))
   if (!validCost(value) || (previous !== null && value < previous)) {
     await update($, turnCost, () => null)
+    if (validCost(value) && previous !== null && value < previous) await update($, turnCostBase, () => null)
     return
   }
-  if (measured) {
-    const base = await read($, turnCostBase)
-    if (base !== null) await update($, turnCost, () => (value >= base ? value - base : null))
-  }
+  const base = await read($, turnCostBase)
+  if (base !== null) await update($, turnCost, () => (value >= base ? value - base : null))
 }
 
 function themeOf(value: unknown): OverheadTheme {
@@ -368,6 +400,7 @@ async function readTheme($: EngineInterface) {
 }
 
 async function resetConversation($: EngineInterface) {
+  conversationRevision++
   await update($, effort, () => null)
   await update($, ctx, () => null)
   await update($, breakdown, () => null)
@@ -387,8 +420,9 @@ async function resetConversation($: EngineInterface) {
 }
 
 async function syncSession($: EngineInterface): Promise<boolean> {
+  const revision = conversationRevision
   const id = await $.session.id().catch(() => null)
-  if (id === null) return false
+  if (revision !== conversationRevision || id === null) return false
   const previous = await read($, sessionId)
   await update($, sessionId, () => id)
   const changed = previous !== null && previous !== id
@@ -398,18 +432,25 @@ async function syncSession($: EngineInterface): Promise<boolean> {
 
 // A cheap local read on the existing countdown tick catches changes no event delivered.
 async function poll($: EngineInterface) {
-  await readActiveAgents($)
   const changed = await syncSession($)
+  const revision = conversationRevision
+  await readActiveAgents($)
   const beforeModel = await read($, model)
   await readModel($)
   const reading = await $.session.usage()
+  if (revision !== conversationRevision) return
+  await takeCost($, reading.cost?.usd)
+  await takeLimits($, reading.rateLimits, await read($, limitsLive))
+  if (revision !== conversationRevision) return
   const last = await read($, ctx)
   const next = reading.context
   if (changed || beforeModel !== (await read($, model)) || !last || last.window !== next.window || last.tokens !== next.tokens || last.percent !== next.percent) await load($)
 }
 
 async function readActiveAgents($: EngineInterface) {
+  const revision = conversationRevision
   const list = await $.agent.list().catch(() => [])
+  if (revision !== conversationRevision) return
   const count = list.filter(agent => agent.status === 'running').length
   if (count !== await read($, activeAgents)) await update($, activeAgents, () => count)
   // Reuse this one list read for the pane's identity labels, including delayed or updated descriptions.

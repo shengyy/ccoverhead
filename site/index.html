@@ -46,7 +46,7 @@
               <a class="button" href="#install">Install ccOverhead <span aria-hidden="true">↓</span></a>
               <a class="text-link" href="https://github.com/shengyy/ccoverhead#readme">Read the docs <span aria-hidden="true">↗</span></a>
             </div>
-            <p class="hero-meta"><a href="https://github.com/shengyy/ccoverhead/releases/tag/v{{version}}">v{{version}} · Release notes</a><span>Free · MIT · No telemetry</span></p>
+            <p class="hero-meta"><a href="https://github.com/shengyy/ccoverhead/releases/tag/v{{version}}">v{{version}} · Release notes</a><a href="#install">Available in Anthropic Directory</a><span>Free · MIT · No telemetry</span></p>
           </div>
         </section>
 
@@ -79,7 +79,7 @@
               <div><dt>What fills the window</dt><dd>Local token counts by category, with the largest MCP tool schemas broken out by server.</dd></div>
               <div><dt>Room before compaction</dt><dd>The auto-compaction threshold, tokens to go, growth since the last compaction and the last three before-and-after sizes.</dd></div>
               <div><dt>Cache and quota, in detail</dt><dd>Cache hit rate and token counts. Every quota window, with a compact window-average exhaustion estimate when useful, plus native session cost.</dd></div>
-              <div><dt>The subagent view</dt><dd>The eight most recently active subagents: type, model, last context total and growth.</dd></div>
+              <div><dt>The subagent view</dt><dd>The eight most recently observed subagents: short task description, agent ID, model, requested effort when available, last input and observed input/output tokens.</dd></div>
             </dl>
             <a class="text-link" href="https://github.com/shengyy/ccoverhead/blob/main/docs/status.md">Surfaces &amp; verification <span aria-hidden="true">↗</span></a>
           </div>
@@ -112,7 +112,7 @@
           </div>
           <div class="session-footnotes">
             <p><strong>On resume.</strong> Warmth is aged from the transcript’s last response, so a pause carries through to the cache state.</p>
-            <p><strong>On a narrow window.</strong> The chart, cache rewrite and secondary figures yield in stages. Context stays visible longest.</p>
+            <p><strong>On a narrow window.</strong> Last-turn cost yields first, then all cost, then agents and the other groups from right to left. Context and its growth chart stay longest.</p>
           </div>
           <p class="verification-note">These previews use fictional data. The latest states have test and render coverage; live visual checks are still pending. <a href="https://github.com/shengyy/ccoverhead/blob/main/docs/status.md">Read the verification notes.</a></p>
         </section>
@@ -140,15 +140,24 @@
         </section>
 
         <section class="install-section section-rule" id="install" aria-labelledby="install-heading">
-          <div class="install-intro"><p class="eyebrow">Get started</p><h2 id="install-heading">Three commands.<br /><em>Back to your work.</em></h2><p>Add this repository as a marketplace, install the mod, then reload your plugins. Run these inside Claude Code.</p><p class="requirement">Requires Claude Code 2.1.288 or later.<br /><a href="https://github.com/shengyy/ccoverhead/blob/main/docs/status.md">Checked versions &amp; surfaces <span aria-hidden="true">↗</span></a></p></div>
+          <div class="install-intro">
+            <p class="eyebrow">Get started · two ways to install</p>
+            <h2 id="install-heading">Find ccOverhead.<br /><em>Back to your work.</em></h2>
+            <p>Install directly from the official <strong>Anthropic Directory</strong>. In Claude desktop, open <strong>Settings → Plugins → Discover</strong>, search <code>ccOverhead</code>, and install the entry from <strong>Anthropic Directory</strong>. <strong>No marketplace setup or terminal commands needed.</strong></p>
+            <p><a class="text-link" href="https://claude.ai/customize/plugins/id/d9866436-5b36-4af8-83d9-7c066d390bdb%40anthropic-plugin-directory">Open the directory listing <span aria-hidden="true">↗</span></a></p>
+            <p>Or add our GitHub marketplace with the commands alongside. Choose one source and enable only one copy.</p>
+            <p class="requirement">Requires Claude Code 2.1.288 or later.<br /><a href="https://github.com/shengyy/ccoverhead/blob/main/docs/status.md">Checked versions &amp; surfaces <span aria-hidden="true">↗</span></a></p>
+          </div>
           <div class="install-commands">
+            <h3 class="marketplace-heading">Alternative: our GitHub marketplace</h3>
+            <p class="marketplace-caption">Skip these commands when installing from Anthropic Directory. For this alternative, run them inside Claude Code.</p>
             <ol>
               <li><div class="command-title"><span>01</span><h3>Add the marketplace</h3></div><div class="command-row"><code id="marketplace-command" data-install-command>/plugin marketplace add shengyy/ccoverhead</code><button type="button" class="copy-button" data-copy-target="marketplace-command" aria-label="Copy marketplace command">Copy</button></div></li>
               <li><div class="command-title"><span>02</span><h3>Install ccOverhead</h3></div><div class="command-row"><code id="install-command" data-install-command>/plugin install ccoverhead@ccoverhead</code><button type="button" class="copy-button" data-copy-target="install-command" aria-label="Copy plugin install command">Copy</button></div></li>
               <li><div class="command-title"><span>03</span><h3>Reload the plugins</h3></div><div class="command-row"><code id="reload-command" data-install-command>/reload-plugins</code><button type="button" class="copy-button" data-copy-target="reload-command" aria-label="Copy reload command">Copy</button></div></li>
             </ol>
             <div class="copy-all-row"><button type="button" class="copy-all" data-copy-all>Copy all three</button><span id="copy-status" role="status" aria-live="polite"></span></div>
-            <details class="management"><summary>Updating or uninstalling</summary><p>Refresh the marketplace, then update the plugin:</p><pre>/plugin marketplace update ccoverhead
+            <details class="management"><summary>Updating or uninstalling</summary><p>Installed from Anthropic Directory? Use the plugin’s details in Claude to update or remove it.</p><p>Installed from our GitHub marketplace? Refresh it, then update the plugin:</p><pre>/plugin marketplace update ccoverhead
 /plugin update ccoverhead@ccoverhead</pre><p>To uninstall:</p><pre>/plugin uninstall ccoverhead@ccoverhead</pre></details>
           </div>
         </section>
@@ -161,7 +170,7 @@
             <details><summary>Why does the context sometimes have a ~?</summary><p>Before the first response, after <code>/clear</code>, or after compaction, <code>~</code> marks Claude Code’s local estimate. The next response replaces it with a reported total. If an estimate is unavailable, the band shows <code>--</code> instead of an old reading.</p></details>
             <details><summary>What about model-specific quota or gateway limits?</summary><p>When Claude Code reports a weekly window for the main model, the weekly group follows it, for example <code>7d fable</code>. A gateway’s <code>spend_limit</code> appears as <code>spend</code> and can exceed 100%. Both paths are covered by synthetic tests and have not yet been verified with live readings. Without them, the regular weekly window stays in use.</p></details>
             <details><summary>Are quota and cache readings cost estimates?</summary><p>Quota is a share used. The pane can estimate exhaustion at the window-average pace, marked as approximate. Cost is Claude Code’s API-price reference, not a subscription invoice. Cache warmth reflects the main conversation’s reported reads and writes; ccOverhead never pauses, compacts or changes a model for you.</p></details>
-            <details><summary>Does it work with a light theme?</summary><p>The previews use a dark theme. Desktop graphics include a light palette, but text colors are tuned for dark surfaces and light themes have not been verified live. <a href="https://github.com/shengyy/ccoverhead/blob/main/docs/status.md">Current verification limits.</a></p></details>
+            <details><summary>Does it work with a light theme?</summary><p>Text and desktop graphics have matching dark and light palettes. These are covered by offline tests and fictional previews; light themes have not been verified live. <a href="https://github.com/shengyy/ccoverhead/blob/main/docs/status.md">Current verification limits.</a></p></details>
           </div>
         </section>
       </main>

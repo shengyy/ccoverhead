@@ -8,6 +8,8 @@ All notable changes to ccOverhead are documented here. The format follows
 
 ### Fixed
 
+- Late native accounting now updates the turn increment and quota even when context stays unchanged.
+  Native reads that outlive a conversation clear cannot restore the old session's figures.
 - The band preserves content drawn by later mods and Claude Code. Main-context readings refresh between
   requests, and native session/command observations recover changes when `classic.*` is unavailable.
 - Cache warmth no longer assumes an hour before the engine reports a lifetime; a long response does not
@@ -30,6 +32,8 @@ All notable changes to ccOverhead are documented here. The format follows
 
 ### Added
 
+- Installation instructions for the official Anthropic Directory listing and the repository's own
+  marketplace in both READMEs, the bundled plugin README and the website.
 - Main-session ID, requested effort and observed output tokens in the pane, using the existing native
   readings and input/cache counters; main and subagent usage stay separate. No model-generated summaries.
 - Per-agent details in the pane: native short task description, full agent ID, latest responding model,

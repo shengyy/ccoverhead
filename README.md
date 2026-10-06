@@ -6,8 +6,8 @@
 
 <p align="center">
   Your Claude Code overhead, right overhead.<br>
-  Context, each turn's growth, quota and cache warmth in one band above the prompt,<br>
-  and the detail behind them in one <code>/ccoverhead</code> pane.
+  Context, growth, quota, cache warmth, native cost and agent activity above the prompt.<br>
+  Session and agent details in one <code>/ccoverhead</code> pane.
 </p>
 
 <p align="center">
@@ -21,6 +21,7 @@
 </p>
 
 <p align="center"><a href="https://shengyy.github.io/ccoverhead/"><strong>Website &amp; previews</strong></a></p>
+<p align="center"><a href="#install">Available in Anthropic Directory · search ccOverhead</a></p>
 
 <p align="center">
   <img src="assets/screenshots/desktop.png" width="760" alt="The ccOverhead band in the Claude desktop app: a context bar at 27 percent, a seven-bar growth chart in mixed colours, the cache warm for 38 minutes, 5-hour quota 42 percent, weekly quota 63 percent">
@@ -32,7 +33,8 @@ While you work in Claude Code, a few numbers decide what you should do next: how
 is (time to `/compact`?), how fast it is filling, how much of your 5-hour and weekly quota is left, and
 whether the prompt cache is still warm. ccOverhead is a Claude Code mod (a plugin of function
 hooks) that keeps all of them in one band right above the prompt, colored on a single scale from safe to warning,
-and opens the detail behind them in a pane when you ask.
+with native cost and running-agent indicators alongside. The pane adds session and agent IDs, short
+task descriptions, models, requested effort and observed token usage without model requests.
 
 ## Features
 
@@ -51,7 +53,7 @@ and opens the detail behind them in a pane when you ask.
   On subscriptions this is a usage reference, not an extra bill.
 - **Subagents too.** `agent` shows one spinner per running agent, up to three with `+N` for the rest; hidden at zero. Open a subagent's transcript and the band follows that agent's context and growth.
 - **The `/ccoverhead` pane.** What is in the window by category (which MCP server costs what), growth since
-  the last compaction and each compaction, the cache's hit rate, every quota window with how much of its
+  the last compaction and each compaction, the cache's hit rate, every quota window with a
   window-average exhaustion estimate (when useful), and the eight most recently observed subagents:
   short task description, full agent ID, model, requested effort when reported, input/output tokens and
   cache reads. Counts cover observed requests; input includes cache. It also works in VS Code and the
@@ -80,7 +82,20 @@ and opens the detail behind them in a pane when you ask.
 
 ## Install
 
-In Claude Code:
+Choose either source; enable only one copy of ccOverhead.
+
+### Recommended: Anthropic Directory
+
+ccOverhead is available in the official **Anthropic Directory**. In the Claude desktop app, open
+**Settings → Plugins → Discover**, search **`ccOverhead`**, and select the entry whose source is
+**Anthropic Directory**. Install it and keep it enabled for Claude Code.
+**No marketplace setup or terminal commands are needed for this method.**
+
+[Open ccOverhead in Anthropic Directory](https://claude.ai/customize/plugins/id/d9866436-5b36-4af8-83d9-7c066d390bdb%40anthropic-plugin-directory)
+
+### Alternative: this repository's marketplace
+
+For a direct install from our GitHub marketplace, run these inside Claude Code:
 
 ```text
 /plugin marketplace add shengyy/ccoverhead
@@ -88,8 +103,9 @@ In Claude Code:
 /reload-plugins
 ```
 
-Update with `/plugin marketplace update ccoverhead`, then `/plugin update ccoverhead@ccoverhead`.
-Remove with `/plugin uninstall ccoverhead@ccoverhead`.
+For this marketplace installation, update with `/plugin marketplace update ccoverhead`, then
+`/plugin update ccoverhead@ccoverhead`; remove with `/plugin uninstall ccoverhead@ccoverhead`.
+For the directory installation, use its plugin details in Claude to update or remove it.
 
 ## Use
 

@@ -12,7 +12,13 @@ telemetry. Compacting, pausing and switching models remain your decisions.
 
 ## Install and use
 
-In Claude Code:
+Choose one installation source and enable only one copy:
+
+- **Recommended — Anthropic Directory:** in Claude desktop, open **Settings → Plugins → Discover**, search
+  **`ccOverhead`**, and install the entry from **Anthropic Directory**.
+  No marketplace setup or terminal commands are needed.
+  [Open the directory listing](https://claude.ai/customize/plugins/id/d9866436-5b36-4af8-83d9-7c066d390bdb%40anthropic-plugin-directory).
+- **Alternative — our GitHub marketplace:** use these commands instead of the directory installation:
 
 ```text
 /plugin marketplace add shengyy/ccoverhead

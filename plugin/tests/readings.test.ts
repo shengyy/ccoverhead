@@ -13,6 +13,112 @@ const SPAWN: AgentSpawnInput = {
 }
 
 for (const surface of SURFACES) {
+  test(`late cost and quota readings settle without a context change (${surface})`, async ($, on) => {
+    let dollars = 1
+    let percentUsed = 20
+    let hasLimits = true
+    on('session.start', ($, e) => ({ cwd: e.cwd }))
+    on('turn.start', ($, e) => ({ turnId: e.turnId }))
+    on('turn.complete', () => ({ text: '' }))
+    on('session.usage', () => ({ value: {
+      ...usage(40_000, hasLimits ? [{ kind: 'five_hour', percentUsed, resetsAt: iso(180 * MIN) }] : [], false),
+      cost: { usd: dollars },
+    } }))
+    mockHost(on)
+    const clock = mock.clock(on, { now: NOW })
+    await $.session.start(session(surface))
+    const ui = await $.ui.mount(band(surface))
+    await $.turn.start({ turnId: 't', text: '' })
+    await $.turn.complete(DONE)
+    // The host posts the final ledger only after turn.complete returns; no measure event follows.
+    dollars = 1.2
+    await clock.advance(100)
+    expect(await ui.find({ type: 'Text', text: /^ ?\(\+\$0.20\)$/ })).toBeDefined()
+    // Even later background accounting changes neither context nor the model.
+    dollars = 1.3
+    percentUsed = 25
+    await clock.advance(30_000)
+    expect(await ui.find({ type: 'Text', text: /^ ?≈\$1.30$/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /^ ?\(\+\$0.30\)$/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /^ ?25%$/ })).toBeDefined()
+    // The next turn replaces the baseline rather than accumulating the previous turn again.
+    await $.turn.start({ turnId: 'next', text: '' })
+    dollars = 1.35
+    hasLimits = false
+    await $.turn.complete({ ...DONE, turnId: 'next' })
+    await clock.advance(100)
+    expect(await ui.find({ type: 'Text', text: /^ ?\(\+\$0.05\)$/ })).toBeDefined()
+    await clock.advance(30_000)
+    expect(await ui.find({ type: 'Text', text: /^5h$/ })).toBeUndefined()
+  })
+
+  for (const [source, delayed] of [
+    ['load', 'identity'], ['load', 'usage'], ['load', 'breakdown'], ['load', 'model'],
+    ['measure', 'model'], ['step', 'identity'],
+  ] as const) {
+    test(`a ${source} ${delayed} read crossing clear cannot restore old session figures (${surface})`, async ($, on) => {
+      let id = 'fictional-old'
+      let tokens = 40_000
+      let dollars = 2
+      let model = 'claude-opus-5-5'
+      let delayNext = false
+      let entered!: () => void
+      let release!: () => void
+      const enteredRead = new Promise<void>(resolve => { entered = resolve })
+      const delayedRead = new Promise<void>(resolve => { release = resolve })
+      const pause = async () => {
+        if (!delayNext) return
+        delayNext = false
+        entered()
+        await delayedRead
+      }
+      on('session.start', ($, e) => ({ cwd: e.cwd }))
+      on('session.measure', ($, e) => ({ changed: e.changed }))
+      on('turn.step', async function* () { return cached(30_000, 1_000) })
+      on('session.id', async () => {
+        const value = id
+        if (delayed === 'identity') await pause()
+        return { value }
+      })
+      on('session.model', async () => {
+        const value = model
+        if (delayed === 'model') await pause()
+        return { value }
+      })
+      on('session.usage', async ($, e) => {
+        const value = { ...usage(tokens, [], Boolean(e.breakdown)), cost: { usd: dollars } }
+        if (delayed === (e.breakdown ? 'breakdown' : 'usage')) await pause()
+        return { value }
+      })
+      on('classic.SessionStart', () => ({}))
+      on('ui.open', () => ({ value: { isPlaced: true } }))
+      mockHost(on)
+      mock.clock(on, { now: NOW })
+      await $.session.start(session(surface))
+      const ui = await $.ui.mount(band(surface))
+      delayNext = true
+      const opening = source === 'load'
+        ? $.command.run({ command: 'ccoverhead', args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 160 } })
+        : source === 'measure'
+          ? $.session.measure({ ...measured(fill(tokens)), cost: { usd: dollars } })
+          : (async () => { for await (const _ of $.turn.step(STEP)) { /* drain */ } })()
+      await enteredRead
+      id = 'fictional-new'
+      tokens = 9_000
+      dollars = 0
+      model = 'claude-haiku-4-5'
+      await $.classic.SessionStart({ source: 'clear' })
+      release()
+      await opening
+      expect(await ui.find({ type: 'Text', text: /^ ?9k\/1M$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /^ ?≈\$0.00$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /40k|\$2.00/ })).toBeUndefined()
+      const detail = await $.ui.mount({ plugin: 'ccoverhead', surface, component: 'Pane', requestId: 'ccoverhead',
+        props: { title: 'ccOverhead', isFocused: false, bodyColumns: 100, placement: 'inline', scroll: { offset: 0, bodyRows: 60 }, view: {} } })
+      expect(await detail.find({ type: 'Text', text: /^ ?claude-haiku-4-5$/ })).toBeDefined()
+    })
+  }
+
   test(`agent animation follows native spawn and settled status without a model call (${surface})`, async ($, on) => {
     let status: AgentInfo['status'] = 'pending'
     let denied = false

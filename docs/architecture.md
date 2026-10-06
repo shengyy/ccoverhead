@@ -30,6 +30,9 @@ the band from that state. External facts about the engine live in
 The render hooks only read. Every write happens in an event hook, and a write to `$.state` redraws the
 band and the pane by itself. The existing clock also checks native session identity and readings when
 classic events are unavailable. No additional polling loop or persistent history is created.
+Conversation resets invalidate in-flight native reads through a local revision counter. The existing
+poll adopts cost and quota updates even when context stays unchanged; the turn's cost baseline lasts
+until the next turn/reset so a late ledger update can settle the increment.
 
 ## Files (`plugin/`)
 

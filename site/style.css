@@ -110,6 +110,8 @@ h3 { font-size: 17px; line-height: 1.4; font-weight: 600; letter-spacing: -.015e
 .install-intro > p:not(.eyebrow) { color: var(--muted); max-width: 42ch; font-size: clamp(14px, .85vw, 20px); margin-top: 21px; }
 .install-intro .requirement { font-size: clamp(12px, .75vw, 18px); }
 .install-commands ol { list-style: none; padding: 0; margin: 0; }
+.marketplace-heading { font-size: clamp(18px, 1.2vw, 26px); }
+.marketplace-caption { color: var(--muted); margin: 10px 0 24px; }
 .install-commands li { padding-bottom: 22px; }
 .command-title { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
 .command-title > span { font: clamp(11px, .65vw, 15px) var(--mono); color: var(--muted); }

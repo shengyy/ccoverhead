@@ -31,6 +31,7 @@ export type Span = {
   forecast?: number
   barLabel?: string
   spark?: number[]
+  sparkLabel?: 'input'
   tiers?: number[]
   money?: boolean
   agentCount?: number
@@ -142,7 +143,7 @@ export function svgOf(s: Span): Graphic | undefined {
       .join('')
     return {
       source: svg(width, 14, inks(GAIN.map((ink, t) => [`t${t}`, ink])), cols),
-      alt: `context added in each of the last ${s.spark.length} changes`,
+      alt: `${s.sparkLabel === 'input' ? 'input increase' : 'context added'} in each of the last ${s.spark.length} changes`,
       width,
       height: 14,
     }
@@ -246,11 +247,11 @@ export type BandInput = {
 }
 
 // The growth sparkline and the latest gain, each bar in its gain's tier of `window`.
-function growth(history: number[], window: number): Span[] {
+function growth(history: number[], window: number, sparkLabel?: Span['sparkLabel']): Span[] {
   const gs = gains(history)
   return [
     { text: '  ', fold: 'growth' },
-    { text: sparkline(gs), spark: gs, tiers: gs.map(v => gainTier(v, window)), fold: 'growth' },
+    { text: sparkline(gs), spark: gs, sparkLabel, tiers: gs.map(v => gainTier(v, window)), fold: 'growth' },
     { text: ` ↑${kshort(gs.at(-1) ?? 0)}`, dimColor: true, fold: 'growth' },
   ]
 }
@@ -300,7 +301,7 @@ function agentGroup(b: BandInput, view: AgentView): Span[] {
   } else {
     g.push({ text: ` ${ktok(tokens)}` })
   }
-  if (totals.length >= 2) g.push(...growth(totals, view.window ?? b.ctx?.window ?? FALLBACK_WINDOW))
+  if (totals.length >= 2) g.push(...growth(totals, view.window ?? b.ctx?.window ?? FALLBACK_WINDOW, 'input'))
   return g
 }
 
