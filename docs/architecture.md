@@ -69,7 +69,7 @@ plugin from a folder (ignored by Git).
 | `limitsLive` | `boolean` | the same | Whether `limits` is this session's own reading (drawn in color) or remembered (dim) |
 | `cache` | `OverheadCache \| null` | `turn.step`, `classic.PostModelSwitch`, `classic.SessionStart` (cleared; on a resume or fork, aged from the last response) | When the last main-thread request started and whether it touched the cache |
 | `cacheStats` | `OverheadCacheStats` | `turn.step`, `session.compact`, `classic.SessionStart` (cleared; on a resume or fork, `last` is the transcript's last context) | The main conversation's input, cache-read and cache-written tokens, the last request's total, and the latest rewrite, until a later turn reads the cache |
-| `cacheTtl` | `number \| null` | `classic.PostModelSwitch`, `classic.SessionStart` (resume or fork) | The cache lifetime in ms; unknown until a switch reports it or a resume shows it |
+| `cacheTtl` | `number \| null` | `classic.PostModelSwitch`, `classic.SessionStart` (resume or fork) | The cache lifetime in ms the session has shown (a switch, a resume, the request traffic); `null` until then, when `cacheLifetime` falls back to the account's rule |
 | `model` | `string \| null` | load, `session.measure`, `classic.PostModelSwitch` | The main loop's model; picks its own weekly window (`weeklyWindow`) |
 | `agents` | `OverheadAgent[]` | `turn.step`, existing agent-list refresh; cleared on conversation change | Up to eight subagents: native ID/type/short description, latest responding model and requested effort, changed input totals and cumulative observed input/output/cache-read usage |
 

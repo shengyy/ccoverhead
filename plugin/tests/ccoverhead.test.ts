@@ -116,7 +116,8 @@ describe('ccoverhead', () => {
         // drain
       }
       // A freshly warm cache, its minutes in the same colour: none of the lifetime gone, the scale's sky.
-      expect((await ui.find({ type: 'Text', text: /^ ?TTL unknown$/ }))?.props.dimColor).toBe(true)
+      // The lifetime follows the account (plan windows reported, none full: an hour), so the first request warms for 1h0m.
+      expect((await ui.find({ type: 'Text', text: /^ ?warm 1h0m$/ }))?.props.color).toBe(TIER_HEX[2])
       // The conversation's state first (context, then cache), then the account's quota.
       const order = (await ui.findAll({ type: 'Text' })).map(t => t.text.trim())
       expect(order.indexOf('ctx') < order.indexOf('cache') && order.indexOf('cache') < order.indexOf('5h') && order.indexOf('5h') < order.indexOf('7d')).toBe(true)
@@ -156,15 +157,22 @@ describe('ccoverhead', () => {
       }
       const wide = await $.ui.mount(band(surface, 160))
       expect(await wide.find({ type: 'Text', text: /↑18k/ })).toBeDefined()
-      // Rightmost quota details yield before the per-turn growth chart.
+      // Rightmost quota details yield before the per-turn growth chart. Only the terminal counts cells: a
+      // proportional surface's cells are the code font's, wider than what it draws, so it keeps every group and wraps.
       const narrow = await $.ui.mount(band(surface, 60))
       expect(await narrow.find({ type: 'Text', text: /↑18k/ })).toBeDefined()
       expect(await narrow.find({ type: 'Text', text: /^ ?90k\/1M$/ })).toBeDefined()
-      expect(await narrow.find({ type: 'Text', text: /↻5d/ })).toBeUndefined()
       const tiny = await $.ui.mount(band(surface, 40))
       expect(await tiny.find({ type: 'Text', text: /^ ?90k\/1M$/ })).toBeDefined()
       expect(await tiny.find({ type: 'Text', text: /↑18k/ })).toBeDefined()
-      expect(await tiny.find({ type: 'Text', text: /^5h$/ })).toBeUndefined()
+      if (surface === 'terminal') {
+        expect(await narrow.find({ type: 'Text', text: /↻5d/ })).toBeUndefined()
+        expect(await tiny.find({ type: 'Text', text: /^5h$/ })).toBeUndefined()
+      } else {
+        expect(await narrow.find({ type: 'Text', text: /↻5d/ })).toBeDefined()
+        expect(await tiny.find({ type: 'Text', text: /^5h$/ })).toBeDefined()
+        expect((await tiny.findAll({ type: 'Box' })).some(b => b.props.flexWrap === 'wrap')).toBe(true)
+      }
     })
 
     test(`a new session shows the last saved quota dimmed (${surface})`, async ($, on) => {
@@ -289,7 +297,8 @@ describe('ccoverhead', () => {
         // drain
       }
       expect(await ui.find({ type: 'Text', text: /^ ?↑12\.3k$/ })).toBeDefined()
-      expect(await ui.find({ type: 'Text', text: /^ ?TTL unknown$/ })).toBeDefined()
+      // No plan window reported: an API key's five minutes.
+      expect(await ui.find({ type: 'Text', text: /^ ?warm 5m$/ })).toBeDefined()
 
       expect(await $.classic.SessionStart({ source: 'clear' })).toEqual(downstream)
       expect(await ui.find({ type: 'Text', text: /↑/ })).toBeUndefined()
@@ -388,6 +397,38 @@ describe('ccoverhead', () => {
       if (surface === 'desktop') expect((await ui.findAll({ type: 'Svg' })).some(one => /cache/.test(String(one.props.alt)))).toBe(false)
     })
 
+    test(`the request traffic teaches the cache lifetime over the account's rule (${surface})`, async ($, on) => {
+      // A subscription inside its plan usage: the rule says an hour.
+      const limits: SessionRateLimit[] = [
+        { kind: 'five_hour', percentUsed: 10, resetsAt: iso(240 * MIN) },
+        { kind: 'seven_day', percentUsed: 20, resetsAt: iso(3 * 24 * 60 * MIN) },
+      ]
+      const answers = [cached(30_000, 1_000), cached(0, 31_100)]
+      let at = 0
+      on('session.start', ($, e) => ({ cwd: e.cwd }))
+      on('session.measure', ($, e) => ({ changed: e.changed }))
+      mockHost(on)
+      on('session.usage', () => ({ value: usage(40_000, limits, false) }))
+      on('turn.step', async function* () {
+        return answers[at++]!
+      })
+      const clock = mock.clock(on, { now: NOW })
+      await $.session.start(session(surface))
+      await $.session.measure(measured(fill(40_000, 4), limits))
+      const ui = await $.ui.mount(band(surface))
+      const step = async () => {
+        for await (const _ of $.turn.step(STEP)) {
+          // drain
+        }
+      }
+      await step()
+      expect(await ui.find({ type: 'Text', text: /^ ?warm 1h0m$/ })).toBeDefined()
+      // Ten minutes on, the cache was gone and the request wrote it all again: the lifetime is five minutes.
+      await clock.advance(10 * MIN)
+      await step()
+      expect(await ui.find({ type: 'Text', text: /^ ?warm 5m$/ })).toBeDefined()
+    })
+
     test(`a model switch leaves the cache cold and sets its lifetime (${surface})`, async ($, on) => {
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
@@ -405,7 +446,7 @@ describe('ccoverhead', () => {
       for await (const _ of $.turn.step(STEP)) {
         // drain
       }
-      expect(await ui.find({ type: 'Text', text: /^ ?TTL unknown$/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /^ ?warm 5m$/ })).toBeDefined()
       await $.classic.PostModelSwitch({
         from_model: 'claude-opus-5-5',
         to_model: 'claude-haiku-4-5-20251001',

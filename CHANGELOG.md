@@ -6,6 +6,18 @@ All notable changes to ccOverhead are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-10-07
+
+### Fixed
+
+- The desktop band no longer drops `cost` (and other groups) in a window that has room: the surface's
+  `bodyColumns` count cells of its code font, wider than the proportional text drawn, so the desktop keeps every
+  group and wraps whole groups onto the next line when it is truly narrow. The terminal narrows as before.
+- The cache shows its countdown from the first request instead of `TTL unknown`: the lifetime follows what
+  the session has shown (a model switch, a resume, or the request traffic: a read after more than five minutes
+  proves an hour, a rewrite in between says five minutes), else Claude Code's rule for the account (a
+  subscription within its plan usage an hour, otherwise five minutes).
+
 ## [1.5.0] - 2026-10-07
 
 ### Fixed

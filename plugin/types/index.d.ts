@@ -50,7 +50,7 @@ declare module 'claude-code' {
       limitsLive: boolean
       cache: OverheadCache | null
       cacheStats: OverheadCacheStats
-      // The prompt cache's lifetime in ms, reported by a switch or inferred from a resume; otherwise unknown.
+      // The prompt cache's lifetime in ms as the session showed it (a switch, a resume, the request traffic); null until then.
       cacheTtl: number | null
       cost: number | null
       turnCostBase: number | null

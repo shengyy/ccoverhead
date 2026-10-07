@@ -3,7 +3,7 @@
 // the surfaces with a proportional font).
 import type { OverheadAgent, OverheadBreakdown, OverheadCacheStats, OverheadCompaction, OverheadEffort } from '../types'
 import type { BandInput, Span } from './format'
-import { FALLBACK_WINDOW, bar, cacheStatus, dur, forecastBar, gainTier, gains, kshort, ktok, pctTier, sparkline, usd, validCost, weeklyWindow } from './format'
+import { FALLBACK_WINDOW, bar, cacheLifetime, cacheStatus, dur, forecastBar, gainTier, gains, kshort, ktok, pctTier, sparkline, usd, validCost, weeklyWindow } from './format'
 import { AGENTS, hitRate, quotaForecast } from './track'
 
 export type PaneInput = BandInput & {
@@ -115,8 +115,9 @@ function cache(p: PaneInput): PaneLine[] {
   const c = p.cache
   if (!c) out.push(line('state', dim(' no request yet')))
   else {
-    const status = cacheStatus(c, p.cacheTtl, p.now)
-    out.push(line('state', status, ...(status.text.startsWith(' warm') && p.cacheTtl !== null ? [dim(` left of ${dur(p.cacheTtl)}`)] : [])))
+    const ttl = cacheLifetime(p.cacheTtl, p.limits)
+    const status = cacheStatus(c, ttl, p.now)
+    out.push(line('state', status, ...(status.text.startsWith(' warm') ? [dim(` left of ${dur(ttl)}`)] : [])))
   }
   const s = p.cacheStats
   const input = s.input + s.read + s.write

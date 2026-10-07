@@ -6,10 +6,10 @@ import type { EngineInterface, Register, SessionContextBreakdown, SessionContext
 
 import type { OverheadAgent, OverheadBreakdown, OverheadCache, OverheadCacheStats, OverheadCompaction, OverheadCtx, OverheadEffort, OverheadLimit, OverheadTheme } from '../types'
 import { bandRich, bandTerminal, paneRich, paneTerminal } from './draw'
-import { CACHE_TTL_MS, SHORT_TTL_MS, fit, validCost } from './format'
+import { CACHE_TTL_MS, SHORT_TTL_MS, fit, groups, validCost } from './format'
 import type { AgentView, BandInput } from './format'
 import { paneLines } from './pane'
-import { NO_CACHE_STATS, TIMELINE, addAgentStep, addCompaction, addSample, addStep, baseModel, clearRewrite, compacted } from './track'
+import { NO_CACHE_STATS, TIMELINE, addAgentStep, addCompaction, addSample, addStep, baseModel, clearRewrite, compacted, learnedTtl } from './track'
 
 // Session-long values the host keeps across a reload of this module.
 const ctx = atom({ plugin: 'ccoverhead', key: 'ctx' } as const, null as OverheadCtx | null)
@@ -180,6 +180,10 @@ export const register: Register = on => {
       if (!changed && revision !== conversationRevision) return result
       await setModel($, u.model)
       await update($, effort, () => requestedEffort ?? null)
+      const before = await read($, cache)
+      const counts = (await read($, cacheStats)) ?? NO_CACHE_STATS
+      const learned = learnedTtl(before, started, counts, u)
+      if (learned !== undefined) await update($, cacheTtl, () => learned)
       await update($, cache, () => ({ at: started, warm: touched > 0 }))
       await update($, cacheStats, s => addStep(s ?? NO_CACHE_STATS, u, e.turnId))
       // Read the host's last context; step usage may sum several server-side responses.
@@ -220,7 +224,9 @@ export const register: Register = on => {
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.hasSurvey) return next(e)
     const band = await bandInput($, e.props.view.agentId)
-    const gs = fit(band, e.props.bodyColumns - 2)
+    // `bodyColumns` counts cells of a monospace font; a proportional surface draws the band narrower than that, so
+    // it keeps every group and wraps when the window really is narrow, rather than dropping the rightmost.
+    const gs = e.surface === 'terminal' ? fit(band, e.props.bodyColumns - 2) : groups(band)
     if (gs.length === 0) return next(e)
     const els = $.ui.resolve(e)
     const palette = await read($, theme)

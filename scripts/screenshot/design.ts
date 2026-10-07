@@ -206,7 +206,7 @@ const states = `
     <div class="state"><h3>首个回复前的本地估算</h3><code class="context-code">${terminal(groupByLabel(estimate, 'ctx'))}</code><p>使用宿主 /context 估算，带 ~；进度条和数值变暗，不发送模型请求。</p></div>
     <div class="state"><h3>没有估算值</h3><code class="context-code">${terminal(groupByLabel(placeholder, 'ctx'))}</code><p>保留窗口大小，用 -- 占位；不沿用上个窗口的数字。</p></div>
     <div class="state quota-state"><h3>额度：本会话读数 / 跨会话记忆</h3><div class="state-pair"><span class="state-tag">当前</span><code>${terminal(groups(band).filter(g => ['5h', '7d'].includes(g[0]!.text)))}</code></div><div class="state-pair"><span class="state-tag">记忆</span><code>${terminal(groups(remembered).filter(g => ['5h', '7d'].includes(g[0]!.text)))}</code></div><p>新会话拿到自己的读数前，显示最近一次额度，数值与倒计时变暗。重置时间已过的窗口直接隐藏。</p></div>
-    <div class="state"><h3>缓存：warm → cold</h3><div class="state-pair"><code>${terminal(groupByLabel(band, 'cache'))}</code><span class="state-tag">→</span><code>${terminal(groupByLabel(expiredCache, 'cache'))}</code></div><p>主对话读 / 写缓存后变热，颜色随寿命流逝由冷转暖；未触及、到期或切换模型变冷，没有读数时隐藏。寿命由切换模型或恢复会话的证据确定，否则显示 TTL unknown。</p></div>
+    <div class="state"><h3>缓存：warm → cold</h3><div class="state-pair"><code>${terminal(groupByLabel(band, 'cache'))}</code><span class="state-tag">→</span><code>${terminal(groupByLabel(expiredCache, 'cache'))}</code></div><p>主对话读 / 写缓存后变热，颜色随寿命流逝由冷转暖；未触及、到期或切换模型变冷，没有读数时隐藏。寿命以切换模型、恢复会话或请求流量的证据为准，没有证据时按账号套餐。</p></div>
   </div>
   <div class="section-heading"><span class="index">02</span><h2>会话变化时，重置该重置的状态</h2></div>
   <table class="lifecycle"><thead><tr><th>触发</th><th>状态变化</th><th>画面规则</th></tr></thead><tbody>
@@ -301,7 +301,7 @@ const english: Record<string, string> = {
   '记忆': 'Saved',
   '新会话拿到自己的读数前，显示最近一次额度，数值与倒计时变暗。重置时间已过的窗口直接隐藏。': 'Show the last quota reading until this session gets its own; figures and countdowns are dim. Hide any window whose reset time has passed.',
   '缓存：warm → cold': 'Cache: warm → cold',
-  [`主对话读 / 写缓存后变热，颜色随寿命流逝由冷转暖；未触及、到期或切换模型变冷，没有读数时隐藏。寿命由切换模型或恢复会话的证据确定，否则显示 TTL unknown。`]: `A main-conversation cache read/write makes it warm, its color warming as the lifetime drains. No touch, expiry or a model switch makes it cold; no reading hides it. Lifetime comes from a model switch or resume evidence; otherwise TTL unknown.`,
+  [`主对话读 / 写缓存后变热，颜色随寿命流逝由冷转暖；未触及、到期或切换模型变冷，没有读数时隐藏。寿命由切换模型或恢复会话的证据确定，否则显示 TTL unknown。`]: `A main-conversation cache read/write makes it warm, its color warming as the lifetime drains. No touch, expiry or a model switch makes it cold; no reading hides it. Lifetime comes from a model switch, a resume or the request traffic; without evidence, from the account's plan.`,
   '会话变化时，重置该重置的状态': 'Conversation changes reset the relevant state',
   '触发': 'Trigger',
   '状态变化': 'State change',
