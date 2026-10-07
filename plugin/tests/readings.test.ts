@@ -1,8 +1,8 @@
 import { expect, mock, test } from 'claude-code/testing'
 import type { AgentInfo, AgentSpawnInput, SessionUsage, TurnCompleteInput } from 'claude-code'
 import { ACTIVITY_FRAME_MS, ACTIVITY_FRAMES } from '../hooks/activity'
-import { colorOf, fit, forecastBar, svgOf, width } from '../hooks/format'
-import { quotaForecast } from '../hooks/track'
+import { CACHE_TTL_MS, SHORT_TTL_MS, cacheLifetime, colorOf, fit, forecastBar, svgOf, width } from '../hooks/format'
+import { NO_CACHE_STATS, learnedTtl, quotaForecast } from '../hooks/track'
 import { paneLines } from '../hooks/pane'
 import { MIN, NOW, STEP, SURFACES, band, cached, fill, iso, measured, mockHost, session, usage } from './kit'
 
@@ -201,10 +201,11 @@ for (const surface of SURFACES) {
     expect(costLabel?.props.color).toBeUndefined()
     expect(costLabel?.props.dimColor).not.toBe(true)
     expect((await ui.find({ type: 'Text', text: /^ ?\(\+\$0.12\)$/ }))?.props.dimColor).toBe(true)
-    // A narrow band keeps the total and drops the turn increment only when it cannot fit.
+    // A narrow terminal keeps the total and drops the turn increment only when it cannot fit; a proportional
+    // surface keeps both and wraps.
     const narrow = await $.ui.mount(band(surface, 40))
     expect(await narrow.find({ type: 'Text', text: /^ ?≈\$1.84$/ })).toBeDefined()
-    expect(await narrow.find({ type: 'Text', text: /\+\$/ })).toBeUndefined()
+    expect(await narrow.find({ type: 'Text', text: /\+\$/ }) === undefined).toBe(surface === 'terminal')
     // Ledger restarts must never leave an increment belonging to the old total.
     dollars = 0
     await $.session.measure({ ...measured(fill(40_000)), cost: { usd: dollars } })
@@ -304,10 +305,15 @@ for (const surface of SURFACES) {
       if (count > 3) expect((await ui.find({ type: 'Text', text: `+${count - 3}` }))?.props.color).toBe('#b8e45c')
       else expect(await ui.find({ type: 'Text', text: /^\+\d+$/ })).toBeUndefined()
     }
-    const narrow = await $.ui.mount(band(surface, 40))
-    expect(await narrow.find({ type: 'Client' })).toBeUndefined()
-    expect((await narrow.findAll({ type: 'Svg' })).some(n => String(n.props.alt).endsWith('running agents'))).toBe(false)
-    expect(await ui.find({ type: 'Text', text: /^ ?TTL unknown$/ })).toBeDefined()
+    if (surface === 'terminal') {
+      const narrow = await $.ui.mount(band(surface, 40))
+      expect(await narrow.find({ type: 'Client' })).toBeUndefined()
+    } else {
+      const narrow = await $.ui.mount(band(surface, 40))
+      expect((await narrow.findAll({ type: 'Svg' })).some(n => String(n.props.alt).endsWith('running agents'))).toBe(true)
+    }
+    // The animation frames above move the clock; the cache's five minutes may have run out by now.
+    expect(await ui.find({ type: 'Text', text: /^ ?(warm \dm|cold)$/ })).toBeDefined()
     id = 'fictional-b'
     ledger = usage(undefined, [], true)
     list = []
@@ -319,6 +325,38 @@ for (const surface of SURFACES) {
     expect(await ui.find({ type: 'Text', text: /^ ?~13k\/1M$/ })).toBeDefined()
   })
 }
+
+test('the cache lifetime follows what was seen, else the account', () => {
+  const plan = (five: number, seven: number) => [
+    { kind: 'five_hour', percentUsed: five, resetsAt: iso(60 * MIN) },
+    { kind: 'seven_day', percentUsed: seven, resetsAt: iso(60 * MIN) },
+  ]
+  // A subscription inside its plan usage: an hour; a full window (usage credits) or no plan window (an API key): five minutes.
+  expect(cacheLifetime(null, plan(10, 20))).toBe(CACHE_TTL_MS)
+  expect(cacheLifetime(null, plan(100, 20))).toBe(SHORT_TTL_MS)
+  expect(cacheLifetime(null, [{ kind: 'spend_limit', percentUsed: 10 }])).toBe(SHORT_TTL_MS)
+  expect(cacheLifetime(null, [])).toBe(SHORT_TTL_MS)
+  // What the session showed wins over the rule.
+  expect(cacheLifetime(SHORT_TTL_MS, plan(10, 20))).toBe(SHORT_TTL_MS)
+  expect(cacheLifetime(CACHE_TTL_MS, [])).toBe(CACHE_TTL_MS)
+})
+
+test('a request shows the cache lifetime only when the gap since the last one proves it', () => {
+  const prev = { at: 0, warm: true }
+  const stats = { ...NO_CACHE_STATS, last: 40_000 }
+  const step = (read: number, write: number) => ({ input_tokens: 100, output_tokens: 50, cache_read_input_tokens: read, cache_creation_input_tokens: write })
+  // A read after more than five minutes proves the hour; within five minutes proves nothing.
+  expect(learnedTtl(prev, 6 * 60_000, stats, step(39_000, 1_000))).toBe(CACHE_TTL_MS)
+  expect(learnedTtl(prev, 4 * 60_000, stats, step(39_000, 1_000))).toBeUndefined()
+  // A rewrite between five minutes and an hour, with the prompt no smaller, says five minutes; after the
+  // hour it says nothing, and neither does one that shrank the prompt.
+  expect(learnedTtl(prev, 20 * 60_000, stats, step(0, 40_000))).toBe(SHORT_TTL_MS)
+  expect(learnedTtl(prev, 70 * 60_000, stats, step(0, 40_000))).toBeUndefined()
+  expect(learnedTtl(prev, 20 * 60_000, stats, step(0, 10_000))).toBeUndefined()
+  // No cache or no earlier request to compare with (a first request, or one after a compaction).
+  expect(learnedTtl(null, 20 * 60_000, stats, step(0, 40_000))).toBeUndefined()
+  expect(learnedTtl(prev, 20 * 60_000, NO_CACHE_STATS, step(0, 40_000))).toBeUndefined()
+})
 
 test('forecast uses the window-average formula, hides unusable readings, and stays out of the band', () => {
   const limit = { kind: 'five_hour', percentUsed: 50, resetsAt: iso(180 * MIN) }

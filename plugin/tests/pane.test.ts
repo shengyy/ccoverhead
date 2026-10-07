@@ -94,8 +94,9 @@ describe('the /ccoverhead pane', () => {
       // Growth since the compaction, and the compaction itself.
       expect(await text(/^ ?↑12k$/)).toBeDefined()
       expect(await text(/^ ?431k → 60k$/)).toBeDefined()
-      expect(await text(/^ ?TTL unknown$/)).toBeDefined()
-      expect(await text(/left of/)).toBeUndefined()
+      // Plan windows reported and none full: Claude Code's hour.
+      expect(await text(/^ ?warm /)).toBeDefined()
+      expect(await text(/left of 1h0m/)).toBeDefined()
       // 400k of 431k read from the cache.
       expect(await text(/^ ?92%$/)).toBeDefined()
       // Quota keeps reset countdowns, without a separate elapsed-time progress bar.

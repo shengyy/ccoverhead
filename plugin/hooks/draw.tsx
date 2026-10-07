@@ -77,17 +77,18 @@ export function bandTerminal(els: AnimatedTerm, gs: Span[][], theme: OverheadThe
   )
 }
 
-// The band elsewhere: each group a row, a dim bar between groups.
+// The band elsewhere: each group a row, a dim bar leading every group but the first so a wrapped line keeps
+// it with its group. A group never shrinks; a narrow window wraps whole groups onto the next line.
 export function bandRich(els: Rich, gs: Span[][], theme: OverheadTheme = 'dark') {
   const { Box, Text } = els
   return (
-    <Box flexDirection="row" alignItems="center" paddingX={1} gap={1}>
-      {gs.flatMap((g, i) => [
-        ...(i > 0 ? [<Text key={`sep-${i}`} dimColor>|</Text>] : []),
-        <Box key={`group-${i}`} flexDirection="row" alignItems="center" gap={1}>
+    <Box flexDirection="row" flexWrap="wrap" alignItems="center" paddingX={1} columnGap={1}>
+      {gs.map((g, i) => (
+        <Box key={`group-${i}`} flexDirection="row" alignItems="center" flexShrink={0} gap={1}>
+          {i > 0 && <Text dimColor>|</Text>}
           {itemRun(els, g, String(i), theme)}
-        </Box>,
-      ])}
+        </Box>
+      ))}
     </Box>
   )
 }

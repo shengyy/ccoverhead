@@ -1,7 +1,7 @@
 // Pure updates of the plugin's recorded figures: the context totals, the cache's running counts and each
 // subagent's context. The event hooks in register.tsx apply them to `$.state`.
-import type { OverheadAgent, OverheadCacheStats, OverheadCompaction, OverheadLimit } from '../types'
-import { HISTORY } from './format'
+import type { OverheadAgent, OverheadCache, OverheadCacheStats, OverheadCompaction, OverheadLimit } from '../types'
+import { CACHE_TTL_MS, HISTORY, SHORT_TTL_MS } from './format'
 
 // Totals kept for the pane's growth chart.
 export const TIMELINE = 48
@@ -46,6 +46,22 @@ export function addStep(stats: OverheadCacheStats, u: StepUsage, turnId: string)
   if (stats.last > 0 && write > 0 && read * 2 < stats.last) next.rewrite = { tokens: write, turnId }
   else if (stats.rewrite && (stats.rewrite.turnId === turnId || read === 0)) next.rewrite = stats.rewrite
   return next
+}
+
+// The lifetime a main-conversation request shows, given the cache's state before it and the counts before it
+// (`stats`), or undefined when it shows none. A request that read the cache back more than five minutes after
+// the previous one proves the hour; one that rewrote it in between, with the prompt no smaller, says five
+// minutes. Only the model that answered the previous request counts: a switch leaves the cache cold at once.
+export function learnedTtl(prev: OverheadCache | null, started: number, stats: OverheadCacheStats, u: StepUsage): number | undefined {
+  if (!prev || stats.last <= 0) return undefined
+  const gap = started - prev.at
+  if (gap <= SHORT_TTL_MS) return undefined
+  const read = u.cache_read_input_tokens ?? 0
+  const write = u.cache_creation_input_tokens ?? 0
+  const rewrote = write > 0 && read * 2 < stats.last
+  if (!rewrote && read > 0) return CACHE_TTL_MS
+  if (rewrote && gap < CACHE_TTL_MS && (u.input_tokens ?? 0) + read + write >= stats.last) return SHORT_TTL_MS
+  return undefined
 }
 
 // The counts without the rewrite mark.

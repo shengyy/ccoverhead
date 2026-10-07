@@ -2,9 +2,17 @@
 import type { OverheadAgent, OverheadCache, OverheadCtx, OverheadLimit, OverheadTheme } from '../types'
 import { activityBody, activityGlyphs, activityOverflow, activityWidth } from './activity'
 
-// The two cache lifetimes the engine can report. Neither is assumed before evidence arrives.
+// The two cache lifetimes Claude Code uses.
 export const CACHE_TTL_MS = 60 * 60 * 1000
 export const SHORT_TTL_MS = 5 * 60 * 1000
+// The cache lifetime in use: what the session has shown (`seen`, from a model switch, a resume or the request
+// traffic), else Claude Code's own rule for the account: a subscription inside its plan usage gets an hour, usage
+// credits or an API key five minutes. A subscription is told by the plan windows (`five_hour`, `seven_day`).
+export function cacheLifetime(seen: number | null, limits: OverheadLimit[]): number {
+  if (seen !== null) return seen
+  const plan = limits.filter(l => l.kind === 'five_hour' || l.kind === 'seven_day')
+  return plan.length > 0 && plan.every(l => l.percentUsed < 100) ? CACHE_TTL_MS : SHORT_TTL_MS
+}
 // The warm cache's colour for `left` of a `ttl` lifetime: the share of it gone, on the percentage scale, as a
 // quota's share used is. Sky while fresh, one tier per 10% gone from 30%, red in its last tenth.
 export function cacheTier(left: number, ttl: number): number {
@@ -310,7 +318,7 @@ function agentGroup(b: BandInput, view: AgentView): Span[] {
 // share of the window.
 function cacheGroup(b: BandInput, cache: OverheadCache): Span[] {
   const g: Span[] = [{ text: 'cache' }]
-  g.push(cacheStatus(cache, b.cacheTtl, b.now))
+  g.push(cacheStatus(cache, cacheLifetime(b.cacheTtl, b.limits), b.now))
   if (b.rewrite) {
     const text = ` rewrote ${kshort(b.rewrite)}`
     g.push({ ...(b.ctx?.window ? { text, tier: gainTier(b.rewrite, b.ctx.window) } : { text, dimColor: true }), fold: 'rewrite' })
@@ -369,10 +377,8 @@ export function usd(cost: number): string {
   return `$${cost.toFixed(2)}`
 }
 
-// A cache lifetime the engine has not reported is unknown, never an assumed hour.
-export function cacheStatus(cache: OverheadCache, ttl: number | null, now: number): Span {
+export function cacheStatus(cache: OverheadCache, ttl: number, now: number): Span {
   if (!cache.warm) return { text: ' cold', dimColor: true }
-  if (ttl === null) return { text: ' TTL unknown', dimColor: true }
   const left = cache.at + ttl - now
   return left > 0 ? { text: ` warm ${dur(left)}`, tier: cacheTier(left, ttl) } : { text: ' cold', dimColor: true }
 }

@@ -94,9 +94,14 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
 
 - Only main-conversation requests count, not subagents. A request that read or wrote the cache makes it
   warm for the cache lifetime from that moment; anything else, or an expired lifetime, is cold.
-- The lifetime stays unknown (`TTL unknown`) until a model switch reports the session's own (`5m` or
-  `1h`), or a resume shows it: the engine's verdict on a cache between five minutes and an hour old tells the two apart. A
-  switch to another model leaves the cache cold: each model has its own.
+- The lifetime is what the session has shown, else Claude Code's rule for the account. Evidence, newest
+  winning: a model switch reports the session's own (`5m` or `1h`); a resume shows it (the engine's verdict
+  on a cache between five minutes and an hour old tells the two apart); and the request traffic does (a read
+  more than five minutes after the previous request proves the hour, a rewrite between five minutes and an
+  hour with the prompt no smaller says five minutes). Without evidence, a subscription inside its plan usage
+  (a `five_hour` or `seven_day` window reported, none full) gets an hour, usage credits or an API key five
+  minutes. The band never says which; the countdown is all it shows. A switch to another model leaves the
+  cache cold: each model has its own.
 - A resumed or forked conversation shows its cache warm or cold at once, aged from the transcript's last
   response, and its first request counts as a rewrite when it writes the transcript again.
 - `warm` and its minutes share one color: the share of the lifetime gone, on the percentage scale, as a

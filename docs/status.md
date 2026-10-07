@@ -61,7 +61,11 @@ On Claude Code 2.1.291, the validator and test kit cover native cost, turn incre
 counts, theme colors, downstream band preservation, mid-turn context refresh, and conversation changes
 without classic events. Type checking uses the saved 2.1.289 declarations. Fictional previews cover dark
 and light cost styling, lime agent spinners, and right-to-left narrowing that hides cost before agents
-and preserves the growth chart.
+and preserves the growth chart (on the terminal; a proportional surface wraps instead, see
+[claude-code-integration.md](claude-code-integration.md)). The cache lifetime rule (the session's evidence, else the
+account's plan) and the request-traffic learning are covered by the test kit on both surfaces; they are **not verified
+in a live session**. The Claude desktop app runs its own bundled Claude Code (2.1.289 seen in its log), not the
+terminal's install, so the two can differ in version.
 Activity uses a local terminal Client and an animated desktop SVG. The test kit checks mounting and
 removal, one spinner per agent up to three plus overflow, four-row vector grids and synchronized phases.
 Its frame clock checks progression across redraws and count changes without duplicating timers; native playback
