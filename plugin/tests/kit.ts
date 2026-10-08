@@ -117,9 +117,13 @@ export async function tiers(ui: Mounted<Surface, 'AbovePrompt'>, surface: Surfac
   for (const t of want) expect(source).toContain(`.t${t}{fill:${TIER_HEX[t]}}`)
 }
 
-// Explicit dark theme for fixtures; production falls back to native semantic colors if unavailable.
-export function mockHost(on: Parameters<typeof mock.store>[0], initial?: Parameters<typeof mock.store>[1], theme = 'dark', downstream = '') {
+// Explicit dark theme for fixtures; production draws native semantic colors until the theme has been read. `theme` may be
+// a function, called on each `config.list`: it may throw (the list fails) or return undefined (no theme row yet).
+export function mockHost(on: Parameters<typeof mock.store>[0], initial?: Parameters<typeof mock.store>[1], theme: string | (() => string | undefined) = 'dark', downstream = '') {
   mock.store(on, initial)
   on('ui.render', { component: 'AbovePrompt' }, ($, e) => $.ui.resolve(e).Text({ children: downstream }))
-  on('config.list', () => ({ value: [{ key: 'theme', value: theme, label: 'Theme', kind: 'choice', provider: { plugin: 'engine', tier: 'core' }, isLocked: false }] }))
+  on('config.list', () => {
+    const value = typeof theme === 'function' ? theme() : theme
+    return { value: value === undefined ? [] : [{ key: 'theme', value, label: 'Theme', kind: 'choice', provider: { plugin: 'engine', tier: 'core' }, isLocked: false }] }
+  })
 }

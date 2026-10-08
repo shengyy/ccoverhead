@@ -1,7 +1,7 @@
 {
   "name": "ccoverhead",
   "displayName": "ccOverhead",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "ccOverhead: context, per-turn growth, quota, cache warmth, native cost and agent activity above the Claude Code prompt, with session and agent details.",
   "author": { "name": "shengyy", "url": "https://github.com/shengyy" },
   "homepage": "https://github.com/shengyy/ccoverhead",

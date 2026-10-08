@@ -18,7 +18,7 @@ the band from that state. External facts about the engine live in
  turn.start / turn.complete / session.measure ─▶ native cost total and turn increment
  config.list / config.set ─▶ theme
  native commands / turn.step / agent.spawn / turn.complete ─▶ coalesced refresh after 100 ms
- clock, every 30 s ─▶ local session/model/context check, running-agent count, redraw
+ clock, every 30 s ─▶ local session/model/context check, running-agent count, theme while unread, redraw
                                                    │
  ui.render { AbovePrompt } ◀── read $.state ───────┤ ──▶ format.ts: fit → groups → spans ──┐
  ui.render { Pane, ccoverhead } ◀── read $.state ──┘ ──▶ pane.ts: paneLines → spans ───────┤

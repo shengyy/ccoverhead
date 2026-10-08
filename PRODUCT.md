@@ -150,7 +150,8 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
 - Labels are plain text: they name things, they are not states. Money stays gold regardless of amount.
   A nonzero running-agent count has a fixed lime accent for activity; its color does not imply a measured
   spending rate or quota level.
-- Text uses the configured dark/light palette; other themes keep Claude Code semantic colors.
+- Text uses the configured dark/light palette; `auto` uses the dark palette regardless of the effective
+  appearance. Other themes keep Claude Code semantic colors.
 
 ## Non-goals
 

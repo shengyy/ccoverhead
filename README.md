@@ -64,7 +64,7 @@ task descriptions, models, requested effort and observed token usage without mod
 - **One color language.** Cool means safe, yellow means caution, warm to red means warning, the same for
   every usage number in the band. Cost keeps a fixed gold accent. The scale stays readable for red-green color-blind users.
 - **Terminal and desktop.** One line of text in the terminal; crisp vector bars in the Claude desktop app,
-  where block characters would not line up. Text follows dark/light themes.
+  where block characters would not line up. Text follows dark/light themes; `auto` uses the dark palette.
 - **Private and free.** It only reads figures Claude Code already reports. No files, no network, no model
   requests, no telemetry.
 

@@ -85,9 +85,9 @@ share of the window: a rewrite is a cost like a turn's growth, while a category'
   In the maintainer's last 30 days (328 turns) the median turn added about 8k; the first seven tiers each
   held 10–18% of turns, 64k and more about 7%, 256k and more under 1%. Everyday turns spread across the
   cool tiers; warm bars mark the heavy ones.
-- **Theme-aware text.** `config.list` supplies the native theme. Dark/light themes use the matching
-  palette; other themes retain native semantic colors. Every light-palette tier clears 4.5:1 against
-  `#f5f5f5`. Desktop Svg switches palettes with `prefers-color-scheme`. Live light-theme rendering is not
+- **Theme-aware text.** `config.list` supplies the theme setting. Dark/light themes use the matching
+  palette; `auto` uses dark, and other themes retain native semantic colors. Every light-palette tier
+  clears 4.5:1 against `#f5f5f5`. Desktop Svg switches palettes with `prefers-color-scheme`. Live light-theme rendering is not
   verified; the fictional previews and test kit cover the implementation.
 
 ## Desktop drawing
