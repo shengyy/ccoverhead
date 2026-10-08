@@ -6,8 +6,12 @@ All notable changes to ccOverhead are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.5.2] - 2026-10-08
+
 ### Fixed
 
+- The host's `auto` theme uses the existing dark text palette, preserving the ten-step color scale
+  instead of falling back to native semantic colors. This mapping does not detect the effective appearance.
 - A session whose first theme read failed (seen after a resume) no longer stays on Claude Code's native
   colors, with a single color for every growth bar, until `/theme` is run: an unread theme is read again on the
   30-second tick and on a clear, resume or fork, and only a `theme` row from the host settles it.

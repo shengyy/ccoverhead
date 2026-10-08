@@ -57,9 +57,10 @@ Each Claude Code behavior these rely on, and the version it was checked against,
 
 ## Current offline validation
 
-On Claude Code 2.1.291, the validator and test kit cover native cost, turn increments, running-agent
-counts, theme colors, downstream band preservation, mid-turn context refresh, and conversation changes
-without classic events. Type checking uses the saved 2.1.289 declarations. Fictional previews cover dark
+On Claude Code 2.1.293, the validator and test kit cover native cost, turn increments, running-agent
+counts, theme colors (including `auto` using the dark text palette), downstream band preservation,
+mid-turn context refresh, and conversation changes without classic events. Type checking uses the saved
+2.1.289 declarations. Fictional previews cover dark
 and light cost styling, lime agent spinners, and right-to-left narrowing that hides cost before agents
 and preserves the growth chart (on the terminal; a proportional surface wraps instead, see
 [claude-code-integration.md](claude-code-integration.md)). The cache lifetime rule (the session's evidence, else the

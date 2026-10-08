@@ -71,6 +71,7 @@ row when you rely on it in a new version, and add the version you checked.
 | `Svg` is drawn as an image: no theme colors, but its own `prefers-color-scheme` media query applies | 2.1.288 (dark theme seen; light not verified) |
 | The desktop band uses a proportional font; block glyphs such as `■□` and `▁▂▃` do not line up there | 2.1.288 |
 | `Text` `color` takes a theme key, a color name or a hex color; `ansi:` colors are refused | 2.1.288 |
+| `config.list` returns the theme setting (`dark` for `dark`, `auto` for `auto`), without a resolved appearance | 2.1.293, headless; desktop not verified |
 
 ## Test kit
 
@@ -84,15 +85,16 @@ row when you rely on it in a new version, and add the version you checked.
 
 ## Native observation paths (not verified live)
 
-The saved 2.1.289 declarations and the 2.1.291 test kit cover these paths; this is not live acceptance.
+The saved 2.1.289 declarations and the 2.1.293 test kit cover these paths; this is not live acceptance.
 
 - `session.measure.cost.usd` / `session.usage().cost.usd` provide the session ledger. The plugin
   snapshots it at main `turn.start`, subtracts on every local ledger refresh, and keeps that baseline
   until the next turn or reset so delayed accounting can settle. Subagent completion does not replace
   it. `turn.complete` is passed on unchanged. The existing poll adopts cost and quota changes even when
   context is unchanged; this timing is tested with delayed fictional readings, not verified live.
-- `config.list` exposes the theme; allowed `config.set` results update colors. Unknown theme names use
-  native semantic colors. No configuration is written. A list that fails or has no `theme` row leaves the
+- Allowed `config.set` results update colors. Theme settings use the palette mapping in
+  [design.md](design.md#color-scale), including dark text for `auto`. No configuration is written.
+  A list that fails or has no `theme` row leaves the
   theme unread (native colors meanwhile) and the 30-second tick and a clear/resume/fork read again until a row
   answers. One resumed session was seen drawing native colors under a `dark` setting until `/theme` was
   confirmed; why its first read failed is not verified (2.1.289).

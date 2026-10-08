@@ -401,6 +401,8 @@ async function takeCost($: EngineInterface, value: number | undefined) {
 }
 
 function themeOf(value: unknown): OverheadTheme {
+  // The host reports the setting, not auto's resolved appearance; use the dark palette for auto.
+  if (value === 'auto') return 'dark'
   return value === 'light' || value === 'dark' ? value : 'native'
 }
 

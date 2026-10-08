@@ -429,9 +429,9 @@ describe('ccoverhead', () => {
       expect(await ui.find({ type: 'Text', text: /^ ?warm 5m$/ })).toBeDefined()
     })
 
-    test(`a theme the host could not give at start is read on a later tick, then left alone (${surface})`, async ($, on) => {
-      // The list fails at start, then lacks the theme row, then answers: only the last settles the palette.
-      const answers: (string | undefined | Error)[] = [new Error('not ready'), undefined, 'dark']
+    test(`an unread theme retries until auto settles on the dark palette (${surface})`, async ($, on) => {
+      // The list fails at start, then lacks the theme row, then answers auto: only the last settles the palette.
+      const answers: (string | undefined | Error)[] = [new Error('not ready'), undefined, 'auto']
       let asked = 0
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
