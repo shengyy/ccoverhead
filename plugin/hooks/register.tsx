@@ -24,7 +24,8 @@ const cacheTtl = atom({ plugin: 'ccoverhead', key: 'cacheTtl' } as const, null a
 const cost = atom({ plugin: 'ccoverhead', key: 'cost' } as const, null as number | null)
 const turnCostBase = atom({ plugin: 'ccoverhead', key: 'turnCostBase' } as const, null as number | null)
 const turnCost = atom({ plugin: 'ccoverhead', key: 'turnCost' } as const, null as number | null)
-const theme = atom({ plugin: 'ccoverhead', key: 'theme' } as const, 'native' as OverheadTheme)
+// null until the host's theme has been read; the band draws native colors meanwhile.
+const theme = atom({ plugin: 'ccoverhead', key: 'theme' } as const, null as OverheadTheme | null)
 const sessionId = atom({ plugin: 'ccoverhead', key: 'sessionId' } as const, null as string | null)
 const limitsAt = atom({ plugin: 'ccoverhead', key: 'limitsAt' } as const, null as number | null)
 const activeAgents = atom({ plugin: 'ccoverhead', key: 'activeAgents' } as const, 0)
@@ -51,6 +52,7 @@ export const register: Register = on => {
     const result = await next(e)
     tick?.cancel()
     tick = $.clock.every(TICK_MS, async () => {
+      await ensureTheme($)
       await poll($).catch(() => undefined)
       $.ui.invalidate('ui.render')
     })
@@ -74,6 +76,7 @@ export const register: Register = on => {
       return await next(e)
     } finally {
       await resetConversation($)
+      await ensureTheme($)
       await load($)
       if (e.source !== 'clear') await resumed($, e)
     }
@@ -229,7 +232,7 @@ export const register: Register = on => {
     const gs = e.surface === 'terminal' ? fit(band, e.props.bodyColumns - 2) : groups(band)
     if (gs.length === 0) return next(e)
     const els = $.ui.resolve(e)
-    const palette = await read($, theme)
+    const palette = (await read($, theme)) ?? 'native'
     const below = await next(e)
     // Branch on the surface, not on the table: the terminal's table answers `'Svg' in` with a placeholder.
     const own = e.surface === 'terminal' ? bandTerminal($.ui.resolve(e), gs, palette) : bandRich($.ui.resolve(e), gs, palette)
@@ -251,7 +254,7 @@ export const register: Register = on => {
       limitsAt: await read($, limitsAt),
       turnCost: await read($, turnCost),
     })
-    const palette = await read($, theme)
+    const palette = (await read($, theme)) ?? 'native'
     if (e.surface === 'terminal') return paneTerminal($.ui.resolve(e), lines, palette)
     return paneRich($.ui.resolve(e), lines, palette)
   })
@@ -401,9 +404,17 @@ function themeOf(value: unknown): OverheadTheme {
   return value === 'light' || value === 'dark' ? value : 'native'
 }
 
+// Settles the theme only from the host's own `theme` row. A failed list or a list without the row (the host not
+// ready yet) leaves it unread, so `ensureTheme` tries again, rather than fixing the band on native colors.
 async function readTheme($: EngineInterface) {
-  const rows = await $.config.list().catch(() => [])
-  await update($, theme, () => themeOf(rows.find(row => row.key === 'theme')?.value))
+  const rows = await $.config.list().catch(() => undefined)
+  const row = rows?.find(r => r.key === 'theme')
+  if (row !== undefined) await update($, theme, () => themeOf(row.value))
+}
+
+// Reads the theme only while it is unread.
+async function ensureTheme($: EngineInterface) {
+  if ((await read($, theme)) === null) await readTheme($)
 }
 
 async function resetConversation($: EngineInterface) {

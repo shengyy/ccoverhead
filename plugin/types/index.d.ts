@@ -55,7 +55,8 @@ declare module 'claude-code' {
       cost: number | null
       turnCostBase: number | null
       turnCost: number | null
-      theme: OverheadTheme
+      // null until the host's `theme` row has been read; drawn as native colors meanwhile.
+      theme: OverheadTheme | null
       sessionId: string | null
       limitsAt: number | null
       activeAgents: number

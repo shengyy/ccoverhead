@@ -6,6 +6,12 @@ All notable changes to ccOverhead are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- A session whose first theme read failed (seen after a resume) no longer stays on Claude Code's native
+  colors, with a single color for every growth bar, until `/theme` is run: an unread theme is read again on the
+  30-second tick and on a clear, resume or fork, and only a `theme` row from the host settles it.
+
 ## [1.5.1] - 2026-10-07
 
 ### Fixed

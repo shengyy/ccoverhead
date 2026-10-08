@@ -92,7 +92,10 @@ The saved 2.1.289 declarations and the 2.1.291 test kit cover these paths; this 
   it. `turn.complete` is passed on unchanged. The existing poll adopts cost and quota changes even when
   context is unchanged; this timing is tested with delayed fictional readings, not verified live.
 - `config.list` exposes the theme; allowed `config.set` results update colors. Unknown theme names use
-  native semantic colors. No configuration is written.
+  native semantic colors. No configuration is written. A list that fails or has no `theme` row leaves the
+  theme unread (native colors meanwhile) and the 30-second tick and a clear/resume/fork read again until a row
+  answers. One resumed session was seen drawing native colors under a `dark` setting until `/theme` was
+  confirmed; why its first read failed is not verified (2.1.289).
 - `session.id`, `session.model` and `session.usage` allow local refreshes when `classic.*` is unavailable.
   The upstream [sec-default guard](https://github.com/anthropics/claude-code/blob/main/mods/sec-default/hooks/register.ts)
   skips user classic hooks for managed/Team/Enterprise contexts. ccOverhead still respects refused reads;

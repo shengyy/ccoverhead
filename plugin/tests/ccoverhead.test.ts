@@ -429,6 +429,33 @@ describe('ccoverhead', () => {
       expect(await ui.find({ type: 'Text', text: /^ ?warm 5m$/ })).toBeDefined()
     })
 
+    test(`a theme the host could not give at start is read on a later tick, then left alone (${surface})`, async ($, on) => {
+      // The list fails at start, then lacks the theme row, then answers: only the last settles the palette.
+      const answers: (string | undefined | Error)[] = [new Error('not ready'), undefined, 'dark']
+      let asked = 0
+      on('session.start', ($, e) => ({ cwd: e.cwd }))
+      on('session.measure', ($, e) => ({ changed: e.changed }))
+      mockHost(on, undefined, () => {
+        const answer = answers[Math.min(asked++, answers.length - 1)]
+        if (answer instanceof Error) throw answer
+        return answer
+      })
+      on('session.usage', () => ({ value: usage(440_000, [], false) }))
+      const clock = mock.clock(on, { now: NOW })
+      await $.session.start(session(surface))
+      await $.session.measure(measured(fill(440_000)))
+      const ui = await $.ui.mount(band(surface))
+      // Native colors meanwhile: the 44% figure is a semantic color, not the scale's teal.
+      expect((await ui.find({ type: 'Text', text: /^ ?44%$/ }))?.props.color).toBe('permission')
+      await clock.advance(30_000)
+      expect((await ui.find({ type: 'Text', text: /^ ?44%$/ }))?.props.color).toBe('permission')
+      await clock.advance(30_000)
+      expect((await ui.find({ type: 'Text', text: /^ ?44%$/ }))?.props.color).toBe(TIER_HEX[4])
+      // Settled: no further reads.
+      await clock.advance(60_000)
+      expect(asked).toBe(3)
+    })
+
     test(`a model switch leaves the cache cold and sets its lifetime (${surface})`, async ($, on) => {
       on('session.start', ($, e) => ({ cwd: e.cwd }))
       on('session.measure', ($, e) => ({ changed: e.changed }))
