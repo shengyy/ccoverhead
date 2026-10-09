@@ -320,12 +320,12 @@ async function take($: EngineInterface, context: SessionContextUsage | undefined
   await update($, breakdown, () => (b ? slim(b) : null))
   if (context?.window) {
     const m = await read($, model)
-    const next: OverheadCtx = { tokens: context.tokens, window: context.window, percent: context.percent, ...(m && { model: m }) }
+    const nextContext: OverheadCtx = { tokens: context.tokens, window: context.window, percent: context.percent, ...(m && { model: m }) }
     // Where auto-compaction runs; without a breakdown this time, where it ran last time for the same model.
     const last = await read($, ctx)
     const kept = last?.model !== undefined && baseModel(last.model) === baseModel(m) ? last.compactAt : undefined
     const compactAt = b ? (b.isAutoCompactEnabled ? (b.autoCompactThreshold ?? undefined) : undefined) : kept
-    if (compactAt) next.compactAt = compactAt
+    if (compactAt) nextContext.compactAt = compactAt
     if (context.tokens !== undefined && context.tokens > 0 && recordGrowth) {
       const t = context.tokens
       const before = (await read($, timeline)).at(-1)
@@ -339,9 +339,9 @@ async function take($: EngineInterface, context: SessionContextUsage | undefined
       }
     } else if (context.tokens === undefined || context.tokens <= 0) {
       // No response in this window yet (new, cleared or just compacted): /context's local estimate.
-      next.estimate = b?.totalTokens
+      nextContext.estimate = b?.totalTokens
     }
-    await update($, ctx, () => next)
+    await update($, ctx, () => nextContext)
   }
   if (revision !== conversationRevision) return
   await takeLimits($, rateLimits, withdrawn)
@@ -463,8 +463,8 @@ async function poll($: EngineInterface) {
   await takeLimits($, reading.rateLimits, await read($, limitsLive))
   if (revision !== conversationRevision) return
   const last = await read($, ctx)
-  const next = reading.context
-  if (changed || beforeModel !== (await read($, model)) || !last || last.window !== next.window || last.tokens !== next.tokens || last.percent !== next.percent) await load($)
+  const nextContext = reading.context
+  if (changed || beforeModel !== (await read($, model)) || !last || last.window !== nextContext.window || last.tokens !== nextContext.tokens || last.percent !== nextContext.percent) await load($)
 }
 
 async function readActiveAgents($: EngineInterface) {

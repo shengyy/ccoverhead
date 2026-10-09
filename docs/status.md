@@ -57,7 +57,7 @@ Each Claude Code behavior these rely on, and the version it was checked against,
 
 ## Current offline validation
 
-On Claude Code 2.1.293, the validator and test kit cover native cost, turn increments, running-agent
+On Claude Code 2.1.295, the validator and test kit cover native cost, turn increments, running-agent
 counts, theme colors (including `auto` using the dark text palette), downstream band preservation,
 mid-turn context refresh, and conversation changes without classic events. Type checking uses the saved
 2.1.289 declarations. Fictional previews cover dark
