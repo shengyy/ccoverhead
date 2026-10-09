@@ -6,6 +6,14 @@ All notable changes to ccOverhead are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.5.4] - 2026-10-09
+
+### Fixed
+
+- Settings observations return the host's decision through one unconditional path and refresh from
+  the host's effective settings. Denied changes stay denied, and the theme follows the value actually
+  applied. This removes conditional result handling from the directory's flagged `config.set` hook.
+
 ## [1.5.3] - 2026-10-09
 
 ### Fixed
