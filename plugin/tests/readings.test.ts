@@ -13,18 +13,18 @@ const SPAWN: AgentSpawnInput = {
 }
 
 for (const surface of SURFACES) {
-  test(`a failed display refresh cannot replace a settings decision or host error (${surface})`, async ($, on) => {
+  test(`an unavailable refresh timer cannot replace a settings decision or dispatch error (${surface})`, async ($, on) => {
     let outcome = 'allow'
     let refreshes = 0
-    on('config.set', () => {
-      if (outcome === 'error') throw new Error('fictional host error')
+    on('config.set', ($, e, next) => {
+      if (outcome === 'error') return next(e)
       return outcome === 'deny' ? { deny: 'fictional policy refusal' } : { value: 'dark' }
     })
-    on('state.set', { plugin: 'ccoverhead', key: 'theme' }, () => {
+    mockHost(on, undefined, () => {
       refreshes++
-      throw new Error('fictional display error')
+      return 'dark'
     })
-    mockHost(on)
+    // No clock implementation: scheduling the display refresh rejects after every decision.
     const event = { key: 'theme', value: 'dark', previous: 'light',
       provider: { plugin: 'engine', tier: 'core' }, origin: { kind: 'composer' } } as const
     expect(await $.config.set(event)).toEqual({ value: 'dark' })
@@ -33,7 +33,7 @@ for (const surface of SURFACES) {
     outcome = 'error'
     let error: unknown
     try { await $.config.set(event) } catch (caught) { error = caught }
-    expect(error instanceof Error ? error.message : error).toBe('fictional host error')
+    expect(error instanceof Error ? error.message : error).toBe('no implementation for config.set')
     expect(refreshes).toBe(3)
   })
 

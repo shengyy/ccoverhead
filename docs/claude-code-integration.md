@@ -95,7 +95,7 @@ The saved 2.1.289 declarations and the 2.1.295 test kit cover these paths; this 
 - `config.set` observations return `next(e)` directly, then read the effective theme from `config.list`
   and schedule a refresh of the local context breakdown in `finally`. Display refresh failures cannot
   replace the host's decision or error. Tests cover refused changes, a host-rewritten theme, and failed
-  settings reads and display-state writes. Theme settings use the palette mapping in
+  settings reads and unavailable refresh timers. Theme settings use the palette mapping in
   [design.md](design.md#color-scale), including dark text for `auto`. No configuration is written.
   A list that fails or has no `theme` row leaves the
   theme unread (native colors meanwhile) and the 30-second tick and a clear/resume/fork read again until a row
