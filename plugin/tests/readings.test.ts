@@ -13,6 +13,30 @@ const SPAWN: AgentSpawnInput = {
 }
 
 for (const surface of SURFACES) {
+  test(`an unavailable refresh timer cannot replace a settings decision or dispatch error (${surface})`, async ($, on) => {
+    let outcome = 'allow'
+    let refreshes = 0
+    on('config.set', ($, e, next) => {
+      if (outcome === 'error') return next(e)
+      return outcome === 'deny' ? { deny: 'fictional policy refusal' } : { value: 'dark' }
+    })
+    mockHost(on, undefined, () => {
+      refreshes++
+      return 'dark'
+    })
+    // No clock implementation: scheduling the display refresh rejects after every decision.
+    const event = { key: 'theme', value: 'dark', previous: 'light',
+      provider: { plugin: 'engine', tier: 'core' }, origin: { kind: 'composer' } } as const
+    expect(await $.config.set(event)).toEqual({ value: 'dark' })
+    outcome = 'deny'
+    expect(await $.config.set(event)).toEqual({ deny: 'fictional policy refusal' })
+    outcome = 'error'
+    let error: unknown
+    try { await $.config.set(event) } catch (caught) { error = caught }
+    expect(error instanceof Error ? error.message : error).toBe('no implementation for config.set')
+    expect(refreshes).toBe(3)
+  })
+
   test(`settings observations preserve host decisions and display effective values (${surface})`, async ($, on) => {
     let configuredTheme = 'dark'
     let autoCompact = true

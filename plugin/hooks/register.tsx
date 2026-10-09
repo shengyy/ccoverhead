@@ -208,11 +208,17 @@ export const register: Register = on => {
   })
 
   on('config.set', { key: ['theme', 'autoCompact'] }, async ($, e, next) => {
-    const result = await next(e)
-    // Read the host's effective settings after the decision, including a refusal or a rewritten value.
-    await readTheme($)
-    settling = refreshSoon($, settling)
-    return result
+    try {
+      return await next(e)
+    } finally {
+      // A display refresh must never replace the host's decision or error.
+      try {
+        await readTheme($)
+        settling = refreshSoon($, settling)
+      } catch {
+        // Display-only failures do not govern settings changes.
+      }
+    }
   })
 
   on('command.run', { command: PANE }, async $ => {
