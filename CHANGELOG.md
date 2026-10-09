@@ -6,6 +6,14 @@ All notable changes to ccOverhead are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.5.3] - 2026-10-09
+
+### Fixed
+
+- Context-reading variables no longer share the hook continuation's `next` name, removing the binding
+  ambiguity reported by the directory's permission-policy check. Agent spawns and their permission
+  decisions still pass through unchanged.
+
 ## [1.5.2] - 2026-10-08
 
 ### Fixed
