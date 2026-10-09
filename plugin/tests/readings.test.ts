@@ -13,6 +13,30 @@ const SPAWN: AgentSpawnInput = {
 }
 
 for (const surface of SURFACES) {
+  test(`a failed display refresh cannot replace a settings decision or host error (${surface})`, async ($, on) => {
+    let outcome = 'allow'
+    let refreshes = 0
+    on('config.set', () => {
+      if (outcome === 'error') throw new Error('fictional host error')
+      return outcome === 'deny' ? { deny: 'fictional policy refusal' } : { value: 'dark' }
+    })
+    on('state.set', { plugin: 'ccoverhead', key: 'theme' }, () => {
+      refreshes++
+      throw new Error('fictional display error')
+    })
+    mockHost(on)
+    const event = { key: 'theme', value: 'dark', previous: 'light',
+      provider: { plugin: 'engine', tier: 'core' }, origin: { kind: 'composer' } } as const
+    expect(await $.config.set(event)).toEqual({ value: 'dark' })
+    outcome = 'deny'
+    expect(await $.config.set(event)).toEqual({ deny: 'fictional policy refusal' })
+    outcome = 'error'
+    let error: unknown
+    try { await $.config.set(event) } catch (caught) { error = caught }
+    expect(error instanceof Error ? error.message : error).toBe('fictional host error')
+    expect(refreshes).toBe(3)
+  })
+
   test(`settings observations preserve host decisions and display effective values (${surface})`, async ($, on) => {
     let configuredTheme = 'dark'
     let autoCompact = true

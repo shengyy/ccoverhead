@@ -6,6 +6,14 @@ All notable changes to ccOverhead are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.5.5] - 2026-10-09
+
+### Fixed
+
+- The settings observer returns `next(e)` directly, with its read-only refresh in `finally`, so the
+  directory can inspect the forwarding path without following a result alias. Refresh failures cannot
+  replace the host's settings decision or error.
+
 ## [1.5.4] - 2026-10-09
 
 ### Fixed

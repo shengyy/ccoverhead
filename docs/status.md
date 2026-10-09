@@ -87,7 +87,8 @@ Delayed-reading tests on terminal and desktop cover cost posted after completion
 unchanged context, and identity/model/usage/breakdown reads that finish after a conversation clear,
 including native reads inside measurement and request-completion handlers.
 Settings-observation tests on both surfaces preserve allowed and denied results, display the host's
-effective theme, and refresh auto-compaction after a change even if the theme read fails.
+effective theme, and refresh auto-compaction after a change even if the theme read fails. A failed
+display-state write cannot replace an allowed or denied decision or the host's own error.
 
 ## Known limitations
 
