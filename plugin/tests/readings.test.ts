@@ -18,6 +18,7 @@ for (const surface of SURFACES) {
     let autoCompact = true
     let deny = false
     let readFails = false
+    const source = { provider: { plugin: 'engine', tier: 'core' }, origin: { kind: 'composer' } } as const
     const received: { key: string; value: unknown }[] = []
     on('session.start', ($, e) => ({ cwd: e.cwd }))
     on('config.set', ($, e) => {
@@ -39,15 +40,15 @@ for (const surface of SURFACES) {
     await $.session.start(session(surface))
     const ui = await $.ui.mount(band(surface))
     expect((await ui.find({ type: 'Text', text: /^ ?44%$/ }))?.props.color).toBe(colorOf({ text: '', tier: 4 }, 'dark'))
-    expect(await $.config.set({ key: 'theme', value: 'auto' })).toEqual({ value: 'light' })
+    expect(await $.config.set({ ...source, key: 'theme', value: 'auto', previous: configuredTheme })).toEqual({ value: 'light' })
     expect((await ui.find({ type: 'Text', text: /^ ?44%$/ }))?.props.color).toBe(colorOf({ text: '', tier: 4 }, 'light'))
     deny = true
-    expect(await $.config.set({ key: 'theme', value: 'dark' })).toEqual({ deny: 'fictional policy refusal' })
+    expect(await $.config.set({ ...source, key: 'theme', value: 'dark', previous: configuredTheme })).toEqual({ deny: 'fictional policy refusal' })
     expect((await ui.find({ type: 'Text', text: /^ ?44%$/ }))?.props.color).toBe(colorOf({ text: '', tier: 4 }, 'light'))
     readFails = true
-    expect(await $.config.set({ key: 'autoCompact', value: false })).toEqual({ deny: 'fictional policy refusal' })
+    expect(await $.config.set({ ...source, key: 'autoCompact', value: false, previous: autoCompact })).toEqual({ deny: 'fictional policy refusal' })
     deny = false
-    expect(await $.config.set({ key: 'autoCompact', value: false })).toEqual({ value: false })
+    expect(await $.config.set({ ...source, key: 'autoCompact', value: false, previous: autoCompact })).toEqual({ value: false })
     await clock.advance(100)
     const detail = await $.ui.mount({ plugin: 'ccoverhead', surface, component: 'Pane', requestId: 'ccoverhead',
       props: { title: 'ccOverhead', isFocused: false, bodyColumns: 100, placement: 'inline', scroll: { offset: 0, bodyRows: 60 }, view: {} } })
