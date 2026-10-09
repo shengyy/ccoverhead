@@ -4,7 +4,7 @@ import { ACTIVITY_FRAME_MS, ACTIVITY_FRAMES } from '../hooks/activity'
 import { CACHE_TTL_MS, SHORT_TTL_MS, cacheLifetime, colorOf, fit, forecastBar, svgOf, width } from '../hooks/format'
 import { NO_CACHE_STATS, learnedTtl, quotaForecast } from '../hooks/track'
 import { paneLines } from '../hooks/pane'
-import { MIN, NOW, STEP, SURFACES, band, cached, fill, iso, measured, mockHost, session, usage } from './kit'
+import { BREAKDOWN, MIN, NOW, STEP, SURFACES, band, cached, fill, iso, measured, mockHost, session, usage } from './kit'
 
 const DONE: TurnCompleteInput = { turnId: 't', answer: '', durationMs: 1, isAborted: false, reason: 'answer' }
 const SPAWN: AgentSpawnInput = {
@@ -13,6 +13,51 @@ const SPAWN: AgentSpawnInput = {
 }
 
 for (const surface of SURFACES) {
+  test(`settings observations preserve host decisions and display effective values (${surface})`, async ($, on) => {
+    let configuredTheme = 'dark'
+    let autoCompact = true
+    let deny = false
+    let readFails = false
+    const received: { key: string; value: unknown }[] = []
+    on('session.start', ($, e) => ({ cwd: e.cwd }))
+    on('config.set', ($, e) => {
+      received.push({ key: e.key, value: e.value })
+      if (deny) return { deny: 'fictional policy refusal' }
+      if (e.key === 'theme') {
+        configuredTheme = e.value === 'auto' ? 'light' : String(e.value)
+        return { value: configuredTheme }
+      }
+      autoCompact = Boolean(e.value)
+      return { value: autoCompact }
+    })
+    on('session.usage', () => ({ value: usage(440_000, [], { ...BREAKDOWN, isAutoCompactEnabled: autoCompact }) }))
+    mockHost(on, undefined, () => {
+      if (readFails) throw new Error('fictional settings read failure')
+      return configuredTheme
+    })
+    const clock = mock.clock(on, { now: NOW })
+    await $.session.start(session(surface))
+    const ui = await $.ui.mount(band(surface))
+    expect((await ui.find({ type: 'Text', text: /^ ?44%$/ }))?.props.color).toBe(colorOf({ text: '', tier: 4 }, 'dark'))
+    expect(await $.config.set({ key: 'theme', value: 'auto' })).toEqual({ value: 'light' })
+    expect((await ui.find({ type: 'Text', text: /^ ?44%$/ }))?.props.color).toBe(colorOf({ text: '', tier: 4 }, 'light'))
+    deny = true
+    expect(await $.config.set({ key: 'theme', value: 'dark' })).toEqual({ deny: 'fictional policy refusal' })
+    expect((await ui.find({ type: 'Text', text: /^ ?44%$/ }))?.props.color).toBe(colorOf({ text: '', tier: 4 }, 'light'))
+    readFails = true
+    expect(await $.config.set({ key: 'autoCompact', value: false })).toEqual({ deny: 'fictional policy refusal' })
+    deny = false
+    expect(await $.config.set({ key: 'autoCompact', value: false })).toEqual({ value: false })
+    await clock.advance(100)
+    const detail = await $.ui.mount({ plugin: 'ccoverhead', surface, component: 'Pane', requestId: 'ccoverhead',
+      props: { title: 'ccOverhead', isFocused: false, bodyColumns: 100, placement: 'inline', scroll: { offset: 0, bodyRows: 60 }, view: {} } })
+    expect(await detail.find({ type: 'Text', text: /auto-compaction is off/ })).toBeDefined()
+    expect(received).toEqual([
+      { key: 'theme', value: 'auto' }, { key: 'theme', value: 'dark' },
+      { key: 'autoCompact', value: false }, { key: 'autoCompact', value: false },
+    ])
+  })
+
   test(`native events retain the first reading when they discover a new conversation (${surface})`, async ($, on) => {
     let id = 'fictional-old'
     on('session.start', ($, e) => ({ cwd: e.cwd }))

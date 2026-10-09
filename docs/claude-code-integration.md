@@ -85,14 +85,16 @@ row when you rely on it in a new version, and add the version you checked.
 
 ## Native observation paths (not verified live)
 
-The saved 2.1.289 declarations and the 2.1.293 test kit cover these paths; this is not live acceptance.
+The saved 2.1.289 declarations and the 2.1.295 test kit cover these paths; this is not live acceptance.
 
 - `session.measure.cost.usd` / `session.usage().cost.usd` provide the session ledger. The plugin
   snapshots it at main `turn.start`, subtracts on every local ledger refresh, and keeps that baseline
   until the next turn or reset so delayed accounting can settle. Subagent completion does not replace
   it. `turn.complete` is passed on unchanged. The existing poll adopts cost and quota changes even when
   context is unchanged; this timing is tested with delayed fictional readings, not verified live.
-- Allowed `config.set` results update colors. Theme settings use the palette mapping in
+- `config.set` observations pass the host's decision through unchanged, read the effective theme from
+  `config.list`, and schedule a refresh of the local context breakdown. Tests cover refused changes,
+  a host-rewritten theme, and a failed settings read preserving the decision. Theme settings use the palette mapping in
   [design.md](design.md#color-scale), including dark text for `auto`. No configuration is written.
   A list that fails or has no `theme` row leaves the
   theme unread (native colors meanwhile) and the 30-second tick and a clear/resume/fork read again until a row
