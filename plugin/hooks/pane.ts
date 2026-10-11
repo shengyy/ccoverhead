@@ -52,6 +52,9 @@ function context(p: PaneInput): PaneLine[] {
   } else {
     out.push(line('window', dim(` -- of ${ktok(window)}`)))
   }
+  if (ctx.modelWindow !== undefined && ctx.modelWindow !== window) {
+    out.push(line('model limit', dim(` ${ktok(ctx.modelWindow)} tokens`)))
+  }
   // Where auto-compaction runs and the tokens to go; a threshold at or past the window's end is never reached.
   if (compactAt !== undefined && compactAt > 0 && compactAt < window) {
     const used = now ?? estimate

@@ -6,6 +6,13 @@ All notable changes to ccOverhead are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Context percentages, bars and colors follow Claude Code's effective auto-compact window: a `400k`
+  window makes `320k` read as `80%`, including after settings or model changes. Missing readings fall
+  back to the model's capacity. The pane keeps the model limit and actual compaction trigger separate,
+  and a subagent's band still uses its model's capacity.
+
 ## [1.5.5] - 2026-10-09
 
 ### Fixed
