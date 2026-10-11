@@ -25,6 +25,11 @@ export const band: BandInput = {
 
 export const rewriting: BandInput = { ...band, rewrite: 41_000 }
 
+export const compactWindow: BandInput = {
+  ...band,
+  ctx: { ...band.ctx!, window: 400_000, modelWindow: 1_000_000, percent: 67, compactAt: 367_000 },
+}
+
 export const agentView: BandInput = {
   ...band,
   view: {
@@ -39,9 +44,9 @@ export const agentView: BandInput = {
   },
 }
 
-// The pane over the same session: one compaction behind it, two MCP servers and one subagent.
+// The pane after choosing a 400k window: one compaction, two MCP servers and one subagent.
 export const pane: PaneInput = {
-  ...band,
+  ...compactWindow,
   model: 'claude-opus-5-5',
   effort: 'high',
   sessionId: '00000000-0000-4000-8000-000000000001',

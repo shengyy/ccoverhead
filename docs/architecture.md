@@ -51,6 +51,7 @@ until the next turn/reset so a late ledger update can settle the increment.
 | `tests/kit.ts` | Shared fictional figures and engine answers for the tests |
 | `tests/ccoverhead.test.ts` | The band's behavior through the engine's test kit, on the terminal and desktop surfaces |
 | `tests/readings.test.ts` | Native cost, theme, mid-turn context, session identity and forecast regressions |
+| `tests/context-window.test.ts` | Effective-window changes, percentage and color scaling, fallback, model switches and subagent isolation |
 | `tests/pane.test.ts` | The pane's behavior, on the terminal, desktop, VS Code and mobile surfaces |
 
 `tsconfig.json` extends the declarations Claude Code writes into `.claude-plugin/types/` when it loads the
@@ -60,7 +61,7 @@ plugin from a folder (ignored by Git).
 
 | Key | Type | Written by | Holds |
 |---|---|---|---|
-| `ctx` | `OverheadCtx \| null` | `session.start`, `session.measure`, `classic.SessionStart`, `command.run`; `session.compact` drops its reading, `classic.PostModelSwitch` its threshold | Window, tokens and percent of the last response, or the pre-response estimate; the auto-compaction threshold; the model the window was read for |
+| `ctx` | `OverheadCtx \| null` | `session.start`, `session.measure`, `classic.SessionStart`, `command.run`, the existing clock; `session.compact` drops its reading, `classic.PostModelSwitch` its threshold | Effective window and separate model capacity; last-response tokens and recalculated percent, or the pre-response estimate; auto-compaction threshold; the model the window was read for |
 | `history` | `number[]` | the same, `session.compact` | Up to eight context totals; reset on a compaction, a drop or a new conversation |
 | `timeline` | `number[]` | the same, `session.compact` | Up to 48 context totals since the last compaction, for the pane |
 | `compactions` | `OverheadCompaction[]` | `session.compact`, a drop in `session.measure` | The last three compactions' sizes before and after |

@@ -47,6 +47,9 @@ ctx ■■■□□□□□□□ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | 
   group, its trailing detail yields before the whole group. Context keeps its growth chart until every
   group to its right is gone; then growth yields before token counts, keeping the bar and percentage last.
 - The band redraws every 30 s so countdowns keep time.
+- Main-context percentages and colors use the effective window: `320k/400k` has the same 80% bar and
+  tier as `800k/1M`. The denominator follows Claude Code's local reading; the pane lists the model limit
+  separately when larger. The auto-compaction trigger remains a separate detail, not the denominator.
 
 ## Color scale
 
@@ -145,7 +148,8 @@ bun scripts/screenshot/render.ts   # needs Google Chrome and ImageMagick
 
 It stages the band in a terminal frame and in a desktop frame, and the pane in a terminal frame,
 screenshots them at 4x with headless Chrome for wide and high-density displays, and trims them into
-`assets/screenshots/{terminal,desktop,pane}.png`. It also writes `cache-rewrite.png` and `agent.png`
+`assets/screenshots/{terminal,desktop,pane}.png`. It also writes `context-window.png` for a configured
+400k window, plus `cache-rewrite.png` and `agent.png`
 as close-ups of those groups, plus `cost.png`, `cost-light.png` and `terminal-light.png` from the shared state fixtures for the website. Never commit screenshots of a
 real session.
 

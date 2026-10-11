@@ -11,7 +11,7 @@ import { join, resolve } from 'node:path'
 import type { BandInput, Span } from '../../plugin/hooks/format'
 import { SEP, cells, colorOf, fit, items } from '../../plugin/hooks/format'
 import { LABEL, paneLines } from '../../plugin/hooks/pane'
-import { agentView, band, pane, rewriting } from './fixture'
+import { agentView, band, compactWindow, pane, rewriting } from './fixture'
 
 const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 const OUT = resolve(import.meta.dir, '../../assets/screenshots')
@@ -114,6 +114,7 @@ const dir = mkdtempSync(join(tmpdir(), 'ccoverhead-shots-'))
 for (const [name, html, width, height] of [
   ['terminal', terminal(), 1400, 320],
   ['desktop', desktop(), 1400, 320],
+  ['context-window', desktop(compactWindow, 160, 'ctx'), 860, 320],
   ['pane', paneShot(), 1100, 1300],
   ['terminal-light', terminal('light'), 1400, 320],
   ['cost', desktop(band, 160, 'cost'), 440, 280],

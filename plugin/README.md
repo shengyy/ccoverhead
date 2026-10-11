@@ -6,6 +6,10 @@ band above the prompt. One cool-to-warm color scale makes changes easy to notice
 `/ccoverhead` for a pane with the detail: where auto-compaction runs, the window by category and MCP server, growth and compactions,
 cache hit rate, quota with a shaded projection at the window-average pace, native cost, and subagents.
 
+The main context display follows Claude Code's effective window: with `/autocompact 400k` in effect,
+`320k/400k` is 80%. The existing color scale follows the same percentage; the model limit and actual
+compaction trigger remain separate details in the pane.
+
 The band uses text and glyphs in the terminal, and vector graphics in the Claude desktop app's Code tab.
 It reads only figures Claude Code already reports: no user files, network requests, model requests or
 telemetry. Compacting, pausing and switching models remain your decisions.

@@ -296,7 +296,7 @@ async function bandInput($: EngineInterface, viewing: string | undefined): Promi
 }
 
 // Start of session, a reload or the pane: the engine's figures, else the last live quota from the store.
-async function load($: EngineInterface) {
+async function load($: EngineInterface, reconcileLimits = false) {
   await syncSession($)
   const revision = conversationRevision
   const { context, rateLimits, cost: ledger } = await $.session.usage()
@@ -305,7 +305,7 @@ async function load($: EngineInterface) {
   if (revision !== conversationRevision) return
   await takeCost($, ledger?.usd)
   if (revision !== conversationRevision) return
-  await take($, context, rateLimits, false, false, revision)
+  await take($, context, rateLimits, reconcileLimits && await read($, limitsLive), false, revision)
   if (revision !== conversationRevision) return
   if (pick(rateLimits).length === 0) {
     const saved = await $.store.get(STORE_LIMITS)
@@ -465,7 +465,7 @@ async function syncSession($: EngineInterface): Promise<boolean> {
 // The local breakdown sends no request; a native setting can change without delivering a hook.
 async function poll($: EngineInterface) {
   await readActiveAgents($)
-  await load($)
+  await load($, true)
 }
 
 async function readActiveAgents($: EngineInterface) {

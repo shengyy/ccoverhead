@@ -296,7 +296,7 @@ function contextGroup(b: BandInput, ctx: OverheadCtx): Span[] {
 }
 
 // A subagent's context while its transcript is on screen: its last request's input total, against its
-// window when that is known, else the tokens alone; its growth bars by the main window's tiers.
+// window when that is known, else the tokens alone; its growth bars by the model capacity's tiers.
 function agentGroup(b: BandInput, view: AgentView): Span[] {
   const totals = view.agent?.totals ?? []
   const tokens = totals.at(-1)
@@ -309,7 +309,7 @@ function agentGroup(b: BandInput, view: AgentView): Span[] {
   } else {
     g.push({ text: ` ${ktok(tokens)}` })
   }
-  if (totals.length >= 2) g.push(...growth(totals, view.window ?? b.ctx?.window ?? FALLBACK_WINDOW, 'input'))
+  if (totals.length >= 2) g.push(...growth(totals, view.window ?? b.ctx?.modelWindow ?? b.ctx?.window ?? FALLBACK_WINDOW, 'input'))
   return g
 }
 

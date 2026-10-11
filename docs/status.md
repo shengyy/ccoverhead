@@ -20,6 +20,11 @@ Claude Code raises the band's site (`AbovePrompt`) on the terminal and desktop s
 
 ## Verified
 
+- In live terminal sessions on Claude Code 2.1.296 (Opus 5.5), the effective window and pre-response band
+  follow the native default (1M) and `--autocompact 400k` (400k). A temporary read-only probe confirmed
+  the separate model capacity and compaction threshold; no model requests were sent. Same-session
+  setting changes, fallback, model switches and desktop rendering are covered by tests and fictional
+  previews; this release's desktop behavior has not been observed in the native app.
 - The Claude desktop app's **Settings → Plugins → Discover** lists ccOverhead from **Anthropic
   Directory**; its detail page shows the installed release enabled. This confirms directory listing
   and discovery, not a fresh-install test or live acceptance of the new behavior described below. Installation
@@ -57,10 +62,10 @@ Each Claude Code behavior these rely on, and the version it was checked against,
 
 ## Current offline validation
 
-On Claude Code 2.1.295, the validator and test kit cover native cost, turn increments, running-agent
+On Claude Code 2.1.296, the validator and test kit cover native cost, turn increments, running-agent
 counts, theme colors (including `auto` using the dark text palette), downstream band preservation,
 mid-turn context refresh, and conversation changes without classic events. Type checking uses the saved
-2.1.289 declarations. Fictional previews cover dark
+2.1.296 declarations. Fictional previews cover dark
 and light cost styling, lime agent spinners, and right-to-left narrowing that hides cost before agents
 and preserves the growth chart (on the terminal; a proportional surface wraps instead, see
 [claude-code-integration.md](claude-code-integration.md)). The cache lifetime rule (the session's evidence, else the
@@ -89,6 +94,10 @@ including native reads inside measurement and request-completion handlers.
 Settings-observation tests on both surfaces preserve allowed and denied results, display the host's
 effective theme, and refresh auto-compaction after a change even if the theme read fails. An unavailable
 refresh timer cannot replace an allowed or denied decision or the settings dispatcher error.
+Effective-window regressions on terminal and desktop cover `320k/400k = 80%`, matching color and bar,
+growth scaling, estimates, over-100% usage, command and clock refresh, missing/invalid readings,
+model-capacity caps and subagent isolation. The effective window remains independent of the separate
+auto-compaction trigger.
 
 ## Known limitations
 

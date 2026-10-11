@@ -40,7 +40,9 @@ task descriptions, models, requested effort and observed token usage without mod
 
 - **Context at a glance.** A bar, the used percentage and `used/window` tokens. Before the first response
   of a session (or after `/clear` or compaction) it shows Claude Code's own `/context` estimate, marked
-  `~`, instead of a blank.
+  `~`, instead of a blank. The window follows Claude Code's effective setting: `/autocompact 400k`
+  makes `320k/400k` read as 80%, with the same colors as 80% of a default window.
+  [See a 400k window](assets/screenshots/context-window.png).
 - **Each turn's growth.** A seven-bar chart of what every recent turn added to the context, plus the last
   turn's `↑` figure. Context readings also refresh between requests within a turn. Each bar is colored by its share of the window, so a heavy turn stands out.
 - **Quota with reset countdowns.** The 5-hour and weekly windows (and a Claude gateway's spend limit), as a

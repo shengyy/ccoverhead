@@ -182,7 +182,7 @@ function cost(p: PaneInput): PaneLine[] {
 // the cache-read figure is a subset, not another amount to add. No missing effort is inferred.
 function agents(p: PaneInput): PaneLine[] {
   if (p.agents.length === 0) return []
-  const window = p.ctx?.window ?? FALLBACK_WINDOW
+  const window = p.ctx?.modelWindow ?? p.ctx?.window ?? FALLBACK_WINDOW
   const out: PaneLine[] = [{ head: p.agents.length < AGENTS ? 'Subagents' : `Subagents, the last ${AGENTS} active` }]
   for (const [index, a] of p.agents.entries()) {
     const gs = gains(a.totals)

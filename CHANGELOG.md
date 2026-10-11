@@ -6,6 +6,8 @@ All notable changes to ccOverhead are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.5.6] - 2026-10-11
+
 ### Fixed
 
 - Context percentages, bars and colors follow Claude Code's effective auto-compact window: a `400k`
