@@ -52,6 +52,9 @@ function context(p: PaneInput): PaneLine[] {
   } else {
     out.push(line('window', dim(` -- of ${ktok(window)}`)))
   }
+  if (ctx.modelWindow !== undefined && ctx.modelWindow !== window) {
+    out.push(line('model limit', dim(` ${ktok(ctx.modelWindow)} tokens`)))
+  }
   // Where auto-compaction runs and the tokens to go; a threshold at or past the window's end is never reached.
   if (compactAt !== undefined && compactAt > 0 && compactAt < window) {
     const used = now ?? estimate
@@ -179,7 +182,7 @@ function cost(p: PaneInput): PaneLine[] {
 // the cache-read figure is a subset, not another amount to add. No missing effort is inferred.
 function agents(p: PaneInput): PaneLine[] {
   if (p.agents.length === 0) return []
-  const window = p.ctx?.window ?? FALLBACK_WINDOW
+  const window = p.ctx?.modelWindow ?? p.ctx?.window ?? FALLBACK_WINDOW
   const out: PaneLine[] = [{ head: p.agents.length < AGENTS ? 'Subagents' : `Subagents, the last ${AGENTS} active` }]
   for (const [index, a] of p.agents.entries()) {
     const gs = gains(a.totals)

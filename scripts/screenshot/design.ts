@@ -34,7 +34,7 @@ function groupByLabel(input: BandInput, label: string) {
 }
 const full = fit(band, 110)
 const featureDescriptions = [
-  ['上下文容量', '进度条 / 已用比例 / token 数', '容量来自最后一次回复的实际读数。', 'ctx'],
+  ['上下文容量', '进度条 / 已用比例 / token 数', '窗口跟随宿主当前生效的设置。', 'ctx'],
   ['每轮增长', '最近 7 次变化 / 最新增量', '柱高相对比较，颜色按窗口占比。', 'growth'],
   ['缓存冷热', 'warm / cold / 剩余分钟', '仅跟踪主对话请求的缓存读写。', 'cache'],
   ['使用额度', '5 小时 / 每周 / 重置倒计时', '显示已用比例，额度读数来自宿主。', 'quota'],
@@ -248,7 +248,7 @@ const english: Record<string, string> = {
   '有调查问卷时，让出横条。': 'Yield the band to a survey.',
   '上下文容量': 'Context window',
   '进度条 / 已用比例 / token 数': 'Bar / used percentage / tokens',
-  '容量来自最后一次回复的实际读数。': 'Figures from the last response.',
+  '窗口跟随宿主当前生效的设置。': 'Window follows the host’s effective setting.',
   '每轮增长': 'Per-turn growth',
   '最近 7 次变化 / 最新增量': 'Last 7 changes / latest delta',
   '柱高相对比较，颜色按窗口占比。': 'Height is relative; color uses window share.',
@@ -301,7 +301,7 @@ const english: Record<string, string> = {
   '记忆': 'Saved',
   '新会话拿到自己的读数前，显示最近一次额度，数值与倒计时变暗。重置时间已过的窗口直接隐藏。': 'Show the last quota reading until this session gets its own; figures and countdowns are dim. Hide any window whose reset time has passed.',
   '缓存：warm → cold': 'Cache: warm → cold',
-  [`主对话读 / 写缓存后变热，颜色随寿命流逝由冷转暖；未触及、到期或切换模型变冷，没有读数时隐藏。寿命由切换模型或恢复会话的证据确定，否则显示 TTL unknown。`]: `A main-conversation cache read/write makes it warm, its color warming as the lifetime drains. No touch, expiry or a model switch makes it cold; no reading hides it. Lifetime comes from a model switch, a resume or the request traffic; without evidence, from the account's plan.`,
+  '主对话读 / 写缓存后变热，颜色随寿命流逝由冷转暖；未触及、到期或切换模型变冷，没有读数时隐藏。寿命以切换模型、恢复会话或请求流量的证据为准，没有证据时按账号套餐。': `A main-conversation cache read/write makes it warm, its color warming as the lifetime drains. No touch, expiry or a model switch makes it cold; no reading hides it. Lifetime comes from a model switch, a resume or the request traffic; without evidence, from the account's plan.`,
   '会话变化时，重置该重置的状态': 'Conversation changes reset the relevant state',
   '触发': 'Trigger',
   '状态变化': 'State change',

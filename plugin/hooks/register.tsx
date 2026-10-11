@@ -275,7 +275,7 @@ async function bandInput($: EngineInterface, viewing: string | undefined): Promi
     const agent = (await read($, agents)).find(a => a.id === viewing)
     // An agent on the model the window was read for has that window; on another model (or before the first
     // reading after a switch) the window is not reported.
-    const window = agent && c?.model && baseModel(agent.model) === baseModel(c.model) ? c.window : undefined
+    const window = agent && c?.model && baseModel(agent.model) === baseModel(c.model) ? (c.modelWindow ?? c.window) : undefined
     view = { agent, window }
   }
   return {
@@ -296,7 +296,7 @@ async function bandInput($: EngineInterface, viewing: string | undefined): Promi
 }
 
 // Start of session, a reload or the pane: the engine's figures, else the last live quota from the store.
-async function load($: EngineInterface) {
+async function load($: EngineInterface, reconcileLimits = false) {
   await syncSession($)
   const revision = conversationRevision
   const { context, rateLimits, cost: ledger } = await $.session.usage()
@@ -305,7 +305,7 @@ async function load($: EngineInterface) {
   if (revision !== conversationRevision) return
   await takeCost($, ledger?.usd)
   if (revision !== conversationRevision) return
-  await take($, context, rateLimits, false, false, revision)
+  await take($, context, rateLimits, reconcileLimits && await read($, limitsLive), false, revision)
   if (revision !== conversationRevision) return
   if (pick(rateLimits).length === 0) {
     const saved = await $.store.get(STORE_LIMITS)
@@ -325,7 +325,13 @@ async function take($: EngineInterface, context: SessionContextUsage | undefined
   await update($, breakdown, () => (b ? slim(b) : null))
   if (context?.window) {
     const m = await read($, model)
-    const nextContext: OverheadCtx = { tokens: context.tokens, window: context.window, percent: context.percent, ...(m && { model: m }) }
+    const raw = b?.rawMaxTokens
+    const window = raw !== undefined && Number.isFinite(raw) && raw > 0 ? Math.min(raw, context.window) : context.window
+    const nextContext: OverheadCtx = {
+      tokens: context.tokens, window, modelWindow: context.window,
+      ...(context.tokens !== undefined && { percent: Math.trunc((context.tokens * 100) / window) }),
+      ...(m && { model: m }),
+    }
     // Where auto-compaction runs; without a breakdown this time, where it ran last time for the same model.
     const last = await read($, ctx)
     const kept = last?.model !== undefined && baseModel(last.model) === baseModel(m) ? last.compactAt : undefined
@@ -455,21 +461,11 @@ async function syncSession($: EngineInterface): Promise<boolean> {
   return changed
 }
 
-// A cheap local read on the existing countdown tick catches changes no event delivered.
+// Reuse the countdown tick to read the effective window even when tokens and model stay unchanged.
+// The local breakdown sends no request; a native setting can change without delivering a hook.
 async function poll($: EngineInterface) {
-  const changed = await syncSession($)
-  const revision = conversationRevision
   await readActiveAgents($)
-  const beforeModel = await read($, model)
-  await readModel($)
-  const reading = await $.session.usage()
-  if (revision !== conversationRevision) return
-  await takeCost($, reading.cost?.usd)
-  await takeLimits($, reading.rateLimits, await read($, limitsLive))
-  if (revision !== conversationRevision) return
-  const last = await read($, ctx)
-  const nextContext = reading.context
-  if (changed || beforeModel !== (await read($, model)) || !last || last.window !== nextContext.window || last.tokens !== nextContext.tokens || last.percent !== nextContext.percent) await load($)
+  await load($, true)
 }
 
 async function readActiveAgents($: EngineInterface) {
@@ -517,8 +513,8 @@ function slim(b: SessionContextBreakdown): OverheadBreakdown {
 }
 
 // The context with no reading of its own yet, as after a compaction, until the next response reports one.
-function withoutReading({ window, compactAt, model }: OverheadCtx): OverheadCtx {
-  return { window, ...(compactAt !== undefined && { compactAt }), ...(model !== undefined && { model }) }
+function withoutReading({ window, modelWindow, compactAt, model }: OverheadCtx): OverheadCtx {
+  return { window, ...(modelWindow !== undefined && { modelWindow }), ...(compactAt !== undefined && { compactAt }), ...(model !== undefined && { model }) }
 }
 
 // A resumed or forked conversation, before its first request. That request re-sends what the transcript last

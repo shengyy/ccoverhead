@@ -1,7 +1,10 @@
 // Context fill as of the latest response: `tokens`/`percent` absent before the first one, when
-// `estimate` holds /context's local count instead. `compactAt` is the total at which auto-compaction
-// runs, absent while it is off or unknown; `model` the main loop's model when the window was read.
-export type OverheadCtx = { tokens?: number; window: number; percent?: number; estimate?: number; compactAt?: number; model?: string }
+// `estimate` holds /context's local count instead. `window` is /context's effective rawMaxTokens,
+// falling back to the model's capacity; `percent` is computed against that window. `modelWindow`
+// retains the model's capacity for subagents and the pane (absent in state from older versions).
+// `compactAt` is the separate auto-compaction trigger, absent while it is off or unknown;
+// `model` is the main loop's model when the window was read.
+export type OverheadCtx = { tokens?: number; window: number; modelWindow?: number; percent?: number; estimate?: number; compactAt?: number; model?: string }
 // One compaction of the main conversation: its size before and after, as far as Claude Code recorded them.
 export type OverheadCompaction = { before?: number; after?: number }
 export type OverheadLimit = { kind: string; percentUsed: number; resetsAt?: string }

@@ -16,8 +16,9 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
 
 ## Concepts
 
-- **Context window**: the model's window and how much of it the last response was answered over
-  (uncached, cache-written and cache-read input together), as Claude Code's status line reports it.
+- **Context window**: Claude Code's effective window (`rawMaxTokens` from its local `/context` count),
+  whether chosen automatically or configured by the user, capped at the model's capacity. Usage is the
+  last response's input (uncached, cache-written and cache-read together), as the status line reports it.
 - **Auto-compaction threshold**: the context total at which Claude Code compacts on its own, from its local
   `/context` count; none while auto-compaction is off.
 - **Growth**: what a turn added to the context, the difference between consecutive context totals.
@@ -63,6 +64,12 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
   new session, after `/clear`, after compaction) it shows Claude Code's local `/context` estimate, dim and
   marked `~`; the estimate sends no request.
 - If Claude Code cannot give an estimate, the band shows the window size with `--`, never a stale figure.
+- The effective window is 100%: with `/autocompact 400k` in effect, `320k/400k` is 80%, with the same
+  bar and color as `800k/1M`. The percentage, growth and rewrite colors use that window. Changes refresh
+  after native commands and on the existing 30-second clock even when usage is unchanged. A missing or
+  invalid window reading falls back to model capacity; the mod keeps no independent window setting.
+- The pane shows model capacity separately when it differs. Subagents retain the model-capacity scale;
+  the main conversation's auto-compact setting does not establish a subagent's window.
 - The band draws no auto-compaction mark: on a 1M window the threshold (967k) sits at the bar's end, where
   a mark read as a separator and said no more than the bar's end. The pane gives the threshold and the
   tokens to go, read with the same local count as the estimate, so it costs no request.
