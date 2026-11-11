@@ -6,6 +6,8 @@ All notable changes to ccOverhead are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.5.7] - 2026-11-11
+
 ### Fixed
 
 - The weekly group recognizes Claude Code's own name for the Fable limit, `seven_day_overage_included`, as
