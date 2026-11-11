@@ -6,6 +6,14 @@ All notable changes to ccOverhead are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.5.7] - 2026-11-11
+
+### Fixed
+
+- The weekly group recognizes Claude Code's own name for the Fable limit, `seven_day_overage_included`, as
+  Fable's weekly window. Claude Code 2.1.322 does not pass that window to mods yet, so `7d` stays the
+  all-models week until it does.
+
 ## [1.5.6] - 2026-10-11
 
 ### Fixed

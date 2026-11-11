@@ -122,7 +122,7 @@ ctx ■■■□□□□□□□ 27% 271k/1M  ▁▁▃█▁▇▁ ↑3.4k | 
 | `ctx` | Context used: bar, percentage, tokens. `~` marks the pre-response estimate. Reads `agent` while a subagent's transcript is on screen |
 | Bars and `↑` | What each of the last seven turns added; `↑` is the latest turn |
 | `cache` | `warm` and its minutes, warming in color as the lifetime drains, or `cold`; the lifetime follows what the session shows, else the account's plan; `rewrote` and its tokens on a turn that wrote the cache again instead of reading it |
-| `5h`, `7d` | Quota used in each window, and `↻` the time until it resets. Dim when remembered from an earlier session. `7d` follows the main model's own weekly window when Claude Code reports one, such as `7d fable` (not verified) |
+| `5h`, `7d` | Quota used in each window, and `↻` the time until it resets. Dim when remembered from an earlier session. `7d` follows the main model's own weekly window when Claude Code reports one, such as `7d fable` (not verified: as of Claude Code 2.1.322 it reports none to mods, so `7d` stays the all-models week) |
 | `cost` | Gold session USD total and secondary latest-turn increment; native API-price reference, hidden when absent |
 | `agent` + spinners | One lime spinner per running agent, up to three plus `+N` for the rest. Four-row dots rotate clockwise in sync on both surfaces; zero is hidden |
 | `spend` | A Claude gateway's spend limit, when reported; it can pass 100% (not verified) |

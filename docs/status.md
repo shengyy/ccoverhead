@@ -52,8 +52,9 @@ Claude Code raises the band's site (`AbovePrompt`) on the terminal and desktop s
 
 Not verified live: light themes (matching text palettes are covered offline), `/clear` resetting Claude Code's own
 plugin state (ccOverhead resets its values itself, covered by tests), plans other than Claude Pro, the
-weekly group following a model's own window and a gateway's `spend_limit` (neither has reached a plugin;
-covered by tests with fictional ones), the band following a subagent's transcript on screen and a model
+weekly group following a model's own window and a gateway's `spend_limit` (neither has reached a plugin:
+on 2.1.322 a Fable session still reports only `five_hour` and `seven_day`; covered by tests with fictional
+ones), the band following a subagent's transcript on screen and a model
 switch leaving the cache cold (both from the declarations; covered by tests), and the pane on VS Code and
 mobile.
 
