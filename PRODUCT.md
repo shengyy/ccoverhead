@@ -92,8 +92,10 @@ It shows figures; it never acts on them. Compacting, pausing or switching models
   spend limit has reached a plugin yet.
 - The weekly group follows the main model: when Claude Code reports a weekly window of the model's own, it
   shows that window, labeled with the model family (`7d fable`), and switches at once on `/model`;
-  otherwise the all-models week. *Not verified*: no model's own window has reached a plugin yet, so it is
-  recognized by its kind (one naming the family; for Fable, also a `scoped` one).
+  otherwise the all-models week. *Not verified*: no model's own window has reached a plugin yet (Claude
+  Code 2.1.322 passes none, even with Fable as the main model), so it is recognized by its kind (one naming
+  the family; for Fable, also `seven_day_overage_included` and a `scoped` one). Until Claude Code passes
+  it, the group stays on the all-models week: it is never relabeled or filled with a guessed figure.
 - Until a session has its own reading, it shows the last reading any session saw, dimmed. A session saves
   a reading only when its own figures change, so an idle session never overwrites a newer one.
 

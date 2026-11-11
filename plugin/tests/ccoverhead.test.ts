@@ -24,6 +24,14 @@ test('the weekly window follows the main model when one is named after it (not v
   ]
   expect(weeklyWindow(scoped, 'claude-fable-5-1')).toEqual({ limit: scoped[2], label: '7d fable' })
   expect(weeklyWindow(scoped, 'claude-opus-5-5')).toEqual({ limit: scoped[1], label: '7d' })
+  // Claude Code's own name for the Fable limit, should it ever reach a plugin.
+  const included = [
+    { kind: 'five_hour', percentUsed: 74 },
+    { kind: 'seven_day', percentUsed: 65 },
+    { kind: 'seven_day_overage_included', percentUsed: 0 },
+  ]
+  expect(weeklyWindow(included, 'claude-fable-5-2')).toEqual({ limit: included[2], label: '7d fable' })
+  expect(weeklyWindow(included, 'claude-opus-5-5')).toEqual({ limit: included[1], label: '7d' })
 })
 
 test('subagent usage counts repeated and smaller requests while its growth history deduplicates and restarts', () => {

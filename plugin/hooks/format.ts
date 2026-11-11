@@ -217,10 +217,12 @@ export function modelFamily(model: string | null): string | undefined {
 }
 
 // The weekly window to show: the main model's own when Claude Code reports one, else the all-models week.
-// Not verified: no model's own window has reached a plugin yet, so its kind is matched, not known. A kind
-// naming the family counts; for Fable so does a `scoped` one, since Anthropic's usage data calls a
-// model's own weekly window `weekly_scoped` (the model in a separate scope a rate limit here does not
-// carry) and the one seen was Fable's.
+// Not verified: no model's own window has reached a plugin yet (Claude Code 2.1.322 passes only `five_hour`,
+// `seven_day` and a gateway's `spend_limit`), so its kind is matched, not known. A kind naming the family
+// counts; for Fable so do Claude Code's own name for the Fable limit, `seven_day_overage_included`, and a
+// `scoped` one, since Anthropic's usage data calls a model's own weekly window `weekly_scoped` (the model
+// in a separate scope a rate limit here does not carry) and the one seen was Fable's.
+const FABLE_KINDS = ['seven_day_overage_included', 'scoped']
 export function weeklyWindow(limits: OverheadLimit[], model: string | null): { limit?: OverheadLimit; label: string } {
   const family = modelFamily(model)
   const others = limits.filter(l => l.kind !== 'seven_day')
@@ -228,7 +230,7 @@ export function weeklyWindow(limits: OverheadLimit[], model: string | null): { l
     family === undefined
       ? undefined
       : (others.find(l => l.kind.toLowerCase().includes(family)) ??
-        (family === 'fable' ? others.find(l => l.kind.toLowerCase().includes('scoped')) : undefined))
+        (family === 'fable' ? others.find(l => FABLE_KINDS.some(k => l.kind.toLowerCase().includes(k))) : undefined))
   return own ? { limit: own, label: `7d ${family}` } : { limit: limits.find(l => l.kind === 'seven_day'), label: '7d' }
 }
 

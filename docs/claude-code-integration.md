@@ -33,7 +33,9 @@ row when you rely on it in a new version, and add the version you checked.
 | The official example mods (`anthropics/claude-code` `mods/`: `agents-md`, `diff`, `sec-default`, `telemetry`) read neither the cache lifetime nor the cost; nothing in the declarations (2.1.289 and the repository's 2.1.277 copy) exposes the lifetime besides `PostModelSwitch.cache_ttl` and the resume fields | 2026-10-07 |
 | `classic.PostModelSwitch` carries `cache_ttl` (`5m` or `1h`) and `prompt_cache_warm`, documented as "a switch then forfeits it" (each model has its own cache) | not verified (declarations of 2.1.289) |
 | Anthropic's usage data, as cached by Claude Code's `/usage` (not read by ccOverhead), names a model's own weekly window `weekly_scoped`, with the model in a separate `scope`; the one seen was Fable's, on an account with Fable access | seen in 2026-08, outside the plugin API |
-| Whether Claude Code passes a model's own weekly window to plugins in `rateLimits`, and under what kind (`SessionRateLimit` has no scope) | not verified |
+| On a Claude Max account with Fable access and Fable as the main model, `rateLimits` still holds only `five_hour` and `seven_day` (all models): the saved reading stayed at those two across several Fable requests | 2.1.322 |
+| Claude Code names Fable's own weekly window `seven_day_overage_included` ("Fable limit" in its notices) and tracks it internally, but the list it builds for plugins takes only `five_hour`, `seven_day` and, on a gateway, `spend_limit` | 2.1.322, read from the installed program's text, not from a plugin |
+| Whether a later Claude Code passes a model's own weekly window to plugins in `rateLimits`, and under what kind (`SessionRateLimit` has no scope); ccOverhead would recognize `seven_day_overage_included` | not verified |
 
 ## Session lifecycle
 
